@@ -1,0 +1,22 @@
+services:
+  api:
+    build: ./backend
+    environment:
+      DIARY_DATA_DIR: /data
+      DIARY_TIMEZONE: ${DIARY_TIMEZONE:-Asia/Shanghai}
+      DIARY_ADMIN_PASSWORD: ${DIARY_ADMIN_PASSWORD:?set-in-env-file}
+      DIARY_SESSION_SECRET: ${DIARY_SESSION_SECRET:?set-in-env-file}
+    volumes:
+      - ${DIARY_DATA_DIR:?set-in-env-file}:/data
+    restart: unless-stopped
+
+  web:
+    image: caddy:2-alpine
+    ports:
+      - "127.0.0.1:8088:80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend:/srv:ro
+    depends_on:
+      - api
+    restart: unless-stopped
