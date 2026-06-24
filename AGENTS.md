@@ -16,7 +16,7 @@ its architecture is documented.
 | Overall architecture, stages, or scope | `docs/plan-v1.1.md` |
 | Entry, media, or comment persistence | `docs/plan-v1.1.md` |
 | Importing the Portal prototype | `docs/migration.md` |
-| Docker/Caddy deployment | `compose.yaml`, `deploy/Caddyfile` |
+| Docker/Caddy or alternative static deployment | `docs/deployment.md`, then `compose.yaml`, `deploy/Caddyfile` |
 
 ## Boundaries
 
@@ -28,8 +28,8 @@ its architecture is documented.
   media, `.env`, or secrets under Git.
 - Public API is versioned under `/api/v1/*`; do not add `/api/diary` or
   `PORTAL_*` compatibility paths.
-- Docker Compose is the supported first-release deployment. The web container
-  serves the frontend and proxies only `/api/*` to the API container.
+- Docker Compose and Caddy are optional deployment examples. The frontend must
+  remain usable through any static server; the API proxy is added only with P3.
 - Preserve `metadata.json`, `content.md`, `comments.json`, and
   `media-manifest.json` as the data facts. HTML, editor state, indexes, and
   previews are rebuildable derivatives; their v1 outline lives in the plan.
