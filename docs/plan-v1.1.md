@@ -11,6 +11,31 @@ application to an existing portal.
 The current Portal implementation is only a migration source. Portal may later
 link to Diary, but it is never a runtime dependency.
 
+## Development Method and Frontend Stages
+
+Development is intentionally small-step. The current first milestone is a
+frontend-only static prototype; it does not need Docker, API, authentication,
+or real diary files.
+
+1. **Step 0 — style contract:** minimal, fluent, modular. The page has one
+   full-width, indefinitely scrollable diary area and avoids permanent panels,
+   metadata controls, Markdown previews, or noisy loading UI.
+2. **Step 1 — scroll area:** create a full-page scroll region filled with
+   bordered placeholder entry cards containing mock text. Entries form a
+   vertical list; no backend or storage is involved.
+3. **Step 2 — entry modes:** use a static list of sample entries to develop
+   three switchable modes: saved reading, inline editing, and an unsaved “new
+   entry” item at the end of the list. New mode differs only by its label and
+   lack of a persisted ID.
+4. **Later frontend stages:** replace mock data with the API adapter, introduce
+   Tiptap for active inline editing, then add comments, media, timeline/search,
+   PWA, and configuration-driven visual tuning.
+
+Each frontend module should have a narrow role: feed/loading, entry rendering,
+entry editing, comments, and visual tokens. Styling knobs such as font, size,
+spacing, and colors live in a frontend configuration/token module rather than
+being duplicated through components.
+
 ## Runtime Architecture
 
 ```text
@@ -41,9 +66,13 @@ replace application authentication.
   page.
 - Entries have server-created IDs, dates, timestamps, and revisions. Save uses
   optimistic revision checking; a stale save returns a conflict.
-- The normal reading UI is intentionally quiet. Entry actions appear only on
-  hover/focus; editing activates an inline Tiptap editor with an expandable
-  formatting toolbar.
+- The normal reading UI is intentionally quiet. Entries are shown continuously
+  like one long document; a new-entry affordance remains at the end. Entry
+  actions appear only on hover/focus; editing activates an inline Tiptap editor
+  with an expandable formatting toolbar.
+- Date labels are server-created. The UI may show Today/Yesterday for recent
+  entries, and includes time when several entries share a day. Loading older
+  cursor pages inserts them above current text without duplication.
 - Comments render below the entry in a distinct, compact style. A selected-text
   comment stores a quotation and context; a no-selection comment belongs to the
   whole entry. A no-longer-matchable quotation is shown as orphaned, never
@@ -76,15 +105,42 @@ entries/<year>/<date>-<uuid>/
 - SQLite indexes, previews, rendered HTML, thumbnails, and Tiptap JSON are
   caches/derivatives and must be rebuildable from these files.
 
+### Metadata v1
+
+`metadata.json` has `schema_version`, UUID `id`, `date`, `timezone`, server
+`created_at`/`updated_at`, `revision`, optional title, tags, mood, weather,
+location, time range, favorite state, and typed custom fields. Dates use
+`YYYY-MM-DD`; timestamps use RFC 3339 with offset. Unknown top-level write
+fields are rejected; custom fields are governed by a root-level
+`field-definitions.json` so label changes do not rewrite historical entries.
+
+### Content and media v1
+
+`content.md` uses UTF-8/LF semantic Markdown. Images use
+`![alt](media:<uuid>)`. Video and audio use a versioned `diary-media` fenced
+block with `id`, `kind`, and optional caption. The renderer resolves a media ID
+through `media-manifest.json`; it never treats a Markdown URL as a local
+filesystem path. Text-only export degrades media to a readable ID reference.
+
+### Comments v1
+
+`comments.json` contains a schema version and an array of comments. A comment
+has UUID, Markdown body, timestamps, and either no anchor (entry comment) or a
+quote anchor. A quote anchor records selected text and context. If later body
+edits prevent a safe match, its state becomes `orphaned`; it must never attach
+to similar but different text. Comments render under their entry, in a compact
+style distinct from diary prose.
+
 ## Delivery Sequence
 
-1. Create backend/frontend packages, versioned configuration, authentication,
+1. Complete static Step 0--2 frontend prototypes and browser checks.
+2. Create backend/frontend packages, versioned configuration, authentication,
    and Compose build images.
-2. Port and harden filesystem storage; implement the full `/api/v1` contract,
+3. Port and harden filesystem storage; implement the full `/api/v1` contract,
    SQLite rebuildable index, migration dry-run, and API tests.
-3. Build the continuous-feed Tiptap UI, comments, mobile interaction, PWA, and
-   media workflow.
-4. Provide exporter, backup/restore verification, release documentation, and
+4. Connect the continuous-feed Tiptap UI, comments, mobile interaction, PWA,
+   and media workflow.
+5. Provide exporter, backup/restore verification, release documentation, and
    a Portal link-only integration option.
 
 ## Migration and Non-Goals
