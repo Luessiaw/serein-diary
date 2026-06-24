@@ -71,14 +71,14 @@
    */
   --reading-width: 46rem;
   --page-gutter: clamp(1rem, 4vw, 3rem);
-  --feed-gap: var(--space-6);
+  --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);
   --year-gap: var(--feed-gap);
-  --month-gap: var(--space-5);
-  --month-entry-gap: var(--space-5);
-  --group-summary-padding-block: var(--space-2);
-  --title-gap: var(--space-2);
-  --paragraph-gap: var(--space-3);
+  --month-gap: var(--space-3);
+  --month-entry-gap: var(--space-3);
+  --group-summary-padding-block: var(--space-1);
+  --title-gap: var(--space-1);
+  --paragraph-gap: var(--space-2);
   --radius-subtle: 0.5rem;
 
   /*
