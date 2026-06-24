@@ -116,7 +116,8 @@ body {
 .new-entry {
   inline-size: min(100%, var(--reading-width));
   justify-self: center;
-  padding-block-start: var(--space-3);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-line);
 }
 
 .new-entry-date {
@@ -136,9 +137,6 @@ body {
 .new-entry-form {
   display: grid;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-subtle);
 }
 
 .new-entry-title-input,
@@ -161,7 +159,9 @@ body {
 }
 
 .new-entry-content-input {
-  resize: vertical;
+  min-block-size: 12rem;
+  overflow-y: hidden;
+  resize: none;
 }
 
 .new-entry-title-input:focus-visible,
@@ -180,7 +180,7 @@ body {
 
 .new-entry-actions {
   display: flex;
-  justify-content: end;
+  justify-content: start;
   gap: var(--space-2);
 }
 

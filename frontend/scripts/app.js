@@ -71,7 +71,7 @@
     content.className = "new-entry-content-input";
     content.name = "content";
     content.placeholder = "写下此刻……";
-    content.rows = 8;
+    content.rows = 1;
     content.setAttribute("aria-label", "Diary content");
     message.className = "new-entry-message";
     message.setAttribute("role", "status");
@@ -85,6 +85,10 @@
     save.className = "new-entry-save";
     save.type = "submit";
     save.textContent = "保存";
+
+    content.addEventListener("input", () => {
+      resizeContentInput(content);
+    });
 
     cancel.addEventListener("click", () => {
       form.reset();
@@ -109,9 +113,12 @@
     });
 
     actions.append(cancel, saveDraft, save);
-    form.append(title, content, message, actions);
+    form.append(actions, title, content, message);
     area.append(date, form);
-    requestAnimationFrame(() => content.focus());
+    requestAnimationFrame(() => {
+      resizeContentInput(content);
+      content.focus();
+    });
 
     return area;
   }
@@ -156,6 +163,11 @@
         mediaManifest: { schema_version: 1, media: [] },
       },
     };
+  }
+
+  function resizeContentInput(content) {
+    content.style.blockSize = "auto";
+    content.style.blockSize = `${content.scrollHeight}px`;
   }
 
   function createMockUuid() {
