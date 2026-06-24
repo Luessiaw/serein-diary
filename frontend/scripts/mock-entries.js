@@ -27,7 +27,7 @@ window.SereinMockEntries = [
         is_favorite: false,
         custom_fields: {},
       },
-      content: "雨停以后，窗边留下很淡的光。\n\n一些尚未整理的句子，慢慢向下延伸。",
+      content: "雨停以后，窗边留下很淡的光。\n一些尚未整理的句子，慢慢向下延伸。",
       comments: { schema_version: 1, comments: [] },
       mediaManifest: { schema_version: 1, media: [] },
     },

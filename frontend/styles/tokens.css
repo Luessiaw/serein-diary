@@ -15,7 +15,7 @@
    * 使用 `--font-reading`，小型界面标签使用 `--font-ui`。
    */
   --font-title: Georgia, "Noto Serif SC", "Songti SC", SimSun, serif;
-  --font-reading: Georgia, "Noto Serif SC", "Songti SC", SimSun, serif;
+  --font-reading: Georgia, "Noto Serif SC", KaiTi, serif;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
   /*
@@ -27,7 +27,7 @@
   --font-size-title: clamp(1.5rem, 1.2rem + 1vw, 2.25rem);
   --font-size-reading: clamp(1rem, 0.96rem + 0.15vw, 1.125rem);
   --font-size-date: 1.2rem;
-  --line-height-reading: 1.85;
+  --line-height-reading: 1.5;
   --letter-spacing-date: 0.08em;
 
   /*
