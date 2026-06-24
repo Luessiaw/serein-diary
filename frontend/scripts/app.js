@@ -3,38 +3,193 @@
   "use strict";
 
   const app = document.getElementById("app");
+  let isNewEntryActive = false;
 
   if (!app) {
     throw new Error("Serein application mount point is missing.");
   }
 
-  const feed = document.createElement("section");
-  feed.className = "diary-feed";
-  feed.setAttribute("aria-label", "Diary entries");
+  renderFeed();
 
-  const readingSamples = window.SereinMockEntries
-    .filter((sample) => sample.ui.mode === "reading")
-    .slice()
-    .sort((left, right) => (
-      left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
-    ));
-  const entriesPerDate = countEntriesPerDate(readingSamples);
+  function renderFeed() {
+    const feed = document.createElement("section");
+    const readingSamples = getReadingSamples();
+    const entriesPerDate = countEntriesPerDate(readingSamples);
 
-  groupEntriesByDate(readingSamples).forEach((yearGroup) => {
-    const year = createGroup("diary-year", `${yearGroup.year}年`);
+    feed.className = "diary-feed";
+    feed.setAttribute("aria-label", "Diary entries");
 
-    yearGroup.months.forEach((monthGroup) => {
-      const month = createGroup("diary-month", `${Number(monthGroup.month)}月`);
+    groupEntriesByDate(readingSamples).forEach((yearGroup) => {
+      const year = createGroup("diary-year", `${yearGroup.year}年`);
 
-      monthGroup.entries.forEach((sample) => {
-        month.content.append(createEntry(sample, entriesPerDate));
+      yearGroup.months.forEach((monthGroup) => {
+        const month = createGroup("diary-month", `${Number(monthGroup.month)}月`);
+
+        monthGroup.entries.forEach((sample) => {
+          month.content.append(createEntry(sample, entriesPerDate));
+        });
+        year.content.append(month.details);
       });
-      year.content.append(month.details);
+      feed.append(year.details);
     });
-    feed.append(year.details);
-  });
 
-  app.replaceChildren(feed);
+    feed.append(createNewEntryArea());
+    app.replaceChildren(feed);
+  }
+
+  function getReadingSamples() {
+    return window.SereinMockEntries
+      .filter((sample) => sample.ui.mode === "reading")
+      .slice()
+      .sort((left, right) => (
+        left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
+      ));
+  }
+
+  function createNewEntryArea() {
+    const area = document.createElement("section");
+
+    area.className = "new-entry";
+    area.setAttribute("aria-label", "New diary entry");
+
+    if (!isNewEntryActive) {
+      const button = document.createElement("button");
+
+      button.className = "new-entry-launcher";
+      button.type = "button";
+      button.textContent = "新建日记";
+      button.addEventListener("click", () => {
+        isNewEntryActive = true;
+        renderFeed();
+      });
+      area.append(button);
+      return area;
+    }
+
+    const form = document.createElement("form");
+    const title = document.createElement("input");
+    const content = document.createElement("textarea");
+    const message = document.createElement("p");
+    const actions = document.createElement("div");
+    const cancel = document.createElement("button");
+    const save = document.createElement("button");
+
+    form.className = "new-entry-form";
+    title.className = "new-entry-title-input";
+    title.name = "title";
+    title.placeholder = "标题（可选）";
+    title.setAttribute("aria-label", "Diary title");
+    content.className = "new-entry-content-input";
+    content.name = "content";
+    content.placeholder = "写下此刻……";
+    content.rows = 8;
+    content.setAttribute("aria-label", "Diary content");
+    message.className = "new-entry-message";
+    message.setAttribute("role", "status");
+    actions.className = "new-entry-actions";
+    cancel.className = "new-entry-cancel";
+    cancel.type = "button";
+    cancel.textContent = "取消";
+    save.className = "new-entry-save";
+    save.type = "submit";
+    save.textContent = "保存";
+
+    cancel.addEventListener("click", () => {
+      isNewEntryActive = false;
+      renderFeed();
+    });
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const body = content.value.trim();
+      if (!body) {
+        message.textContent = "请先写下一些内容。";
+        content.focus();
+        return;
+      }
+
+      addStaticEntry(title.value.trim(), body);
+      isNewEntryActive = false;
+      renderFeed();
+    });
+
+    actions.append(cancel, save);
+    form.append(title, content, message, actions);
+    area.append(form);
+    requestAnimationFrame(() => content.focus());
+
+    return area;
+  }
+
+  function addStaticEntry(title, content) {
+    const metadata = {
+      schema_version: 1,
+      id: createMockUuid(),
+      created_at: createLocalTimestamp(),
+    };
+
+    if (title) {
+      metadata.title = title;
+    }
+
+    window.SereinMockEntries = [
+      ...window.SereinMockEntries.filter((sample) => sample.ui.mode !== "new"),
+      {
+        ui: { mode: "reading" },
+        data: {
+          metadata,
+          content,
+          comments: { schema_version: 1, comments: [] },
+          mediaManifest: { schema_version: 1, media: [] },
+        },
+      },
+      createNewDraft(),
+    ];
+  }
+
+  function createNewDraft() {
+    return {
+      ui: { mode: "new" },
+      data: {
+        metadata: {
+          schema_version: 1,
+          id: null,
+          created_at: null,
+        },
+        content: "",
+        comments: { schema_version: 1, comments: [] },
+        mediaManifest: { schema_version: 1, media: [] },
+      },
+    };
+  }
+
+  function createMockUuid() {
+    if (window.crypto && window.crypto.randomUUID) {
+      return window.crypto.randomUUID();
+    }
+
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
+      const value = Math.floor(Math.random() * 16);
+      const nibble = character === "x" ? value : (value & 0x3) | 0x8;
+
+      return nibble.toString(16);
+    });
+  }
+
+  function createLocalTimestamp() {
+    const now = new Date();
+    const offsetMinutes = -now.getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? "+" : "-";
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetRemainder = Math.abs(offsetMinutes) % 60;
+    const pad = (value) => String(value).padStart(2, "0");
+
+    return [
+      now.getFullYear(),
+      pad(now.getMonth() + 1),
+      pad(now.getDate()),
+    ].join("-") + `T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}${sign}${pad(offsetHours)}:${pad(offsetRemainder)}`;
+  }
 
   function createGroup(className, label) {
     const details = document.createElement("details");

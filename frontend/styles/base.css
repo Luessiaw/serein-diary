@@ -113,6 +113,96 @@ body {
   margin-block-start: var(--paragraph-gap);
 }
 
+.new-entry {
+  inline-size: min(100%, var(--reading-width));
+  justify-self: center;
+  padding-block-start: var(--space-3);
+}
+
+.new-entry-launcher,
+.new-entry-cancel,
+.new-entry-save {
+  border: 0;
+  border-radius: var(--radius-subtle);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+}
+
+.new-entry-launcher {
+  display: block;
+  margin-inline-start: auto;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-accent);
+  background: transparent;
+}
+
+.new-entry-form {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-subtle);
+}
+
+.new-entry-title-input,
+.new-entry-content-input {
+  inline-size: 100%;
+  border: 0;
+  border-radius: 0;
+  color: var(--color-ink);
+  background: transparent;
+  font-family: var(--font-reading);
+  font-size: inherit;
+  line-height: var(--line-height-reading);
+}
+
+.new-entry-title-input {
+  padding: 0 0 var(--space-2);
+  border-block-end: 1px solid var(--color-line);
+  font-family: var(--font-title);
+  font-size: var(--font-size-title);
+}
+
+.new-entry-content-input {
+  resize: vertical;
+}
+
+.new-entry-title-input:focus-visible,
+.new-entry-content-input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-1);
+}
+
+.new-entry-message {
+  min-block-size: 1.5em;
+  margin: 0;
+  color: var(--color-muted);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+}
+
+.new-entry-actions {
+  display: flex;
+  justify-content: end;
+  gap: var(--space-2);
+}
+
+.new-entry-cancel,
+.new-entry-save {
+  padding: var(--space-2) var(--space-3);
+}
+
+.new-entry-cancel {
+  color: var(--color-muted);
+  background: transparent;
+}
+
+.new-entry-save {
+  color: var(--color-page);
+  background: var(--color-accent);
+}
+
 @media (max-width: 42rem) {
   .diary-feed {
     gap: var(--feed-gap-compact);
