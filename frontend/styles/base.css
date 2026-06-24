@@ -119,22 +119,18 @@ body {
   padding-block-start: var(--space-3);
 }
 
-.new-entry-launcher,
+.new-entry-date {
+  margin: 0 0 var(--space-3);
+}
+
 .new-entry-cancel,
+.new-entry-save-draft,
 .new-entry-save {
   border: 0;
   border-radius: var(--radius-subtle);
   cursor: pointer;
   font-family: var(--font-ui);
   font-size: 0.9rem;
-}
-
-.new-entry-launcher {
-  display: block;
-  margin-inline-start: auto;
-  padding: var(--space-2) var(--space-3);
-  color: var(--color-accent);
-  background: transparent;
 }
 
 .new-entry-form {
@@ -189,12 +185,18 @@ body {
 }
 
 .new-entry-cancel,
+.new-entry-save-draft,
 .new-entry-save {
   padding: var(--space-2) var(--space-3);
 }
 
 .new-entry-cancel {
   color: var(--color-muted);
+  background: transparent;
+}
+
+.new-entry-save-draft {
+  color: var(--color-accent);
   background: transparent;
 }
 

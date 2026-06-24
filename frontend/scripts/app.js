@@ -3,7 +3,6 @@
   "use strict";
 
   const app = document.getElementById("app");
-  let isNewEntryActive = false;
 
   if (!app) {
     throw new Error("Serein application mount point is missing.");
@@ -48,23 +47,12 @@
 
   function createNewEntryArea() {
     const area = document.createElement("section");
+    const date = document.createElement("p");
 
     area.className = "new-entry";
     area.setAttribute("aria-label", "New diary entry");
-
-    if (!isNewEntryActive) {
-      const button = document.createElement("button");
-
-      button.className = "new-entry-launcher";
-      button.type = "button";
-      button.textContent = "新建日记";
-      button.addEventListener("click", () => {
-        isNewEntryActive = true;
-        renderFeed();
-      });
-      area.append(button);
-      return area;
-    }
+    date.className = "entry-date new-entry-date";
+    date.textContent = "现在";
 
     const form = document.createElement("form");
     const title = document.createElement("input");
@@ -72,12 +60,13 @@
     const message = document.createElement("p");
     const actions = document.createElement("div");
     const cancel = document.createElement("button");
+    const saveDraft = document.createElement("button");
     const save = document.createElement("button");
 
     form.className = "new-entry-form";
     title.className = "new-entry-title-input";
     title.name = "title";
-    title.placeholder = "标题（可选）";
+    title.placeholder = "标题";
     title.setAttribute("aria-label", "Diary title");
     content.className = "new-entry-content-input";
     content.name = "content";
@@ -90,13 +79,20 @@
     cancel.className = "new-entry-cancel";
     cancel.type = "button";
     cancel.textContent = "取消";
+    saveDraft.className = "new-entry-save-draft";
+    saveDraft.type = "button";
+    saveDraft.textContent = "保存草稿";
     save.className = "new-entry-save";
     save.type = "submit";
     save.textContent = "保存";
 
     cancel.addEventListener("click", () => {
-      isNewEntryActive = false;
-      renderFeed();
+      form.reset();
+      message.textContent = "已清空未保存内容。";
+      title.focus();
+    });
+    saveDraft.addEventListener("click", () => {
+      message.textContent = "保存草稿将在后端阶段提供；当前内容仍只保留在本页。";
     });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -109,13 +105,12 @@
       }
 
       addStaticEntry(title.value.trim(), body);
-      isNewEntryActive = false;
       renderFeed();
     });
 
-    actions.append(cancel, save);
+    actions.append(cancel, saveDraft, save);
     form.append(title, content, message, actions);
-    area.append(form);
+    area.append(date, form);
     requestAnimationFrame(() => content.focus());
 
     return area;
