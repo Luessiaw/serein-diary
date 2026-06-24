@@ -1,4 +1,4 @@
-/* P1 renders visual placeholders only; no entry state or persistence exists yet. */
+/* P2 consumes entry-shaped static samples only; no persistence exists yet. */
 (function () {
   "use strict";
 
@@ -12,14 +12,16 @@
   feed.className = "placeholder-feed";
   feed.setAttribute("aria-label", "Diary placeholders");
 
-  window.SereinMockEntries.forEach((placeholder) => {
+  window.SereinMockEntries.forEach((sample) => {
     const entry = document.createElement("article");
     const text = document.createElement("p");
+    const { data, ui } = sample;
 
     entry.className = "placeholder-entry";
-    entry.dataset.placeholderId = placeholder.id;
-    entry.style.setProperty("--placeholder-min-height", placeholder.height);
-    text.textContent = placeholder.text;
+    entry.dataset.entryId = data.metadata.id || "new-entry";
+    entry.dataset.entryMode = ui.mode;
+    entry.style.setProperty("--placeholder-min-height", ui.placeholderHeight);
+    text.textContent = data.content.split("\n")[0] || "下一篇日记会在这里出现。";
     entry.append(text);
     feed.append(entry);
   });
