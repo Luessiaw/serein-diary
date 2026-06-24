@@ -14,8 +14,8 @@
    * 第三方字体服务。`--font-title` 预留给未来有标题的界面；当前日记正文
    * 使用 `--font-reading`，小型界面标签使用 `--font-ui`。
    */
-  --font-title: Georgia, "Noto Serif SC", "Songti SC", SimSun, serif;
-  --font-reading: Georgia, "Noto Serif SC", KaiTi, serif;
+  --font-title: "Times New Roman", "Noto Serif SC", "Songti SC", SimSun, serif;
+  --font-reading: "Times New Roman", KaiTi, "Noto Serif SC", serif;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
   /*
@@ -24,7 +24,7 @@
    * `clamp()` 会让正文在较宽屏幕上略微增大，同时确保手机上的字号舒适。
    * 若目标是更安静、适合长文阅读的效果，应优先调整行高，再考虑增大字号。
    */
-  --font-size-title: clamp(1.5rem, 1.2rem + 1vw, 2.25rem);
+  --font-size-title: clamp(1.2rem, 1.2rem + 1vw, 1.8rem);
   --font-size-reading: clamp(1rem, 0.96rem + 0.15vw, 1.125rem);
   --font-year: var(--font-ui);
   --font-month: var(--font-ui);
