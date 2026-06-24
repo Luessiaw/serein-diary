@@ -6,11 +6,24 @@
 
 html,
 body {
-  min-height: 100%;
+  block-size: 100%;
   margin: 0;
   color: var(--color-ink);
   background: var(--color-page);
   font-family: var(--font-reading);
   font-size: var(--font-size-reading);
   line-height: var(--line-height-reading);
+}
+
+body {
+  overflow: hidden;
+}
+
+.diary-scroll-region {
+  block-size: 100dvh;
+  inline-size: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
 }
