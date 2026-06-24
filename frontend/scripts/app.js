@@ -12,40 +12,116 @@
   feed.className = "diary-feed";
   feed.setAttribute("aria-label", "Diary entries");
 
-  const readingSamples = window.SereinMockEntries.filter(
-    (sample) => sample.ui.mode !== "new",
-  );
+  const readingSamples = window.SereinMockEntries
+    .filter((sample) => sample.ui.mode !== "new")
+    .slice()
+    .sort((left, right) => (
+      left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
+    ));
+  const entriesPerDate = countEntriesPerDate(readingSamples);
 
-  readingSamples.forEach((sample) => {
-    const entry = document.createElement("article");
-    const date = document.createElement("time");
-    const content = document.createElement("div");
-    const { data, ui } = sample;
+  groupEntriesByDate(readingSamples).forEach((yearGroup) => {
+    const year = createGroup("diary-year", `${yearGroup.year}年`);
 
-    entry.className = "diary-entry";
-    entry.dataset.entryId = data.metadata.id;
-    entry.dataset.entryMode = ui.mode;
-    date.className = "entry-date";
-    date.dateTime = data.metadata.date;
-    date.textContent = formatDate(data.metadata.date);
-    content.className = "entry-content";
-    appendMarkdownParagraphs(content, data.content);
+    yearGroup.months.forEach((monthGroup) => {
+      const month = createGroup("diary-month", `${Number(monthGroup.month)}月`);
 
-    entry.append(date);
-    if (data.metadata.title) {
-      const title = document.createElement("h2");
-      title.className = "entry-title";
-      title.textContent = data.metadata.title;
-      entry.append(title);
-    }
-    entry.append(content);
-    feed.append(entry);
+      monthGroup.entries.forEach((sample) => {
+        month.content.append(createEntry(sample, entriesPerDate));
+      });
+      year.content.append(month.details);
+    });
+    feed.append(year.details);
   });
 
   app.replaceChildren(feed);
 
-  function formatDate(date) {
-    return date.replaceAll("-", ".");
+  function createGroup(className, label) {
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    const content = document.createElement("div");
+
+    details.className = className;
+    details.open = true;
+    summary.className = "diary-group-summary";
+    summary.textContent = label;
+    content.className = "diary-group-content";
+    details.append(summary, content);
+
+    return { details, content };
+  }
+
+  function createEntry(sample, entriesByDate) {
+    const entry = document.createElement("article");
+    const date = document.createElement("time");
+    const content = document.createElement("div");
+    const { data, ui } = sample;
+    const { metadata } = data;
+
+    entry.className = "diary-entry";
+    entry.dataset.entryId = metadata.id;
+    entry.dataset.entryMode = ui.mode;
+    date.className = "entry-date";
+    date.dateTime = metadata.created_at;
+    date.textContent = formatEntryDate(
+      metadata.date,
+      metadata.created_at,
+      entriesByDate.get(metadata.date),
+    );
+    content.className = "entry-content";
+    appendMarkdownParagraphs(content, data.content);
+
+    entry.append(date);
+    if (metadata.title) {
+      const title = document.createElement("h2");
+      title.className = "entry-title";
+      title.textContent = metadata.title;
+      entry.append(title);
+    }
+    entry.append(content);
+
+    return entry;
+  }
+
+  function groupEntriesByDate(entries) {
+    const years = new Map();
+
+    entries.forEach((sample) => {
+      const [year, month] = sample.data.metadata.date.split("-");
+      let yearGroup = years.get(year);
+
+      if (!yearGroup) {
+        yearGroup = { year, months: new Map() };
+        years.set(year, yearGroup);
+      }
+      if (!yearGroup.months.has(month)) {
+        yearGroup.months.set(month, []);
+      }
+      yearGroup.months.get(month).push(sample);
+    });
+
+    return [...years.values()].map((yearGroup) => ({
+      year: yearGroup.year,
+      months: [...yearGroup.months.entries()].map(([month, entries]) => ({
+        month,
+        entries,
+      })),
+    }));
+  }
+
+  function countEntriesPerDate(entries) {
+    return entries.reduce((counts, sample) => {
+      const { date } = sample.data.metadata;
+      counts.set(date, (counts.get(date) || 0) + 1);
+      return counts;
+    }, new Map());
+  }
+
+  function formatEntryDate(date, createdAt, entriesOnDate) {
+    const day = Number(date.slice(-2));
+    const time = createdAt.slice(11, 16);
+
+    return entriesOnDate > 1 ? `${day}日 ${time}` : `${day}日`;
   }
 
   function appendMarkdownParagraphs(container, markdown) {

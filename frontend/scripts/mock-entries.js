@@ -77,6 +77,23 @@ window.SereinMockEntries = [
     data: {
       metadata: {
         schema_version: 1,
+        id: "8d48fcd0-10d4-4b2c-8829-5a660d7feeb3",
+        date: "2026-06-24",
+        timezone: "Asia/Shanghai",
+        created_at: "2026-06-24T19:10:00+08:00",
+        updated_at: "2026-06-24T19:10:00+08:00",
+        revision: 1,
+      },
+      content: "傍晚又下了一阵雨。\n\n路灯亮起来以后，空气才真正凉下来。",
+      comments: { schema_version: 1, comments: [] },
+      mediaManifest: { schema_version: 1, media: [] },
+    },
+  },
+  {
+    ui: { mode: "reading" },
+    data: {
+      metadata: {
+        schema_version: 1,
         id: "3a4822f7-6694-490c-87d1-5bb086aa0d3d",
         date: "2026-04-12",
         timezone: "Asia/Shanghai",

@@ -30,19 +30,63 @@ body {
 
 .diary-feed {
   display: grid;
-  gap: var(--feed-gap);
+  gap: var(--year-gap);
   padding: var(--feed-padding-block) var(--page-gutter);
 }
 
-.diary-entry {
+.diary-year {
   inline-size: min(100%, var(--reading-width));
   justify-self: center;
 }
 
+.diary-group-summary {
+  cursor: pointer;
+  inline-size: 100%;
+  padding-block: var(--group-summary-padding-block);
+}
+
+.diary-year > .diary-group-summary {
+  color: var(--color-year);
+  font-family: var(--font-year);
+  font-size: var(--font-size-year);
+  font-weight: 600;
+}
+
+.diary-group-content {
+  display: grid;
+}
+
+.diary-year > .diary-group-content {
+  gap: var(--month-gap);
+  margin-block-start: var(--space-2);
+}
+
+.diary-month > .diary-group-summary {
+  color: var(--color-month);
+  font-family: var(--font-month);
+  font-size: var(--font-size-month);
+  font-weight: 600;
+}
+
+.diary-month > .diary-group-content {
+  gap: var(--month-entry-gap);
+  margin-block-start: var(--space-3);
+}
+
+.diary-group-summary:focus-visible {
+  border-radius: var(--radius-subtle);
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-1);
+}
+
+.diary-entry {
+  min-inline-size: 0;
+}
+
 .entry-date {
   display: block;
-  color: var(--color-muted);
-  font-family: var(--font-ui);
+  color: var(--color-date);
+  font-family: var(--font-date);
   font-size: var(--font-size-date);
   letter-spacing: var(--letter-spacing-date);
 }

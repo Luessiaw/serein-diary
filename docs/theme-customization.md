@@ -11,9 +11,13 @@ Serein 的视觉参数集中在
 
 - **字体排版：** `--font-title` 与 `--font-size-title` 控制可选标题；
   `--font-reading`、`--font-size-reading` 和 `--line-height-reading` 控制正文；
-  `--font-ui` 与 `--font-size-date` 控制安静的界面标签。
+  `--font-date` 与 `--font-size-date` 控制日期标签。
 - **布局：** `--reading-width` 改变行长；`--page-gutter`、`--feed-gap` 与
   `--paragraph-gap` 调整留白。
+- **日历分组：** `--font-year`、`--font-size-year`、`--font-month` 与
+  `--font-size-month` 控制可折叠的年份、月份节点；`--color-year`、
+  `--color-month` 和 `--color-date` 控制其层级色彩；`--year-gap`、
+  `--month-gap` 和 `--month-entry-gap` 调整它们与正文的距离。
 - **颜色：** 应一起修改具有语义的 `--color-*` 变量。只要已有对应 token，
   组件就不应直接使用原始颜色值。
 

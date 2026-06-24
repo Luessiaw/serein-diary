@@ -26,6 +26,11 @@
    */
   --font-size-title: clamp(1.5rem, 1.2rem + 1vw, 2.25rem);
   --font-size-reading: clamp(1rem, 0.96rem + 0.15vw, 1.125rem);
+  --font-year: var(--font-ui);
+  --font-month: var(--font-ui);
+  --font-date: var(--font-ui);
+  --font-size-year: clamp(1.35rem, 1.1rem + 0.7vw, 1.8rem);
+  --font-size-month: 1rem;
   --font-size-date: 1.2rem;
   --line-height-reading: 1.5;
   --letter-spacing-date: 0.08em;
@@ -41,6 +46,9 @@
   --color-muted: #65736a;
   --color-line: #dce5de;
   --color-accent: #277253;
+  --color-year: var(--color-ink);
+  --color-month: var(--color-muted);
+  --color-date: var(--color-muted);
 
   /*
    * 间距刻度
@@ -65,6 +73,10 @@
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-6);
   --feed-padding-block: var(--space-6);
+  --year-gap: var(--feed-gap);
+  --month-gap: var(--space-5);
+  --month-entry-gap: var(--space-5);
+  --group-summary-padding-block: var(--space-2);
   --title-gap: var(--space-2);
   --paragraph-gap: var(--space-3);
   --radius-subtle: 0.5rem;
