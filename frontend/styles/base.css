@@ -1,0 +1,11 @@
+/* P0-T02: structural baseline only. P0-T03 owns visual tokens and styling. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
