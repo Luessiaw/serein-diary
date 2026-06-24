@@ -1,0 +1,30 @@
+/* Serein visual tokens. Components must consume these instead of hardcoding values. */
+
+:root {
+  --color-page: #fcfcfa;
+  --color-ink: #26322d;
+  --color-muted: #65736a;
+  --color-line: #dce5de;
+  --color-accent: #277253;
+
+  --font-reading: Georgia, "Noto Serif SC", "Songti SC", SimSun, serif;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-size-reading: clamp(1rem, 0.96rem + 0.15vw, 1.125rem);
+  --line-height-reading: 1.85;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: 4rem;
+
+  --reading-width: 46rem;
+  --page-gutter: clamp(1rem, 4vw, 3rem);
+  --radius-subtle: 0.5rem;
+
+  /* Reference values for future media queries; CSS custom properties cannot
+     currently be used directly in standard @media conditions. */
+  --breakpoint-compact: 42rem;
+  --breakpoint-wide: 72rem;
+}

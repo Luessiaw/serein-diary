@@ -1,7 +1,7 @@
 phase_id,phase_name,task_id,task_name,description,dependencies,status,context,acceptance_criteria
 P0,风格与静态基线,P0-T01,确定项目名称与视觉原则,"确认项目/仓库名称、简约/流畅/模块化三项原则，并明确首个里程碑不接后端",无,done,"已确定项目名 Serein、仓库名 serein-diary；视觉原则已写入 README 和架构文档","README 与架构文档使用确定名称；明确首个里程碑不包含 API、真实数据与认证"
 P0,风格与静态基线,P0-T02,建立前端静态目录,"创建纯静态 frontend 入口、样式目录、脚本目录和 mock 数据目录",P0-T01,done,"已创建 frontend/index.html、styles/base.css、scripts/mock-entries.js 与 scripts/app.js；使用原生 HTML/CSS/JS","浏览器可加载静态入口；资源职责清晰，未引入 React、Vite、Tiptap 或后端"
-P0,风格与静态基线,P0-T03,建立视觉 token,"集中定义字体、字号、间距、颜色、阅读宽度和响应式断点",P0-T02,todo,"滚动区全宽，但日记正文保留舒适阅读宽度","调整 token 即可改变整体视觉，无需在组件中重复硬编码"
+P0,风格与静态基线,P0-T03,建立视觉 token,"集中定义字体、字号、间距、颜色、阅读宽度和响应式断点",P0-T02,done,"已创建 frontend/styles/tokens.css；基础页面仅通过 token 使用字体、颜色和阅读排版","调整 token 即可改变整体视觉，无需在组件中重复硬编码"
 P1,滚动区静态原型,P1-T01,创建全页滚动区,"实现占据视口宽度和高度的连续滚动主体",P0-T03,todo,"仅考虑浏览体验，不考虑 API、加载、保存或真实日记","页面可连续滚动，移动端与桌面端无横向溢出"
 P1,滚动区静态原型,P1-T02,渲染占位日记列表,"使用若干带边框和随机文本的静态矩形作为单篇日记占位",P1-T01,todo,"占位内容来自 mock 数据，不使用后端","多个元素形成视觉连续的日记列表"
 P1,滚动区静态原型,P1-T03,静态容器验证,"为 frontend 增加最小 Caddy 容器配置并用 Compose 验证静态页面",P1-T02,todo,"只启动 web/Caddy；不启动 API、认证、真实数据卷或服务器主 Caddy","通过本机映射端口访问页面；容器重启后静态页面仍可加载"

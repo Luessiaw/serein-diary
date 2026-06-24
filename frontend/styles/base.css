@@ -1,4 +1,4 @@
-/* P0-T02: structural baseline only. P0-T03 owns visual tokens and styling. */
+/* Structural baseline. Visual values come from tokens.css. */
 
 * {
   box-sizing: border-box;
@@ -8,4 +8,9 @@ html,
 body {
   min-height: 100%;
   margin: 0;
+  color: var(--color-ink);
+  background: var(--color-page);
+  font-family: var(--font-reading);
+  font-size: var(--font-size-reading);
+  line-height: var(--line-height-reading);
 }
