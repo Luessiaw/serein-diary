@@ -1,15 +1,24 @@
-# Diary v1.1 Architecture Plan
+# Serein v1.1 Architecture Plan
 
 ## Goal
 
-Diary is a standalone, self-hosted personal writing application. It provides a
+Serein is a standalone, self-hosted personal writing application. It provides a
 minimal continuous diary feed for desktop and mobile browsers: read entries as
 one long document, create an entry at the end, edit it in place, comment on an
 entry or selected quotation, and navigate older entries without tying the
 application to an existing portal.
 
 The current Portal implementation is only a migration source. Portal may later
-link to Diary, but it is never a runtime dependency.
+link to Serein, but it is never a runtime dependency.
+
+## Style Contract
+
+- **Minimal:** hide permanent controls that do not serve the current writing
+  action; the scrollable diary area is the primary surface.
+- **Fluid:** loading, saving, and transitions must be visible when needed but
+  never dominate the reading or writing flow.
+- **Modular:** entry data is independent from HTML/CSS, visual tokens are
+  centralized, and frontend modules communicate through narrow interfaces.
 
 ## Development Method and Frontend Stages
 

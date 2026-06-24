@@ -1,6 +1,6 @@
-# Diary Project Guide
+# Serein Project Guide
 
-`diary/` is an independent, self-hosted application repository. It is ignored
+`serein-diary/` is an independent, self-hosted application repository. It is ignored
 by the parent `srv` repository and must never depend on Portal source code,
 routes, configuration names, or deployment scripts.
 

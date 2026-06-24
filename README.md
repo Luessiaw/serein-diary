@@ -1,7 +1,15 @@
-# Diary
+# Serein
 
-Self-hosted personal diary application. This repository is independent from the
-parent server-operations repository.
+Serein is a self-hosted personal diary application. Its name evokes the quiet,
+clear air after rain. This repository is independent from the parent
+server-operations repository.
+
+## Visual Principles
+
+- **Minimal:** keep persistent UI out of the way so writing remains central.
+- **Fluid:** loading and saving should not interrupt thought or visual flow.
+- **Modular:** diary data, layout, frontend modules, and backend services stay
+  separable so the data remains portable and the interface remains adjustable.
 
 ## Boundaries
 

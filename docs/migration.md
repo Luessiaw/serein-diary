@@ -1,4 +1,4 @@
-# Migration from the Portal prototype
+# Migrating the Portal Diary Prototype to Serein
 
 The Portal Diary code is a source reference only. Do not copy Portal settings,
 deployment scripts, Caddy root directories, or `/api/diary` routes into this
