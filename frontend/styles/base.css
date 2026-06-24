@@ -43,6 +43,7 @@ body {
   cursor: pointer;
   inline-size: 100%;
   padding-block: var(--group-summary-padding-block);
+  text-align: end;
 }
 
 .diary-year > .diary-group-summary {
@@ -89,6 +90,7 @@ body {
   font-family: var(--font-date);
   font-size: var(--font-size-date);
   letter-spacing: var(--letter-spacing-date);
+  text-align: end;
 }
 
 .entry-title {
