@@ -1,4 +1,4 @@
-/* P2 renders saved samples for reading only; no persistence exists yet. */
+/* P2 仅以阅读态渲染已保存样本，暂不涉及持久化。 */
 (function () {
   "use strict";
 

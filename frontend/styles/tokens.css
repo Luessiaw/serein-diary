@@ -1,17 +1,53 @@
-/* Serein visual tokens. Components must consume these instead of hardcoding values. */
+/*
+ * Serein 视觉 token
+ *
+ * 这是调整应用整体视觉的唯一、易读入口。组件应使用这些语义变量，而不应
+ * 直接硬编码颜色、字体或间距。若要制作可分发的自定义主题，请先阅读
+ * docs/theme-customization.md。
+ */
 
 :root {
+  /*
+   * 字体
+   *
+   * 默认仅使用本地/系统字体栈：自托管可离线使用，也不会让阅读数据接触
+   * 第三方字体服务。`--font-title` 预留给未来有标题的界面；当前日记正文
+   * 使用 `--font-reading`，小型界面标签使用 `--font-ui`。
+   */
+  --font-title: Georgia, "Noto Serif SC", "Songti SC", SimSun, serif;
+  --font-reading: Georgia, "Noto Serif SC", "Songti SC", SimSun, serif;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  /*
+   * 字号与阅读节奏
+   *
+   * `clamp()` 会让正文在较宽屏幕上略微增大，同时确保手机上的字号舒适。
+   * 若目标是更安静、适合长文阅读的效果，应优先调整行高，再考虑增大字号。
+   */
+  --font-size-title: clamp(1.5rem, 1.2rem + 1vw, 2.25rem);
+  --font-size-reading: clamp(1rem, 0.96rem + 0.15vw, 1.125rem);
+  --font-size-date: 1.2rem;
+  --line-height-reading: 1.85;
+  --letter-spacing-date: 0.08em;
+
+  /*
+   * 色彩角色
+   *
+   * 按用途而不是按色相命名。未来的暗色或高对比度主题因此只需覆盖这一组，
+   * 无须修改组件 CSS。
+   */
   --color-page: #fcfcfa;
   --color-ink: #26322d;
   --color-muted: #65736a;
   --color-line: #dce5de;
   --color-accent: #277253;
 
-  --font-reading: Georgia, "Noto Serif SC", "Songti SC", SimSun, serif;
-  --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-size-reading: clamp(1rem, 0.96rem + 0.15vw, 1.125rem);
-  --line-height-reading: 1.85;
-
+  /*
+   * 间距刻度
+   *
+   * 这是全站共用的基础步进。优先选用已有刻度，而不是新增一次性的像素值，
+   * 这样调整后页面仍能保持一致的节奏。
+   */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 1rem;
@@ -19,12 +55,27 @@
   --space-5: 2.5rem;
   --space-6: 4rem;
 
+  /*
+   * 阅读布局
+   *
+   * `--reading-width` 控制单行长度；除非特意追求更密集或更疏朗的阅读感，
+   * 建议保持在当前值附近。`--page-gutter` 用于避免窄屏正文贴近边缘。
+   */
   --reading-width: 46rem;
   --page-gutter: clamp(1rem, 4vw, 3rem);
+  --feed-gap: var(--space-6);
+  --feed-padding-block: var(--space-6);
+  --paragraph-gap: var(--space-3);
   --radius-subtle: 0.5rem;
 
-  /* Reference values for future media queries; CSS custom properties cannot
-     currently be used directly in standard @media conditions. */
+  /*
+   * 窄屏布局
+   *
+   * 标准 CSS 暂不能直接在 @media 条件中使用自定义属性。修改断点时，须将
+   * base.css 中的字面量 42rem 与 `--breakpoint-compact` 同步修改。
+   */
   --breakpoint-compact: 42rem;
   --breakpoint-wide: 72rem;
+  --feed-gap-compact: var(--space-5);
+  --feed-padding-block-compact: var(--space-5);
 }

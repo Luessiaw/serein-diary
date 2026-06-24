@@ -1,10 +1,10 @@
 /*
- * Static P2 samples. `data` mirrors the portable entry files described in
- * docs/plan-v1.1.md: metadata.json, content.md, comments.json, and
- * media-manifest.json. `ui` is deliberately separate from that contract.
+ * P2 静态样本。`data` 对应 docs/plan-v1.1.md 定义的可迁移条目文件：
+ * metadata.json、content.md、comments.json 与 media-manifest.json；`ui`
+ * 则刻意与数据契约分离。
  *
- * The final item is an in-browser draft only. Its null ID and timestamps are
- * intentional: a real server creates those values before persisting an entry.
+ * 最后一项仅是浏览器内草稿。其 ID 和时间戳为 null 是有意设计：真实
+ * 服务会在持久化条目前生成这些字段。
  */
 window.SereinMockEntries = [
   {

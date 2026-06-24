@@ -1,4 +1,4 @@
-/* Structural baseline. Visual values come from tokens.css. */
+/* 结构基线；所有可调视觉值均来自 tokens.css。 */
 
 * {
   box-sizing: border-box;
@@ -30,8 +30,8 @@ body {
 
 .diary-feed {
   display: grid;
-  gap: var(--space-6);
-  padding: var(--space-6) var(--page-gutter);
+  gap: var(--feed-gap);
+  padding: var(--feed-padding-block) var(--page-gutter);
 }
 
 .diary-entry {
@@ -44,8 +44,8 @@ body {
   margin-block-end: var(--space-3);
   color: var(--color-muted);
   font-family: var(--font-ui);
-  font-size: 1.2rem;
-  letter-spacing: 0.08em;
+  font-size: var(--font-size-date);
+  letter-spacing: var(--letter-spacing-date);
 }
 
 .entry-content p {
@@ -53,12 +53,12 @@ body {
 }
 
 .entry-content p + p {
-  margin-block-start: var(--space-3);
+  margin-block-start: var(--paragraph-gap);
 }
 
 @media (max-width: 42rem) {
   .diary-feed {
-    gap: var(--space-5);
-    padding-block: var(--space-5);
+    gap: var(--feed-gap-compact);
+    padding-block: var(--feed-padding-block-compact);
   }
 }

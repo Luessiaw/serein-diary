@@ -1,9 +1,7 @@
-# Migrating the Portal Diary Prototype to Serein
+# 从 Portal Diary 原型迁移到 Serein
 
-The Portal Diary code is a source reference only. Do not copy Portal settings,
-deployment scripts, Caddy root directories, or `/api/diary` routes into this
-repository.
+Portal Diary 的代码仅供参考。不得将 Portal 配置、部署脚本、Caddy 根目录或
+`/api/diary` 路由复制到本仓库。
 
-When an importer is implemented, it must accept the existing entry directory
-format (`metadata.json`, `content.md`, `comments.json`, and media files), run a
-dry-run first, and preserve IDs and source files.
+迁移器实现后，必须接受现有的条目目录格式（`metadata.json`、`content.md`、
+`comments.json` 与媒体文件），先执行 dry-run，并保留原始 ID 和源文件。
