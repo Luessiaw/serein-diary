@@ -30,7 +30,15 @@
     date.textContent = formatDate(data.metadata.date);
     content.className = "entry-content";
     appendMarkdownParagraphs(content, data.content);
-    entry.append(date, content);
+
+    entry.append(date);
+    if (data.metadata.title) {
+      const title = document.createElement("h2");
+      title.className = "entry-title";
+      title.textContent = data.metadata.title;
+      entry.append(title);
+    }
+    entry.append(content);
     feed.append(entry);
   });
 

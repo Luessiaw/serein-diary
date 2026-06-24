@@ -41,11 +41,22 @@ body {
 
 .entry-date {
   display: block;
-  margin-block-end: var(--space-3);
   color: var(--color-muted);
   font-family: var(--font-ui);
   font-size: var(--font-size-date);
   letter-spacing: var(--letter-spacing-date);
+}
+
+.entry-title {
+  margin: var(--title-gap) 0 var(--space-3);
+  font-family: var(--font-title);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.entry-date + .entry-content {
+  margin-block-start: var(--space-3);
 }
 
 .entry-content p {

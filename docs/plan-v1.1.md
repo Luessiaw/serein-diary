@@ -96,10 +96,10 @@ entries/<year>/<date>-<uuid>/
 ### 元数据 v1
 
 `metadata.json` 含有 `schema_version`、UUID `id`、`date`、`timezone`、服务端
-`created_at`/`updated_at`、`revision`、可选标题、标签、心情、天气、地点、时间段、
-收藏状态和带类型的自定义字段。日期使用 `YYYY-MM-DD`；时间戳使用含偏移量的 RFC
-3339。拒绝未知顶层写入字段；自定义字段由根目录 `field-definitions.json` 管理，
-从而避免标签变更时重写历史条目。
+`created_at`/`updated_at`、`revision`，以及可选标题、地点和带类型的自定义字段。
+日期使用 `YYYY-MM-DD`；时间戳使用含偏移量的 RFC 3339。拒绝未知顶层写入字段；
+自定义字段由根目录 `field-definitions.json` 管理，从而避免字段标签变更时重写历史
+条目。
 
 ### 正文与媒体 v1
 

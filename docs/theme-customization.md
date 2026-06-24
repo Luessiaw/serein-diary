@@ -9,9 +9,9 @@ Serein 的视觉参数集中在
 
 每次只调整一个分组，并在桌面与窄屏手机浏览器中刷新页面检查效果：
 
-- **字体排版：** `--font-reading`、`--font-size-reading` 和
-  `--line-height-reading` 控制正文；`--font-ui` 与 `--font-size-date` 控制
-  安静的界面标签。
+- **字体排版：** `--font-title` 与 `--font-size-title` 控制可选标题；
+  `--font-reading`、`--font-size-reading` 和 `--line-height-reading` 控制正文；
+  `--font-ui` 与 `--font-size-date` 控制安静的界面标签。
 - **布局：** `--reading-width` 改变行长；`--page-gutter`、`--feed-gap` 与
   `--paragraph-gap` 调整留白。
 - **颜色：** 应一起修改具有语义的 `--color-*` 变量。只要已有对应 token，
