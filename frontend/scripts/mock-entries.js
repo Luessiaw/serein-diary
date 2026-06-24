@@ -8,7 +8,7 @@
  */
 window.SereinMockEntries = [
   {
-    ui: { mode: "reading", placeholderHeight: "14rem" },
+    ui: { mode: "reading" },
     data: {
       metadata: {
         schema_version: 1,
@@ -33,7 +33,7 @@ window.SereinMockEntries = [
     },
   },
   {
-    ui: { mode: "editing", placeholderHeight: "19rem" },
+    ui: { mode: "editing" },
     data: {
       metadata: {
         schema_version: 1,
@@ -69,7 +69,7 @@ window.SereinMockEntries = [
     },
   },
   {
-    ui: { mode: "new", placeholderHeight: "12rem" },
+    ui: { mode: "new" },
     data: {
       metadata: {
         schema_version: 1,
