@@ -13,7 +13,7 @@
   feed.setAttribute("aria-label", "Diary entries");
 
   const readingSamples = window.SereinMockEntries
-    .filter((sample) => sample.ui.mode !== "new")
+    .filter((sample) => sample.ui.mode === "reading")
     .slice()
     .sort((left, right) => (
       left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
@@ -57,6 +57,7 @@
     const content = document.createElement("div");
     const { data, ui } = sample;
     const { metadata } = data;
+    const calendarDate = getCalendarDate(metadata.created_at);
 
     entry.className = "diary-entry";
     entry.dataset.entryId = metadata.id;
@@ -64,9 +65,9 @@
     date.className = "entry-date";
     date.dateTime = metadata.created_at;
     date.textContent = formatEntryDate(
-      metadata.date,
+      calendarDate,
       metadata.created_at,
-      entriesByDate.get(metadata.date),
+      entriesByDate.get(calendarDate),
     );
     content.className = "entry-content";
     appendMarkdownParagraphs(content, data.content);
@@ -87,7 +88,9 @@
     const years = new Map();
 
     entries.forEach((sample) => {
-      const [year, month] = sample.data.metadata.date.split("-");
+      const [year, month] = getCalendarDate(
+        sample.data.metadata.created_at,
+      ).split("-");
       let yearGroup = years.get(year);
 
       if (!yearGroup) {
@@ -111,8 +114,8 @@
 
   function countEntriesPerDate(entries) {
     return entries.reduce((counts, sample) => {
-      const { date } = sample.data.metadata;
-      counts.set(date, (counts.get(date) || 0) + 1);
+      const calendarDate = getCalendarDate(sample.data.metadata.created_at);
+      counts.set(calendarDate, (counts.get(calendarDate) || 0) + 1);
       return counts;
     }, new Map());
   }
@@ -122,6 +125,10 @@
     const time = createdAt.slice(11, 16);
 
     return entriesOnDate > 1 ? `${day}日 ${time}` : `${day}日`;
+  }
+
+  function getCalendarDate(createdAt) {
+    return createdAt.slice(0, 10);
   }
 
   function appendMarkdownParagraphs(container, markdown) {
