@@ -58,9 +58,10 @@
     const title = document.createElement("input");
     const content = document.createElement("textarea");
     const message = document.createElement("p");
+    const header = document.createElement("div");
     const actions = document.createElement("div");
     const cancel = document.createElement("button");
-    const saveDraft = document.createElement("button");
+    const draftStatus = document.createElement("span");
     const save = document.createElement("button");
 
     form.className = "new-entry-form";
@@ -75,16 +76,22 @@
     content.setAttribute("aria-label", "Diary content");
     message.className = "new-entry-message";
     message.setAttribute("role", "status");
+    header.className = "new-entry-header";
     actions.className = "new-entry-actions";
     cancel.className = "new-entry-cancel";
     cancel.type = "button";
-    cancel.textContent = "取消";
-    saveDraft.className = "new-entry-save-draft";
-    saveDraft.type = "button";
-    saveDraft.textContent = "保存草稿";
+    cancel.textContent = "×";
+    cancel.title = "取消保存";
+    cancel.setAttribute("aria-label", "取消保存");
+    draftStatus.className = "new-entry-draft-status";
+    draftStatus.title = "草稿状态（暂未启用）";
+    draftStatus.setAttribute("role", "img");
+    draftStatus.setAttribute("aria-label", "草稿状态（暂未启用）");
     save.className = "new-entry-save";
     save.type = "submit";
-    save.textContent = "保存";
+    save.textContent = "✓";
+    save.title = "保存日记";
+    save.setAttribute("aria-label", "保存日记");
 
     content.addEventListener("input", () => {
       resizeContentInput(content);
@@ -94,9 +101,6 @@
       form.reset();
       message.textContent = "已清空未保存内容。";
       title.focus();
-    });
-    saveDraft.addEventListener("click", () => {
-      message.textContent = "保存草稿将在后端阶段提供；当前内容仍只保留在本页。";
     });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -112,8 +116,9 @@
       renderFeed();
     });
 
-    actions.append(cancel, saveDraft, save);
-    form.append(actions, title, content, message);
+    actions.append(draftStatus, cancel, save);
+    header.append(title, actions);
+    form.append(header, content, message);
     area.append(date, form);
     requestAnimationFrame(() => {
       resizeContentInput(content);

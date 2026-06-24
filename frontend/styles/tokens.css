@@ -46,6 +46,7 @@
   --color-muted: #65736a;
   --color-line: #dce5de;
   --color-accent: #277253;
+  --color-danger: #a54844;
   --color-year: var(--color-ink);
   --color-month: var(--color-muted);
   --color-date: var(--color-muted);
