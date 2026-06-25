@@ -70,8 +70,8 @@
    * `--reading-width` 控制单行长度；除非特意追求更密集或更疏朗的阅读感，
    * 建议保持在当前值附近。`--page-gutter` 用于避免窄屏正文贴近边缘。
    */
-  --reading-width: 50rem;
-  --entry-side-width: clamp(2.5rem, 10vw, 6rem);
+  --reading-width: 46rem;
+  --entry-side-width: clamp(4.5rem, 10vw, 8rem);
   --entry-side-gap: clamp(1rem, 3vw, 2.5rem);
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
