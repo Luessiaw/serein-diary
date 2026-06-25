@@ -56,6 +56,8 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
   不是靠 padding 临时偏移。
 - 新建日记也放在当前年/月分组里；它没有持久化 `created_at`，但前端用打开页面时的临时时间归组。
 - 窄屏下 `.diary-year`、`.diary-month`、`.diary-entry`、`.new-entry` 会退回普通块布局。
+- 窄屏下年、月、日信息按行显示并靠右对齐；年/月按钮会占满行宽，并把“箭头 + label”小组推到右侧。
+  桌面端为了列式排版，年/月控件内部默认左对齐。
 
 抽象成盒子关系如下：
 
@@ -119,6 +121,9 @@ Box-year
 - `--year-control-width` / `--month-control-width` 控制整个年/月控件列宽。
 - `--group-summary-chevron-gap` 控制箭头与年/月数字之间的距离。
 - `--year-month-inline-gap` / `--month-date-inline-gap` 控制控件列与下一层列之间的距离。
+
+这条左对齐规则只用于桌面列式布局；窄屏下年/月按钮和日期会在 media query 中
+恢复右对齐。
 
 实现上不再使用 `padding-inline` 给日记条目补偿年/月空间。年、月、日和正文
 分别处在嵌套 grid 的真实列中，因此优先改这些 token，而不是直接给
