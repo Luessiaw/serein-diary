@@ -13,11 +13,11 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
   <section class="diary-feed">
     <div class="load-control">...</div>
 
-    <details class="diary-year" open>
-      <summary class="diary-group-summary">2026</summary>
+    <section class="diary-year" data-open="true">
+      <button class="diary-group-summary" aria-expanded="true">2026</button>
       <div class="diary-group-content">
-        <details class="diary-month" open>
-          <summary class="diary-group-summary">06</summary>
+        <section class="diary-month" data-open="true">
+          <button class="diary-group-summary" aria-expanded="true">06</button>
           <div class="diary-group-content">
             <article class="diary-entry">
               <time class="entry-date">
@@ -39,16 +39,18 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
               </div>
             </section>
           </div>
-        </details>
+        </section>
       </div>
-    </details>
+    </section>
   </section>
 </main>
 ```
 
 几点需要记住：
 
-- 年份、月份使用原生 `<details>` / `<summary>`，所以折叠功能来自浏览器。
+- 年份、月份使用普通 `<section>`、`<button>` 和内容 `<div>` 组成；折叠状态由
+  `data-open`、`aria-expanded` 和 `hidden` 控制。这样布局由普通 grid 元素承担，
+  避免 `<details>` / `<summary>` 的特殊渲染模型影响列定位。
 - 当前布局是三层嵌套网格：年份盒子包住月份盒子，月份盒子包住日记条目盒子，
   日记条目盒子再包住日期和正文。年、月、日因此处在同一条真实布局链上，而
   不是靠 padding 临时偏移。
@@ -202,11 +204,47 @@ Box-year
 - 紫色：正文列。
 - 橙色：右侧隐形占位列。
 
+## 浏览器 Console 布局检查
+
+除了肉眼查看边框，还可以在浏览器 F12 Console 中运行：
+
+```js
+SereinDebugLayout.inspect()
+```
+
+它会输出三张表：
+
+- `boxes`：页面、主体、年、月、条目、日期、正文以及预测占位列的实际
+  `left` / `right` / `width` / `center`。
+- `columns`：当前日记条目 grid 四列的实际像素宽度，即日期列、日期正文间距、
+  正文列、右侧占位列。
+- `centers`：正文中心相对页面中心和年份主体中心的偏移。
+
+如果要检查第 N 个条目，可以传入索引：
+
+```js
+SereinDebugLayout.inspect({ entryIndex: 2 })
+```
+
+如果要把结果复制给 AI 或保存，可以运行：
+
+```js
+copy(JSON.stringify(SereinDebugLayout.inspect(), null, 2))
+```
+
+排查横向居中问题时，优先看：
+
+- `centers.bodyMinusViewportCenter`：正文中心相对页面中心的偏移。
+- `centers.bodyMinusYearCenter`：正文中心相对年份主体中心的偏移。
+- `columns.rightPlaceholder` 是否等于左侧时间轴总宽。
+- `boxes.entry.width` 是否等于 `columns.entryColumnSum`。
+
 ## 年/月折叠箭头
 
 年份和月份前面的折叠箭头不是字体字符，而是使用静态图片
 `frontend/assets/pull-arrow.png`。图片默认为展开状态的下拉箭头；折叠状态通过
-旋转同一张图片实现。
+旋转同一张图片实现。折叠状态由 `.diary-year[data-open="false"]` 和
+`.diary-month[data-open="false"]` 触发。
 
 需要微调图标时，优先修改 `base.css` 中 `.diary-group-summary` 的这一组局部变量：
 

@@ -194,14 +194,18 @@ body {
   display: grid;
   grid-template-columns: var(--chevron-box-size) 1fr;
   align-items: start;
+  border: 0;
   justify-content: start;
   justify-items: start;
   column-gap: var(--group-summary-chevron-gap);
+  color: inherit;
   cursor: pointer;
+  font: inherit;
   inline-size: 100%;
   line-height: 1;
   padding-block: var(--group-summary-padding-block);
   text-align: start;
+  background: transparent;
 }
 
 .diary-group-summary::marker,
@@ -226,9 +230,14 @@ body {
   transform-origin: 50% 50%;
 }
 
-.diary-year:not([open]) > .diary-group-summary,
-.diary-month:not([open]) > .diary-group-summary {
+.diary-year[data-open="false"] > .diary-group-summary,
+.diary-month[data-open="false"] > .diary-group-summary {
   --chevron-state-rotation: -90deg;
+}
+
+.diary-year[data-open="false"] > .diary-group-content,
+.diary-month[data-open="false"] > .diary-group-content {
+  display: none;
 }
 
 .diary-year > .diary-group-summary {

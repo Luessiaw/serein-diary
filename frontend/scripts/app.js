@@ -23,6 +23,7 @@
   initializeLoadedWindow();
   renderFeed({ focusNewEntry: true, scrollToEnd: true });
   app.addEventListener("scroll", handleScroll, { passive: true });
+  registerLayoutDebugTools();
 
   function renderFeed(options = {}) {
     const { focusNewEntry = false, scrollToEnd = false } = options;
@@ -443,18 +444,31 @@
   }
 
   function createGroup(className, label) {
-    const details = document.createElement("details");
-    const summary = document.createElement("summary");
+    const group = document.createElement("section");
+    const summary = document.createElement("button");
     const content = document.createElement("div");
+    const contentId = `group-${className}-${label}-${createMockUuid()}`;
 
-    details.className = className;
-    details.open = true;
+    group.className = className;
+    group.dataset.open = "true";
     summary.className = "diary-group-summary";
+    summary.type = "button";
     summary.textContent = label;
+    summary.setAttribute("aria-expanded", "true");
+    summary.setAttribute("aria-controls", contentId);
     content.className = "diary-group-content";
-    details.append(summary, content);
+    content.id = contentId;
+    summary.addEventListener("click", () => {
+      const isOpen = group.dataset.open !== "false";
+      const nextOpen = !isOpen;
 
-    return { details, content };
+      group.dataset.open = String(nextOpen);
+      summary.setAttribute("aria-expanded", String(nextOpen));
+      content.hidden = !nextOpen;
+    });
+    group.append(summary, content);
+
+    return { details: group, content };
   }
 
   function createEntry(sample, entriesByDate) {
@@ -564,5 +578,150 @@
       });
       container.append(element);
     });
+  }
+
+  function registerLayoutDebugTools() {
+    window.SereinDebugLayout = {
+      inspect: inspectLayout,
+    };
+  }
+
+  function inspectLayout(options = {}) {
+    const entryIndex = Number(options.entryIndex || 0);
+    const feed = document.querySelector(".diary-feed");
+    const year = document.querySelector(".diary-year");
+    const yearSummary = document.querySelector(".diary-year > .diary-group-summary");
+    const yearContent = document.querySelector(".diary-year > .diary-group-content");
+    const month = document.querySelector(".diary-month");
+    const monthSummary = document.querySelector(".diary-month > .diary-group-summary");
+    const monthContent = document.querySelector(".diary-month > .diary-group-content");
+    const entries = [...document.querySelectorAll(".diary-entry, .new-entry")];
+    const entry = entries[entryIndex];
+    const date = entry?.querySelector(".entry-date");
+    const body = entry?.querySelector(".entry-body");
+
+    if (!feed || !year || !month || !entry || !date || !body) {
+      console.warn("[Serein layout] Missing layout nodes.", {
+        feed,
+        year,
+        month,
+        entry,
+        date,
+        body,
+      });
+      return null;
+    }
+
+    const entryColumns = parseGridColumns(getComputedStyle(entry).gridTemplateColumns);
+    const entryRect = getRect(entry);
+    const predicted = predictEntryColumns(entryRect.left, entryColumns);
+    const viewportCenter = window.innerWidth / 2;
+    const yearRect = getRect(year);
+    const bodyRect = getRect(body);
+    const bodyCenter = bodyRect.left + bodyRect.width / 2;
+    const yearCenter = yearRect.left + yearRect.width / 2;
+
+    const boxes = [
+      ["viewport", { left: 0, right: window.innerWidth, width: window.innerWidth }],
+      ["feed", getRect(feed)],
+      ["year", yearRect],
+      ["year summary", getRect(yearSummary)],
+      ["year content", getRect(yearContent)],
+      ["month", getRect(month)],
+      ["month summary", getRect(monthSummary)],
+      ["month content", getRect(monthContent)],
+      ["entry", entryRect],
+      ["date", getRect(date)],
+      ["body", bodyRect],
+      ["predicted date", predicted.date],
+      ["predicted date gap", predicted.dateGap],
+      ["predicted body", predicted.body],
+      ["predicted right placeholder", predicted.rightPlaceholder],
+    ].map(([name, rect]) => ({
+      name,
+      left: round(rect.left),
+      right: round(rect.right),
+      width: round(rect.width),
+      center: round(rect.left + rect.width / 2),
+    }));
+
+    const columns = {
+      date: round(entryColumns[0] || 0),
+      dateContentGap: round(entryColumns[1] || 0),
+      body: round(entryColumns[2] || 0),
+      rightPlaceholder: round(entryColumns[3] || 0),
+      entryColumnSum: round(entryColumns.reduce((sum, value) => sum + value, 0)),
+      entryActualWidth: round(entryRect.width),
+    };
+
+    const centers = {
+      viewportCenter: round(viewportCenter),
+      yearCenter: round(yearCenter),
+      bodyCenter: round(bodyCenter),
+      bodyMinusViewportCenter: round(bodyCenter - viewportCenter),
+      bodyMinusYearCenter: round(bodyCenter - yearCenter),
+    };
+
+    const result = {
+      entryIndex,
+      boxes,
+      columns,
+      centers,
+    };
+
+    console.group("[Serein layout]");
+    console.table(boxes);
+    console.table([columns]);
+    console.table([centers]);
+    console.groupEnd();
+
+    return result;
+  }
+
+  function getRect(element) {
+    if (!element) {
+      return { left: 0, right: 0, width: 0 };
+    }
+
+    const rect = element.getBoundingClientRect();
+    return {
+      left: rect.left,
+      right: rect.right,
+      width: rect.width,
+    };
+  }
+
+  function parseGridColumns(value) {
+    return value
+      .split(/\s+/u)
+      .map((part) => Number.parseFloat(part))
+      .filter((value) => Number.isFinite(value));
+  }
+
+  function predictEntryColumns(left, columns) {
+    const [date = 0, dateGap = 0, body = 0, rightPlaceholder = 0] = columns;
+    const dateLeft = left;
+    const dateRight = dateLeft + date;
+    const gapLeft = dateRight;
+    const gapRight = gapLeft + dateGap;
+    const bodyLeft = gapRight;
+    const bodyRight = bodyLeft + body;
+    const placeholderLeft = bodyRight;
+    const placeholderRight = placeholderLeft + rightPlaceholder;
+
+    return {
+      date: { left: dateLeft, right: dateRight, width: date },
+      dateGap: { left: gapLeft, right: gapRight, width: dateGap },
+      body: { left: bodyLeft, right: bodyRight, width: body },
+      rightPlaceholder: {
+        left: placeholderLeft,
+        right: placeholderRight,
+        width: rightPlaceholder,
+      },
+    };
+  }
+
+  function round(value) {
+    return Math.round(value * 100) / 100;
   }
 }());
