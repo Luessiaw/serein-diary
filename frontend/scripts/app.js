@@ -304,16 +304,29 @@
         throw new Error("模拟网络异常");
       }
 
+      /*
+       * Re-read the anchor after the loading control has been rendered.
+       * Otherwise the final render would restore the pre-loading position and
+       * visibly jump by the height of the temporary loading bar.
+       */
+      const anchorBeforeFinalRender = getScrollAnchor() || anchor;
+
       loadState.visibleStartIndex = Math.max(
         0,
         loadState.visibleStartIndex - settings.pageSize,
       );
       loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
-      renderFeedRestoringAnchor(anchor);
+      renderFeedRestoringAnchor(anchorBeforeFinalRender);
     } catch (error) {
+      /*
+       * The error control can also differ in height from the loading control,
+       * so restore from the currently visible anchor here as well.
+       */
+      const anchorBeforeErrorRender = getScrollAnchor() || anchor;
+
       loadState.status = "error";
       loadState.errorMessage = error instanceof Error ? error.message : "未知错误";
-      renderFeedRestoringAnchor(anchor);
+      renderFeedRestoringAnchor(anchorBeforeErrorRender);
     }
   }
 
