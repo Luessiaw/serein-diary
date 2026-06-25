@@ -19,7 +19,7 @@ Serein 的视觉参数集中在
 - **日历分组：** `--font-year`、`--font-size-year`、`--font-month` 与
   `--font-size-month` 控制可折叠的年份、月份节点；`--color-year`、
   `--color-month` 和 `--color-date` 控制其层级色彩；`--year-gap`、
-  `--month-gap` 和 `--month-entry-gap` 调整它们与正文的距离。
+  `--year-month-gap` 和 `--month-date-gap` 调整它们与正文的距离。
 - **颜色：** 应一起修改具有语义的 `--color-*` 变量。只要已有对应 token，
   组件就不应直接使用原始颜色值。
 

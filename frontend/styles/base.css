@@ -136,6 +136,7 @@ body {
   font-family: var(--font-year);
   font-size: var(--font-size-year);
   font-weight: 600;
+  padding-block-start: var(--year-control-padding-block-start);
 }
 
 .diary-group-content {
@@ -145,7 +146,7 @@ body {
 }
 
 .diary-year > .diary-group-content {
-  gap: var(--month-gap);
+  gap: var(--year-month-gap);
   margin-block-start: 0;
 }
 
@@ -155,12 +156,13 @@ body {
   font-family: var(--font-month);
   font-size: var(--font-size-month);
   font-weight: 600;
+  padding-block-start: var(--month-control-padding-block-start);
 }
 
 .diary-month > .diary-group-content {
   grid-column: 1 / -1;
   grid-row: 1;
-  gap: var(--month-entry-gap);
+  gap: var(--month-date-gap);
   margin-block-start: 0;
 }
 
@@ -191,6 +193,7 @@ body {
   font-size: var(--font-size-date);
   letter-spacing: var(--letter-spacing-date);
   line-height: 1;
+  padding-block-start: var(--date-control-padding-block-start);
   text-align: end;
 }
 

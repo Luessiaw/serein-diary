@@ -84,23 +84,31 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 ```css
 --feed-padding-block: var(--space-6);
 --year-gap: var(--feed-gap);
---month-gap: var(--space-3);
---month-entry-gap: var(--space-3);
+--year-month-gap: var(--space-3);
+--month-date-gap: var(--space-3);
 --group-summary-padding-block: var(--space-1);
+--year-control-padding-block-start: 0;
+--month-control-padding-block-start: 0;
+--date-control-padding-block-start: 0;
 --title-gap: var(--space-1);
 --paragraph-gap: var(--space-2);
 ```
 
 - `--feed-padding-block`：整个日记流顶部和底部留白。
 - `--year-gap`：年份组之间的距离。
-- `--month-gap`：同一年内月份组之间的距离。
-- `--month-entry-gap`：同一月份内日记条目之间的距离。
+- `--year-month-gap`：同一年内月份组之间的距离，也影响多个月份之间的垂直间隔。
+- `--month-date-gap`：同一月份内日记条目之间的距离，也影响多个日期之间的垂直间隔。
 - `--group-summary-padding-block`：年/月控件自身的上下 padding。它会影响年/月与日期的视觉对齐。
+- `--year-control-padding-block-start`：年份数字距离本行顶部的微调值。
+- `--month-control-padding-block-start`：月份数字距离本行顶部的微调值。
+- `--date-control-padding-block-start`：日期数字距离本行顶部的微调值。
 - `--title-gap`：标题与日期/正文之间的距离。
 - `--paragraph-gap`：正文段落之间的距离。
 
 如果目标是“年、月、日顶部严格对齐”，优先让 `--group-summary-padding-block`
-接近 `0`，并确认年、月、日字号和 line-height 接近。
+接近 `0`，再用 `--year-control-padding-block-start`、
+`--month-control-padding-block-start` 和 `--date-control-padding-block-start`
+做细微补偿，并确认年、月、日字号和 line-height 接近。
 
 ## 字号与行高
 
