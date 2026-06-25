@@ -36,19 +36,24 @@ body {
 
 .diary-year {
   display: grid;
-  grid-template-columns: var(--entry-side-width) minmax(0, var(--reading-width)) var(--entry-side-width);
-  column-gap: var(--entry-side-gap);
+  grid-template-columns: var(--year-control-width) minmax(0, var(--reading-width)) var(--year-control-width);
+  column-gap: var(--control-content-gap);
   inline-size: min(
     100%,
-    calc(var(--reading-width) + 2 * (var(--entry-side-width) + var(--entry-side-gap)))
+    calc(var(--reading-width) + 2 * (var(--year-control-width) + var(--control-content-gap)))
   );
   justify-self: center;
 }
 
 .diary-month {
   display: grid;
-  grid-template-columns: var(--entry-side-width) minmax(0, var(--reading-width)) var(--entry-side-width);
-  column-gap: var(--entry-side-gap);
+  grid-template-columns: var(--month-control-width) minmax(0, var(--reading-width)) var(--month-control-width);
+  column-gap: var(--control-content-gap);
+  inline-size: min(
+    100%,
+    calc(var(--reading-width) + 2 * (var(--month-control-width) + var(--control-content-gap)))
+  );
+  justify-self: center;
 }
 
 .load-control {
@@ -140,9 +145,14 @@ body {
 
 .diary-entry {
   display: grid;
-  grid-template-columns: var(--entry-side-width) minmax(0, var(--reading-width)) var(--entry-side-width);
-  column-gap: var(--entry-side-gap);
+  grid-template-columns: var(--date-control-width) minmax(0, var(--reading-width)) var(--date-control-width);
+  column-gap: var(--control-content-gap);
   align-items: start;
+  inline-size: min(
+    100%,
+    calc(var(--reading-width) + 2 * (var(--date-control-width) + var(--control-content-gap)))
+  );
+  justify-self: center;
   min-inline-size: 0;
 }
 
@@ -178,11 +188,11 @@ body {
 
 .new-entry {
   display: grid;
-  grid-template-columns: var(--entry-side-width) minmax(0, var(--reading-width)) var(--entry-side-width);
-  column-gap: var(--entry-side-gap);
+  grid-template-columns: var(--date-control-width) minmax(0, var(--reading-width)) var(--date-control-width);
+  column-gap: var(--control-content-gap);
   inline-size: min(
     100%,
-    calc(var(--reading-width) + 2 * (var(--entry-side-width) + var(--entry-side-gap)))
+    calc(var(--reading-width) + 2 * (var(--date-control-width) + var(--control-content-gap)))
   );
   align-items: start;
   justify-self: center;

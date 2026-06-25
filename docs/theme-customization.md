@@ -12,7 +12,9 @@ Serein 的视觉参数集中在
 - **字体排版：** `--font-title` 与 `--font-size-title` 控制可选标题；
   `--font-reading`、`--font-size-reading` 和 `--line-height-reading` 控制正文；
   `--font-date` 与 `--font-size-date` 控制日期标签。
-- **布局：** `--reading-width` 改变行长；`--page-gutter`、`--feed-gap` 与
+- **布局：** `--reading-width` 只改变正文行长；`--year-control-width`、
+  `--month-control-width` 和 `--date-control-width` 分别调整年、月、日左侧控件
+  宽度；`--control-content-gap`、`--page-gutter`、`--feed-gap` 与
   `--paragraph-gap` 调整留白。
 - **日历分组：** `--font-year`、`--font-size-year`、`--font-month` 与
   `--font-size-month` 控制可折叠的年份、月份节点；`--color-year`、
@@ -37,6 +39,8 @@ Serein 的视觉参数集中在
   --color-muted: #75695d;
   --font-reading: "Noto Serif SC", Georgia, serif;
   --reading-width: 44rem;
+  --date-control-width: 4rem;
+  --control-content-gap: 1rem;
 }
 ```
 

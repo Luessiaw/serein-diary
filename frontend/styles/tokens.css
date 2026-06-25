@@ -67,12 +67,15 @@
   /*
    * 阅读布局
    *
-   * `--reading-width` 控制单行长度；除非特意追求更密集或更疏朗的阅读感，
-   * 建议保持在当前值附近。`--page-gutter` 用于避免窄屏正文贴近边缘。
+   * `--reading-width` 只控制正文列宽度，不包含左侧年/月/日控件，也不包含
+   * 右侧对称占位。年、月、日控件宽度分别由下面三个 token 控制；如果希望
+   * 正文始终居中，右侧会自动使用同等宽度作为不可见占位。
    */
   --reading-width: 46rem;
-  --entry-side-width: clamp(4.5rem, 10vw, 8rem);
-  --entry-side-gap: clamp(1rem, 3vw, 2.5rem);
+  --year-control-width: 8rem;
+  --month-control-width: 4rem;
+  --date-control-width: 3.5rem;
+  --control-content-gap: clamp(0.75rem, 2vw, 1.5rem);
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);
