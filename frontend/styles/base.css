@@ -100,9 +100,11 @@ body {
 
 .diary-group-summary {
   grid-column: 1;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
   justify-content: end;
+  justify-items: end;
   gap: var(--space-2);
   cursor: pointer;
   inline-size: 100%;
@@ -116,19 +118,15 @@ body {
 }
 
 .diary-group-summary::before {
-  content: "";
-  inline-size: 0.42em;
-  block-size: 0.42em;
-  border-inline-end: 1px solid currentColor;
-  border-block-end: 1px solid currentColor;
+  content: "⌄";
+  align-self: start;
+  line-height: 1;
   opacity: 0.55;
-  transform: rotate(45deg);
-  transition: transform 160ms ease;
 }
 
 .diary-year:not([open]) > .diary-group-summary::before,
 .diary-month:not([open]) > .diary-group-summary::before {
-  transform: rotate(-45deg);
+  content: "›";
 }
 
 .diary-year > .diary-group-summary {
