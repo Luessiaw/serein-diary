@@ -20,6 +20,20 @@ docker compose up -d web
 Nginx、Caddy、Apache、开发服务器或静态托管服务发布。当前静态阶段不要求特殊
 的服务器重写或代理规则。
 
+### 本机 Portal 集成
+
+在 luessiaw-server 上，Serein 现阶段作为静态前端挂载到 Portal 的 `/diary/`
+路径。父级运维仓库的脚本会在检测到
+`/home/luessiaw/storage/srv/serein-diary/frontend` 时，将其同步到
+`/var/www/luessiaw-portal/diary/`：
+
+```bash
+sudo /home/luessiaw/storage/srv/scripts/portal/deploy_portal.sh
+```
+
+这是本机运维集成，不是 Serein 对 Portal 的运行时依赖。公开发布给其他用户时，
+他们仍可选择任意静态服务器、Docker Compose 或自己的反向代理路径。
+
 ## 后续应用部署
 
 P3 会为 Compose 示例增加独立 API 服务及可选的 `/api/v1/*` 反向代理规则。这
