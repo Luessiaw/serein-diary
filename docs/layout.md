@@ -161,23 +161,21 @@ Box-year
 ## 布局调试边框
 
 `tokens.css` 中保留了一个默认关闭的布局调试开关。需要检查年、月、日、正文
-和右侧占位列的真实边界时，可以临时改成：
+和右侧占位列的真实边界时，只需要修改一个参数：
 
 ```css
---debug-layout-outline-width: 2px;
---debug-layout-opacity: 0.7;
---debug-layout-placeholder-content: "";
---debug-layout-placeholder-min-height: 1.5rem;
+--debug-layout-enabled: 1;
 ```
 
 关闭时恢复为：
 
 ```css
---debug-layout-outline-width: 0;
---debug-layout-opacity: 0;
---debug-layout-placeholder-content: none;
---debug-layout-placeholder-min-height: 0;
+--debug-layout-enabled: 0;
 ```
+
+边框宽度、透明度和右侧占位列的调试高度也在 `tokens.css` 中，但通常不需要改。
+因为 CSS 不能直接在 `calc()` 中使用 `true` / `false`，所以这里使用 `0` / `1`
+作为开关值。
 
 颜色约定：
 

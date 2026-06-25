@@ -109,20 +109,20 @@
   /*
    * 布局调试
    *
-   * 默认关闭。需要检查年/月/日/正文/右侧占位的真实网格边界时，把
-   * `--debug-layout-outline-width` 改为 `2px`，并把
-   * `--debug-layout-opacity` 改为 `0.7` 左右。若还想看右侧隐形占位列，
-   * 同时把 `--debug-layout-placeholder-content` 改为 `""`，
-   * `--debug-layout-placeholder-min-height` 改为 `1.5rem`。
+   * 只需要改第一项：`0` 表示关闭，`1` 表示开启。CSS 不能直接在 `calc()`
+   * 中使用 true/false，因此这里使用数值开关。下面三项是开启后的具体样式，
+   * 通常不需要改。
    */
-  --debug-layout-outline-width: 0;
-  --debug-layout-opacity: 0;
-  --debug-layout-placeholder-content: none;
-  --debug-layout-placeholder-min-height: 0;
-  /* --debug-layout-outline-width: 2px;
-  --debug-layout-opacity: 0.7;
-  --debug-layout-placeholder-content: "";
-  --debug-layout-placeholder-min-height: 1.5rem; */
+  --debug-layout-enabled: 0;
+  --debug-layout-outline-width-when-enabled: 2px;
+  --debug-layout-opacity-when-enabled: 0.7;
+  --debug-layout-placeholder-min-height-when-enabled: 1.5rem;
+  --debug-layout-outline-width: calc(var(--debug-layout-enabled) * var(--debug-layout-outline-width-when-enabled));
+  --debug-layout-opacity: calc(var(--debug-layout-enabled) * var(--debug-layout-opacity-when-enabled));
+  --debug-layout-placeholder-min-height: calc(
+    var(--debug-layout-enabled)
+    * var(--debug-layout-placeholder-min-height-when-enabled)
+  );
 
   /*
    * 滚动加载与新建区

@@ -127,7 +127,7 @@ body {
 
 .diary-entry::after,
 .new-entry::after {
-  content: var(--debug-layout-placeholder-content);
+  content: "";
   grid-column: 4;
   min-block-size: var(--debug-layout-placeholder-min-height);
   outline: var(--debug-layout-outline-width) solid rgb(255 150 0 / var(--debug-layout-opacity));
