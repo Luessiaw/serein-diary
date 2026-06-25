@@ -35,11 +35,20 @@ body {
 }
 
 .diary-year {
+  display: grid;
+  grid-template-columns: var(--entry-side-width) minmax(0, var(--reading-width)) var(--entry-side-width);
+  column-gap: var(--entry-side-gap);
   inline-size: min(
     100%,
     calc(var(--reading-width) + 2 * (var(--entry-side-width) + var(--entry-side-gap)))
   );
   justify-self: center;
+}
+
+.diary-month {
+  display: grid;
+  grid-template-columns: var(--entry-side-width) minmax(0, var(--reading-width)) var(--entry-side-width);
+  column-gap: var(--entry-side-gap);
 }
 
 .load-control {
@@ -85,6 +94,7 @@ body {
 }
 
 .diary-group-summary {
+  grid-column: 1;
   cursor: pointer;
   inline-size: 100%;
   padding-block: var(--group-summary-padding-block);
@@ -100,6 +110,7 @@ body {
 
 .diary-group-content {
   display: grid;
+  grid-column: 1 / -1;
 }
 
 .diary-year > .diary-group-content {
@@ -108,6 +119,7 @@ body {
 }
 
 .diary-month > .diary-group-summary {
+  grid-column: 1;
   color: var(--color-month);
   font-family: var(--font-month);
   font-size: var(--font-size-month);
@@ -115,6 +127,7 @@ body {
 }
 
 .diary-month > .diary-group-content {
+  grid-column: 1 / -1;
   gap: var(--month-entry-gap);
   margin-block-start: var(--space-3);
 }
@@ -298,11 +311,14 @@ body {
   }
 
   .diary-year,
+  .diary-month,
   .new-entry {
     inline-size: min(100%, var(--reading-width));
   }
 
   .diary-entry,
+  .diary-year,
+  .diary-month,
   .new-entry {
     display: block;
   }
