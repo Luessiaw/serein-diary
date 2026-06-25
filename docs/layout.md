@@ -62,7 +62,9 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 --year-control-width: 8rem;
 --month-control-width: 4rem;
 --date-control-width: 3.5rem;
---control-content-gap: clamp(0.75rem, 2vw, 1.5rem);
+--year-month-inline-gap: var(--space-2);
+--month-date-inline-gap: var(--space-2);
+--date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
 --page-gutter: clamp(1rem, 4vw, 3rem);
 ```
 
@@ -70,12 +72,15 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 - `--year-control-width`：年份左侧控件列宽度。
 - `--month-control-width`：月份左侧控件列宽度。
 - `--date-control-width`：日期/“现在”左侧控件列宽度。
-- `--control-content-gap`：左侧控件列与正文列之间的距离。
+- `--year-month-inline-gap`：年份列与月份列之间的横向距离。
+- `--month-date-inline-gap`：月份列与日期列之间的横向距离。
+- `--date-content-gap`：日期列与正文列之间的横向距离。
 - `--page-gutter`：整个滚动区左右边距，主要防止窄屏贴边。
 
-如果要让正文更宽，只改 `--reading-width`。如果要让年/月/日更靠近正文，改
-`--control-content-gap`。如果某一类控件的数字太挤或太松，分别改对应的
-`--*-control-width`。
+如果要让正文更宽，只改 `--reading-width`。如果要让年、月、日彼此靠近或远离，
+分别改 `--year-month-inline-gap` 和 `--month-date-inline-gap`。如果要让日期靠近
+或远离正文，改 `--date-content-gap`。如果某一类控件的数字太挤或太松，分别改
+对应的 `--*-control-width`。
 
 ## 纵向对齐参数
 
@@ -84,8 +89,8 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 ```css
 --feed-padding-block: var(--space-6);
 --year-gap: var(--feed-gap);
---year-month-gap: var(--space-3);
---month-date-gap: var(--space-3);
+--year-month-block-gap: var(--space-3);
+--month-date-block-gap: var(--space-3);
 --group-summary-padding-block: var(--space-1);
 --year-control-padding-block-start: 0;
 --month-control-padding-block-start: 0;
@@ -96,8 +101,8 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 
 - `--feed-padding-block`：整个日记流顶部和底部留白。
 - `--year-gap`：年份组之间的距离。
-- `--year-month-gap`：同一年内月份组之间的距离，也影响多个月份之间的垂直间隔。
-- `--month-date-gap`：同一月份内日记条目之间的距离，也影响多个日期之间的垂直间隔。
+- `--year-month-block-gap`：同一年内月份组之间的垂直距离，也影响多个月份之间的垂直间隔。
+- `--month-date-block-gap`：同一月份内日记条目之间的垂直距离，也影响多个日期之间的垂直间隔。
 - `--group-summary-padding-block`：年/月控件自身的上下 padding。它会影响年/月与日期的视觉对齐。
 - `--year-control-padding-block-start`：年份数字距离本行顶部的微调值。
 - `--month-control-padding-block-start`：月份数字距离本行顶部的微调值。

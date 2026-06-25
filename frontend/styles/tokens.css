@@ -69,20 +69,22 @@
    * 阅读布局
    *
    * `--reading-width` 只控制正文列宽度，不包含左侧年/月/日控件，也不包含
-   * 右侧对称占位。年、月、日控件宽度分别由下面三个 token 控制；如果希望
-   * 正文始终居中，右侧会自动使用同等宽度作为不可见占位。
+   * 右侧对称占位。年、月、日控件宽度和它们之间的横向距离分别控制；如果
+   * 希望正文始终居中，右侧会自动使用同等宽度作为不可见占位。
    */
   --reading-width: 46rem;
   --year-control-width: 5rem;
   --month-control-width: 2rem;
   --date-control-width: 3rem;
-  --control-content-gap: clamp(0.75rem, 2vw, 1.5rem);
+  --year-month-inline-gap: var(--space-2);
+  --month-date-inline-gap: var(--space-2);
+  --date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);
   --year-gap: var(--feed-gap);
-  --year-month-gap: var(--space-4);
-  --month-date-gap: var(--space-4);
+  --year-month-block-gap: var(--space-4);
+  --month-date-block-gap: var(--space-4);
   --group-summary-padding-block: var(--space-1);
   --year-control-padding-block-start: 0;
   --month-control-padding-block-start: 0;

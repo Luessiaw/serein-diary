@@ -14,12 +14,13 @@ Serein 的视觉参数集中在
   `--font-date`、`--font-size-date` 与 `--font-size-entry-time` 控制日期和同日多篇时的时间标签。
 - **布局：** `--reading-width` 只改变正文行长；`--year-control-width`、
   `--month-control-width` 和 `--date-control-width` 分别调整年、月、日左侧控件
-  宽度；`--control-content-gap`、`--page-gutter`、`--feed-gap` 与
+  宽度；`--year-month-inline-gap`、`--month-date-inline-gap`、`--date-content-gap`、
+  `--page-gutter`、`--feed-gap` 与
   `--paragraph-gap` 调整留白。
 - **日历分组：** `--font-year`、`--font-size-year`、`--font-month` 与
   `--font-size-month` 控制可折叠的年份、月份节点；`--color-year`、
   `--color-month` 和 `--color-date` 控制其层级色彩；`--year-gap`、
-  `--year-month-gap` 和 `--month-date-gap` 调整它们与正文的距离。
+  `--year-month-block-gap` 和 `--month-date-block-gap` 调整它们与正文的距离。
 - **颜色：** 应一起修改具有语义的 `--color-*` 变量。只要已有对应 token，
   组件就不应直接使用原始颜色值。
 
@@ -40,7 +41,7 @@ Serein 的视觉参数集中在
   --font-reading: "Noto Serif SC", Georgia, serif;
   --reading-width: 44rem;
   --date-control-width: 4rem;
-  --control-content-gap: 1rem;
+  --date-content-gap: 1rem;
 }
 ```
 
