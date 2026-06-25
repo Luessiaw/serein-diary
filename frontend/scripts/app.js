@@ -81,11 +81,13 @@
   function createNewEntryArea({ focusNewEntry }) {
     const area = document.createElement("section");
     const date = document.createElement("p");
+    const body = document.createElement("div");
 
     area.className = "new-entry";
     area.setAttribute("aria-label", "New diary entry");
     date.className = "entry-date new-entry-date";
     date.textContent = "现在";
+    body.className = "entry-body new-entry-body";
 
     const form = document.createElement("form");
     const title = document.createElement("input");
@@ -152,7 +154,8 @@
     actions.append(draftStatus, cancel, save);
     header.append(title, actions);
     form.append(header, content, message);
-    area.append(date, form);
+    body.append(form);
+    area.append(date, body);
     if (focusNewEntry) {
       requestAnimationFrame(() => {
         resizeContentInput(content);
@@ -437,6 +440,7 @@
   function createEntry(sample, entriesByDate) {
     const entry = document.createElement("article");
     const date = document.createElement("time");
+    const body = document.createElement("div");
     const content = document.createElement("div");
     const { data, ui } = sample;
     const { metadata } = data;
@@ -445,6 +449,7 @@
     entry.className = "diary-entry";
     entry.dataset.entryId = metadata.id;
     entry.dataset.entryMode = ui.mode;
+    body.className = "entry-body";
     date.className = "entry-date";
     date.dateTime = metadata.created_at;
     date.textContent = formatEntryDate(
@@ -455,14 +460,14 @@
     content.className = "entry-content";
     appendMarkdownParagraphs(content, data.content);
 
-    entry.append(date);
+    entry.append(date, body);
     if (metadata.title) {
       const title = document.createElement("h2");
       title.className = "entry-title";
       title.textContent = metadata.title;
-      entry.append(title);
+      body.append(title);
     }
-    entry.append(content);
+    body.append(content);
 
     return entry;
   }

@@ -71,6 +71,8 @@
    * 建议保持在当前值附近。`--page-gutter` 用于避免窄屏正文贴近边缘。
    */
   --reading-width: 46rem;
+  --entry-side-width: clamp(4.5rem, 10vw, 8rem);
+  --entry-side-gap: clamp(1rem, 3vw, 2.5rem);
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);
