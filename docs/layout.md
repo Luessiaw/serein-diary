@@ -185,6 +185,25 @@ Box-year
 - 紫色：正文列。
 - 橙色：右侧隐形占位列。
 
+## 年/月折叠箭头
+
+年份和月份前面的折叠箭头不是字体字符，而是使用静态图片
+`frontend/assets/pull-arrow.png`。图片默认为展开状态的下拉箭头；折叠状态通过
+旋转同一张图片实现。
+
+需要微调图标时，优先修改 `base.css` 中 `.diary-group-summary` 的这一组局部变量：
+
+```css
+--chevron-image-url;
+--chevron-box-size;
+--chevron-icon-size;
+--chevron-opacity;
+--chevron-state-rotation;
+```
+
+如果希望替换箭头形状，通常只需要替换 `frontend/assets/pull-arrow.png`，并保持
+文件名不变；如果想保留多套素材，则新增图片后修改 `--chevron-image-url`。
+
 ## 对应的 CSS 规则
 
 如果 token 不够用，再看 `base.css` 中这些区域：

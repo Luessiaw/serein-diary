@@ -177,8 +177,19 @@ body {
 }
 
 .diary-group-summary {
+  /*
+   * 折叠箭头图标参数。
+   *
+   * 图标素材位于 frontend/assets/pull-arrow.png。默认是展开状态的下拉箭头；
+   * 折叠状态通过旋转同一张图实现。
+   */
+  --chevron-image-url: url("../assets/pull-arrow.png");
+  --chevron-box-size: 0.72em;
+  --chevron-icon-size: 0.62em;
+  --chevron-opacity: 0.46;
+  --chevron-state-rotation: 0deg;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: var(--chevron-box-size) 1fr;
   align-items: start;
   justify-content: end;
   justify-items: end;
@@ -196,15 +207,25 @@ body {
 }
 
 .diary-group-summary::before {
-  content: "⌄";
-  align-self: start;
-  line-height: 1;
-  opacity: 0.55;
+  content: "";
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  justify-self: center;
+  inline-size: var(--chevron-icon-size);
+  block-size: var(--chevron-icon-size);
+  background-image: var(--chevron-image-url);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: var(--chevron-opacity);
+  transform: rotate(var(--chevron-state-rotation));
+  transform-origin: 50% 50%;
 }
 
-.diary-year:not([open]) > .diary-group-summary::before,
-.diary-month:not([open]) > .diary-group-summary::before {
-  content: "›";
+.diary-year:not([open]) > .diary-group-summary,
+.diary-month:not([open]) > .diary-group-summary {
+  --chevron-state-rotation: -90deg;
 }
 
 .diary-year > .diary-group-summary {
