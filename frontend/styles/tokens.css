@@ -24,7 +24,7 @@
    * `clamp()` 会让正文在较宽屏幕上略微增大，同时确保手机上的字号舒适。
    * 若目标是更安静、适合长文阅读的效果，应优先调整行高，再考虑增大字号。
    */
-  --font-size-title: clamp(1.2rem, 1.2rem + 1vw, 1.8rem);
+  --font-size-title: clamp(1.2rem, 1rem + 1vw, 1.5rem);
   --font-size-reading: clamp(1rem, 0.96rem + 0.15vw, 1.125rem);
   --font-year: var(--font-ui);
   --font-month: var(--font-ui);
@@ -72,7 +72,7 @@
    * 右侧对称占位。年、月、日控件宽度分别由下面三个 token 控制；如果希望
    * 正文始终居中，右侧会自动使用同等宽度作为不可见占位。
    */
-  --reading-width: 46rem;
+  --reading-width: 60rem;
   --year-control-width: 8rem;
   --month-control-width: 4rem;
   --date-control-width: 3.5rem;

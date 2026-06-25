@@ -39,7 +39,7 @@
       const year = createGroup("diary-year", yearGroup.year);
 
       yearGroup.months.forEach((monthGroup) => {
-        const month = createGroup("diary-month", String(Number(monthGroup.month)));
+        const month = createGroup("diary-month", monthGroup.month);
 
         monthGroup.items.forEach((item) => {
           if (item.type === "new") {
