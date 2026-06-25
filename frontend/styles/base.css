@@ -39,6 +39,48 @@ body {
   justify-self: center;
 }
 
+.load-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  gap: var(--load-control-gap);
+  inline-size: min(100%, var(--reading-width));
+  min-block-size: 2rem;
+  padding-block: var(--load-control-padding-block);
+  color: var(--color-muted);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+}
+
+.load-control[hidden] {
+  display: none;
+}
+
+.load-control-spinner {
+  inline-size: var(--spinner-size);
+  block-size: var(--spinner-size);
+  border: 1.5px solid var(--color-line);
+  border-block-start-color: var(--color-accent);
+  border-radius: 50%;
+  animation: load-control-spin 0.8s linear infinite;
+}
+
+.load-control-retry {
+  border: 0;
+  border-radius: var(--radius-subtle);
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-accent);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.load-control-retry:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: var(--space-1);
+}
+
 .diary-group-summary {
   cursor: pointer;
   inline-size: 100%;
@@ -116,6 +158,8 @@ body {
 .new-entry {
   inline-size: min(100%, var(--reading-width));
   justify-self: center;
+  min-block-size: var(--new-entry-min-height);
+  margin-block-end: var(--new-entry-bottom-space);
   padding-block-start: var(--space-4);
   border-block-start: 1px solid var(--color-line);
 }
@@ -166,7 +210,7 @@ body {
 }
 
 .new-entry-content-input {
-  min-block-size: 12rem;
+  min-block-size: var(--new-entry-min-height);
   overflow-y: hidden;
   resize: none;
 }
@@ -224,6 +268,12 @@ body {
 .new-entry-save:focus-visible {
   outline: 1px solid currentColor;
   outline-offset: var(--space-1);
+}
+
+@keyframes load-control-spin {
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 @media (max-width: 42rem) {

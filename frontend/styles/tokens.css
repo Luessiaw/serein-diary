@@ -83,6 +83,24 @@
   --radius-subtle: 0.5rem;
 
   /*
+   * 滚动加载与新建区
+   *
+   * 这些变量用于当前静态原型的分页模拟。前三个数值会被 JavaScript 读取：
+   * 初始加载最近多少篇、每次向上加载多少篇，以及滚动到已加载列表顶部第
+   * 几篇附近时触发下一次加载。未来接入后端后，这组参数仍可作为前端体验
+   * 调校入口。
+   */
+  --load-initial-count: 4;
+  --load-page-size: 2;
+  --load-trigger-entry-index: 1;
+  --load-simulated-delay-ms: 1000;
+  --load-control-gap: var(--space-2);
+  --load-control-padding-block: var(--space-2);
+  --spinner-size: 0.9rem;
+  --new-entry-min-height: 55vh;
+  --new-entry-bottom-space: 28vh;
+
+  /*
    * 窄屏布局
    *
    * 标准 CSS 暂不能直接在 @media 条件中使用自定义属性。修改断点时，须将

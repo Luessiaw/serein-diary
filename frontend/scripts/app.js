@@ -8,15 +8,26 @@
     throw new Error("Serein application mount point is missing.");
   }
 
-  renderFeed();
+  const settings = readInteractionSettings();
+  const loadState = {
+    visibleStartIndex: 0,
+    status: "idle",
+    errorMessage: "",
+  };
 
-  function renderFeed() {
+  initializeLoadedWindow();
+  renderFeed({ focusNewEntry: true, scrollToEnd: true });
+  app.addEventListener("scroll", handleScroll, { passive: true });
+
+  function renderFeed(options = {}) {
+    const { focusNewEntry = false, scrollToEnd = false } = options;
     const feed = document.createElement("section");
     const readingSamples = getReadingSamples();
     const entriesPerDate = countEntriesPerDate(readingSamples);
 
     feed.className = "diary-feed";
     feed.setAttribute("aria-label", "Diary entries");
+    feed.append(createLoadControl());
 
     groupEntriesByDate(readingSamples).forEach((yearGroup) => {
       const year = createGroup("diary-year", `${yearGroup.year}年`);
@@ -32,11 +43,21 @@
       feed.append(year.details);
     });
 
-    feed.append(createNewEntryArea());
+    feed.append(createNewEntryArea({ focusNewEntry }));
     app.replaceChildren(feed);
+
+    if (scrollToEnd) {
+      requestAnimationFrame(() => {
+        app.scrollTop = app.scrollHeight;
+      });
+    }
   }
 
   function getReadingSamples() {
+    return getAllReadingSamples().slice(loadState.visibleStartIndex);
+  }
+
+  function getAllReadingSamples() {
     return window.SereinMockEntries
       .filter((sample) => sample.ui.mode === "reading")
       .slice()
@@ -45,7 +66,14 @@
       ));
   }
 
-  function createNewEntryArea() {
+  function initializeLoadedWindow() {
+    const total = getAllReadingSamples().length;
+
+    loadState.visibleStartIndex = Math.max(0, total - settings.initialCount);
+    loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
+  }
+
+  function createNewEntryArea({ focusNewEntry }) {
     const area = document.createElement("section");
     const date = document.createElement("p");
 
@@ -113,17 +141,21 @@
       }
 
       addStaticEntry(title.value.trim(), body);
-      renderFeed();
+      renderFeed({ focusNewEntry: true, scrollToEnd: true });
     });
 
     actions.append(draftStatus, cancel, save);
     header.append(title, actions);
     form.append(header, content, message);
     area.append(date, form);
-    requestAnimationFrame(() => {
+    if (focusNewEntry) {
+      requestAnimationFrame(() => {
+        resizeContentInput(content);
+        content.focus();
+      });
+    } else {
       resizeContentInput(content);
-      content.focus();
-    });
+    }
 
     return area;
   }
@@ -152,6 +184,141 @@
       },
       createNewDraft(),
     ];
+    loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
+  }
+
+  function createLoadControl() {
+    const control = document.createElement("div");
+    const spinner = document.createElement("span");
+    const message = document.createElement("span");
+
+    control.className = `load-control is-${loadState.status}`;
+    control.setAttribute("role", "status");
+    control.setAttribute("aria-live", "polite");
+    spinner.className = "load-control-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    message.className = "load-control-message";
+
+    if (loadState.status === "loading") {
+      message.textContent = "正在拉取更早的日记……";
+      control.append(spinner, message);
+    } else if (loadState.status === "error") {
+      const retry = document.createElement("button");
+
+      message.textContent = `拉取信息失败：${loadState.errorMessage}`;
+      retry.className = "load-control-retry";
+      retry.type = "button";
+      retry.textContent = "重试";
+      retry.addEventListener("click", () => {
+        void loadEarlierEntries();
+      });
+      control.append(message, retry);
+    } else if (loadState.status === "complete") {
+      message.textContent = "已加载所有日记内容";
+      control.append(message);
+    } else {
+      control.hidden = true;
+      control.append(message);
+    }
+
+    return control;
+  }
+
+  function handleScroll() {
+    if (!shouldLoadEarlierEntries()) {
+      return;
+    }
+
+    void loadEarlierEntries();
+  }
+
+  function shouldLoadEarlierEntries() {
+    if (loadState.status === "loading" || loadState.status === "complete") {
+      return false;
+    }
+
+    if (loadState.visibleStartIndex <= 0) {
+      loadState.status = "complete";
+      renderFeed();
+      return false;
+    }
+
+    const entries = [...app.querySelectorAll(".diary-entry")];
+    if (entries.length === 0) {
+      return false;
+    }
+
+    const triggerIndex = Math.min(
+      Math.max(settings.triggerEntryIndex, 1),
+      entries.length,
+    ) - 1;
+    const triggerEntry = entries[triggerIndex];
+
+    return app.scrollTop <= triggerEntry.offsetTop;
+  }
+
+  async function loadEarlierEntries() {
+    if (loadState.status === "loading" || loadState.status === "complete") {
+      return;
+    }
+
+    const previousScrollHeight = app.scrollHeight;
+    const previousScrollTop = app.scrollTop;
+
+    loadState.status = "loading";
+    loadState.errorMessage = "";
+    renderFeed();
+    app.scrollTop = previousScrollTop + (app.scrollHeight - previousScrollHeight);
+
+    try {
+      await simulateLoadingDelay();
+
+      if (window.SereinMockLoadFailure === true) {
+        throw new Error("模拟网络异常");
+      }
+
+      loadState.visibleStartIndex = Math.max(
+        0,
+        loadState.visibleStartIndex - settings.pageSize,
+      );
+      loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
+      renderFeedPreservingScroll();
+    } catch (error) {
+      loadState.status = "error";
+      loadState.errorMessage = error instanceof Error ? error.message : "未知错误";
+      renderFeedPreservingScroll();
+    }
+  }
+
+  function renderFeedPreservingScroll() {
+    const previousScrollHeight = app.scrollHeight;
+    const previousScrollTop = app.scrollTop;
+
+    renderFeed();
+    app.scrollTop = previousScrollTop + (app.scrollHeight - previousScrollHeight);
+  }
+
+  function simulateLoadingDelay() {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, settings.simulatedDelayMs);
+    });
+  }
+
+  function readInteractionSettings() {
+    const styles = window.getComputedStyle(document.documentElement);
+
+    return {
+      initialCount: readIntegerToken(styles, "--load-initial-count", 6),
+      pageSize: readIntegerToken(styles, "--load-page-size", 4),
+      triggerEntryIndex: readIntegerToken(styles, "--load-trigger-entry-index", 5),
+      simulatedDelayMs: readIntegerToken(styles, "--load-simulated-delay-ms", 1000),
+    };
+  }
+
+  function readIntegerToken(styles, name, fallback) {
+    const value = Number.parseInt(styles.getPropertyValue(name), 10);
+
+    return Number.isFinite(value) && value > 0 ? value : fallback;
   }
 
   function createNewDraft() {
