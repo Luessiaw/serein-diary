@@ -73,65 +73,65 @@ body {
 }
 
 /*
- * 临时布局调试边框。
+ * 布局调试边框。
  *
- * 用于排查年 / 月 / 日 / 正文 / 右侧占位在嵌套 grid 中的实际宽度。
- * 确认布局后可整体删除本段。
+ * 默认由 tokens.css 关闭；需要排查年 / 月 / 日 / 正文 / 右侧占位在
+ * 嵌套 grid 中的实际宽度时，打开 tokens.css 中的调试变量。
  */
 .diary-feed {
-  outline: 2px dashed rgb(0 0 0 / 0.35);
+  outline: var(--debug-layout-outline-width) dashed rgb(0 0 0 / calc(var(--debug-layout-opacity) * 0.5));
   outline-offset: -2px;
 }
 
 .diary-year {
-  outline: 2px dashed rgb(100 100 100 / 0.75);
-  background: rgb(100 100 100 / 0.05);
+  outline: var(--debug-layout-outline-width) dashed rgb(100 100 100 / var(--debug-layout-opacity));
+  background: rgb(100 100 100 / calc(var(--debug-layout-opacity) * 0.07));
 }
 
 .diary-month {
-  outline: 2px dashed rgb(30 144 200 / 0.75);
-  background: rgb(30 144 200 / 0.07);
+  outline: var(--debug-layout-outline-width) dashed rgb(30 144 200 / var(--debug-layout-opacity));
+  background: rgb(30 144 200 / calc(var(--debug-layout-opacity) * 0.09));
 }
 
 .diary-group-content {
-  outline: 2px dashed rgb(20 150 80 / 0.55);
+  outline: var(--debug-layout-outline-width) dashed rgb(20 150 80 / calc(var(--debug-layout-opacity) * 0.75));
   outline-offset: -2px;
 }
 
 .diary-year > .diary-group-summary {
-  outline: 2px solid rgb(100 100 100 / 0.9);
-  background: rgb(100 100 100 / 0.18);
+  outline: var(--debug-layout-outline-width) solid rgb(100 100 100 / var(--debug-layout-opacity));
+  background: rgb(100 100 100 / calc(var(--debug-layout-opacity) * 0.24));
 }
 
 .diary-month > .diary-group-summary {
-  outline: 2px solid rgb(30 144 200 / 0.9);
-  background: rgb(30 144 200 / 0.18);
+  outline: var(--debug-layout-outline-width) solid rgb(30 144 200 / var(--debug-layout-opacity));
+  background: rgb(30 144 200 / calc(var(--debug-layout-opacity) * 0.24));
 }
 
 .diary-entry,
 .new-entry {
-  outline: 2px dashed rgb(40 180 80 / 0.8);
+  outline: var(--debug-layout-outline-width) dashed rgb(40 180 80 / var(--debug-layout-opacity));
   outline-offset: -2px;
-  background: rgb(40 180 80 / 0.06);
+  background: rgb(40 180 80 / calc(var(--debug-layout-opacity) * 0.08));
 }
 
 .entry-date {
-  outline: 2px solid rgb(40 180 80 / 0.9);
-  background: rgb(40 180 80 / 0.16);
+  outline: var(--debug-layout-outline-width) solid rgb(40 180 80 / var(--debug-layout-opacity));
+  background: rgb(40 180 80 / calc(var(--debug-layout-opacity) * 0.22));
 }
 
 .entry-body {
-  outline: 2px solid rgb(220 80 190 / 0.9);
-  background: rgb(220 80 190 / 0.12);
+  outline: var(--debug-layout-outline-width) solid rgb(220 80 190 / var(--debug-layout-opacity));
+  background: rgb(220 80 190 / calc(var(--debug-layout-opacity) * 0.16));
 }
 
 .diary-entry::after,
 .new-entry::after {
-  content: "";
+  content: var(--debug-layout-placeholder-content);
   grid-column: 4;
-  min-block-size: 1.5rem;
-  outline: 2px solid rgb(255 150 0 / 0.8);
-  background: rgb(255 150 0 / 0.12);
+  min-block-size: var(--debug-layout-placeholder-min-height);
+  outline: var(--debug-layout-outline-width) solid rgb(255 150 0 / var(--debug-layout-opacity));
+  background: rgb(255 150 0 / calc(var(--debug-layout-opacity) * 0.16));
 }
 
 .load-control {

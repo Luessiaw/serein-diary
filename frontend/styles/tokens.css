@@ -74,10 +74,10 @@
    * “年+月+日+正文”的整体保持居中。
    */
   --reading-width: 20rem;
-  --year-control-width: 3rem;
+  --year-control-width: 4rem;
   --month-control-width: 2rem;
   --date-control-width: 3rem;
-  --year-month-inline-gap: var(--space-2);
+  --year-month-inline-gap: var(--space-3);
   --month-date-inline-gap: var(--space-2);
   --date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
   --page-gutter: clamp(1rem, 4vw, 3rem);
@@ -105,6 +105,24 @@
   --title-gap: 0;
   --paragraph-gap: var(--space-2);
   --radius-subtle: 0.5rem;
+
+  /*
+   * 布局调试
+   *
+   * 默认关闭。需要检查年/月/日/正文/右侧占位的真实网格边界时，把
+   * `--debug-layout-outline-width` 改为 `2px`，并把
+   * `--debug-layout-opacity` 改为 `0.7` 左右。若还想看右侧隐形占位列，
+   * 同时把 `--debug-layout-placeholder-content` 改为 `""`，
+   * `--debug-layout-placeholder-min-height` 改为 `1.5rem`。
+   */
+  --debug-layout-outline-width: 0;
+  --debug-layout-opacity: 0;
+  --debug-layout-placeholder-content: none;
+  --debug-layout-placeholder-min-height: 0;
+  /* --debug-layout-outline-width: 2px;
+  --debug-layout-opacity: 0.7;
+  --debug-layout-placeholder-content: "";
+  --debug-layout-placeholder-min-height: 1.5rem; */
 
   /*
    * 滚动加载与新建区

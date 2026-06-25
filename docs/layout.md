@@ -158,6 +158,35 @@ Box-year
 - 同日多篇日记时，时间显示为日期下方第二行，由 `--font-size-entry-time` 控制。
 - `--letter-spacing-date` 会影响日期数字宽度和视觉密度。
 
+## 布局调试边框
+
+`tokens.css` 中保留了一个默认关闭的布局调试开关。需要检查年、月、日、正文
+和右侧占位列的真实边界时，可以临时改成：
+
+```css
+--debug-layout-outline-width: 2px;
+--debug-layout-opacity: 0.7;
+--debug-layout-placeholder-content: "";
+--debug-layout-placeholder-min-height: 1.5rem;
+```
+
+关闭时恢复为：
+
+```css
+--debug-layout-outline-width: 0;
+--debug-layout-opacity: 0;
+--debug-layout-placeholder-content: none;
+--debug-layout-placeholder-min-height: 0;
+```
+
+颜色约定：
+
+- 灰色：年份容器和年份文字。
+- 蓝色：月份容器和月份文字。
+- 绿色：分组内容、日记条目和日期列。
+- 紫色：正文列。
+- 橙色：右侧隐形占位列。
+
 ## 对应的 CSS 规则
 
 如果 token 不够用，再看 `base.css` 中这些区域：
