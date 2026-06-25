@@ -13,6 +13,7 @@
   }
 
   const settings = readInteractionSettings();
+  let draftCreatedAt = createLocalTimestamp();
   const loadState = {
     visibleStartIndex: 0,
     status: "idle",
@@ -28,26 +29,30 @@
     const feed = document.createElement("section");
     const readingSamples = getReadingSamples();
     const entriesPerDate = countEntriesPerDate(readingSamples);
+    const feedItems = createFeedItems(readingSamples);
 
     feed.className = "diary-feed";
     feed.setAttribute("aria-label", "Diary entries");
     feed.append(createLoadControl());
 
-    groupEntriesByDate(readingSamples).forEach((yearGroup) => {
+    groupItemsByDate(feedItems).forEach((yearGroup) => {
       const year = createGroup("diary-year", `${yearGroup.year}年`);
 
       yearGroup.months.forEach((monthGroup) => {
         const month = createGroup("diary-month", `${Number(monthGroup.month)}月`);
 
-        monthGroup.entries.forEach((sample) => {
-          month.content.append(createEntry(sample, entriesPerDate));
+        monthGroup.items.forEach((item) => {
+          if (item.type === "new") {
+            month.content.append(createNewEntryArea({ focusNewEntry }));
+          } else {
+            month.content.append(createEntry(item.sample, entriesPerDate));
+          }
         });
         year.content.append(month.details);
       });
       feed.append(year.details);
     });
 
-    feed.append(createNewEntryArea({ focusNewEntry }));
     app.replaceChildren(feed);
 
     if (scrollToEnd) {
@@ -69,6 +74,20 @@
       .sort((left, right) => (
         left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
       ));
+  }
+
+  function createFeedItems(readingSamples) {
+    return [
+      ...readingSamples.map((sample) => ({
+        type: "entry",
+        createdAt: sample.data.metadata.created_at,
+        sample,
+      })),
+      {
+        type: "new",
+        createdAt: draftCreatedAt,
+      },
+    ].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   }
 
   function initializeLoadedWindow() {
@@ -192,6 +211,7 @@
       },
       createNewDraft(),
     ];
+    draftCreatedAt = createLocalTimestamp();
     loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
   }
 
@@ -472,12 +492,12 @@
     return entry;
   }
 
-  function groupEntriesByDate(entries) {
+  function groupItemsByDate(items) {
     const years = new Map();
 
-    entries.forEach((sample) => {
+    items.forEach((item) => {
       const [year, month] = getCalendarDate(
-        sample.data.metadata.created_at,
+        item.createdAt,
       ).split("-");
       let yearGroup = years.get(year);
 
@@ -488,14 +508,14 @@
       if (!yearGroup.months.has(month)) {
         yearGroup.months.set(month, []);
       }
-      yearGroup.months.get(month).push(sample);
+      yearGroup.months.get(month).push(item);
     });
 
     return [...years.values()].map((yearGroup) => ({
       year: yearGroup.year,
-      months: [...yearGroup.months.entries()].map(([month, entries]) => ({
+      months: [...yearGroup.months.entries()].map(([month, items]) => ({
         month,
-        entries,
+        items,
       })),
     }));
   }
