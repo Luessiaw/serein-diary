@@ -8,6 +8,10 @@
     throw new Error("Serein application mount point is missing.");
   }
 
+  if ("scrollRestoration" in window.history) {
+    window.history.scrollRestoration = "manual";
+  }
+
   const settings = readInteractionSettings();
   const loadState = {
     visibleStartIndex: 0,
@@ -48,7 +52,8 @@
 
     if (scrollToEnd) {
       requestAnimationFrame(() => {
-        app.scrollTop = app.scrollHeight;
+        scrollToNewEntry();
+        window.setTimeout(scrollToNewEntry, 0);
       });
     }
   }
@@ -128,7 +133,7 @@
     cancel.addEventListener("click", () => {
       form.reset();
       message.textContent = "已清空未保存内容。";
-      title.focus();
+      title.focus({ preventScroll: true });
     });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -136,7 +141,7 @@
       const body = content.value.trim();
       if (!body) {
         message.textContent = "请先写下一些内容。";
-        content.focus();
+        content.focus({ preventScroll: true });
         return;
       }
 
@@ -151,7 +156,7 @@
     if (focusNewEntry) {
       requestAnimationFrame(() => {
         resizeContentInput(content);
-        content.focus();
+        content.focus({ preventScroll: true });
       });
     } else {
       resizeContentInput(content);
@@ -262,13 +267,11 @@
       return;
     }
 
-    const previousScrollHeight = app.scrollHeight;
-    const previousScrollTop = app.scrollTop;
+    const anchor = getScrollAnchor();
 
     loadState.status = "loading";
     loadState.errorMessage = "";
-    renderFeed();
-    app.scrollTop = previousScrollTop + (app.scrollHeight - previousScrollHeight);
+    renderFeedRestoringAnchor(anchor);
 
     try {
       await simulateLoadingDelay();
@@ -282,20 +285,66 @@
         loadState.visibleStartIndex - settings.pageSize,
       );
       loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
-      renderFeedPreservingScroll();
+      renderFeedRestoringAnchor(anchor);
     } catch (error) {
       loadState.status = "error";
       loadState.errorMessage = error instanceof Error ? error.message : "未知错误";
-      renderFeedPreservingScroll();
+      renderFeedRestoringAnchor(anchor);
     }
   }
 
-  function renderFeedPreservingScroll() {
-    const previousScrollHeight = app.scrollHeight;
-    const previousScrollTop = app.scrollTop;
+  function getScrollAnchor() {
+    const appTop = app.getBoundingClientRect().top;
+    const entries = [...app.querySelectorAll(".diary-entry")];
+    const visibleEntry = entries.find((entry) => (
+      entry.getBoundingClientRect().bottom >= appTop
+    ));
 
+    if (!visibleEntry) {
+      return null;
+    }
+
+    return {
+      id: visibleEntry.dataset.entryId,
+      top: visibleEntry.getBoundingClientRect().top,
+    };
+  }
+
+  function renderFeedRestoringAnchor(anchor) {
     renderFeed();
-    app.scrollTop = previousScrollTop + (app.scrollHeight - previousScrollHeight);
+
+    if (!anchor) {
+      return;
+    }
+
+    const anchoredEntry = app.querySelector(`[data-entry-id="${anchor.id}"]`);
+
+    if (!anchoredEntry) {
+      return;
+    }
+
+    setScrollTopInstant(
+      app.scrollTop + anchoredEntry.getBoundingClientRect().top - anchor.top,
+    );
+  }
+
+  function scrollToNewEntry() {
+    const newEntry = app.querySelector(".new-entry");
+
+    if (!newEntry) {
+      setScrollTopInstant(app.scrollHeight - app.clientHeight);
+      return;
+    }
+
+    setScrollTopInstant(newEntry.offsetTop);
+  }
+
+  function setScrollTopInstant(top) {
+    const previousBehavior = app.style.scrollBehavior;
+
+    app.style.scrollBehavior = "auto";
+    app.scrollTop = Math.max(0, top);
+    app.style.scrollBehavior = previousBehavior;
   }
 
   function simulateLoadingDelay() {
