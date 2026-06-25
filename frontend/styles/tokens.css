@@ -73,8 +73,8 @@
    * 距离分别控制；页面会自动在正文右侧生成同等宽度的空白，使正文而不是
    * “年+月+日+正文”的整体保持居中。
    */
-  --reading-width: 30rem;
-  --year-control-width: 5rem;
+  --reading-width: 20rem;
+  --year-control-width: 3rem;
   --month-control-width: 2rem;
   --date-control-width: 3rem;
   --year-month-inline-gap: var(--space-2);

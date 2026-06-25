@@ -48,7 +48,7 @@ body {
   grid-template-columns:
     var(--year-control-width)
     var(--year-month-inline-gap)
-    minmax(0, 1fr);
+    minmax(0, calc(var(--timeline-grid-width) - var(--year-control-width) - var(--year-month-inline-gap)));
   align-items: start;
   inline-size: min(100%, var(--timeline-grid-width));
   justify-self: center;
@@ -60,10 +60,78 @@ body {
   grid-template-columns:
     var(--month-control-width)
     var(--month-date-inline-gap)
-    minmax(0, 1fr);
+    minmax(0, calc(
+      var(--timeline-grid-width)
+      - var(--year-control-width)
+      - var(--year-month-inline-gap)
+      - var(--month-control-width)
+      - var(--month-date-inline-gap)
+    ));
   align-items: start;
   inline-size: 100%;
   min-inline-size: 0;
+}
+
+/*
+ * 临时布局调试边框。
+ *
+ * 用于排查年 / 月 / 日 / 正文 / 右侧占位在嵌套 grid 中的实际宽度。
+ * 确认布局后可整体删除本段。
+ */
+.diary-feed {
+  outline: 2px dashed rgb(0 0 0 / 0.35);
+  outline-offset: -2px;
+}
+
+.diary-year {
+  outline: 2px dashed rgb(100 100 100 / 0.75);
+  background: rgb(100 100 100 / 0.05);
+}
+
+.diary-month {
+  outline: 2px dashed rgb(30 144 200 / 0.75);
+  background: rgb(30 144 200 / 0.07);
+}
+
+.diary-group-content {
+  outline: 2px dashed rgb(20 150 80 / 0.55);
+  outline-offset: -2px;
+}
+
+.diary-year > .diary-group-summary {
+  outline: 2px solid rgb(100 100 100 / 0.9);
+  background: rgb(100 100 100 / 0.18);
+}
+
+.diary-month > .diary-group-summary {
+  outline: 2px solid rgb(30 144 200 / 0.9);
+  background: rgb(30 144 200 / 0.18);
+}
+
+.diary-entry,
+.new-entry {
+  outline: 2px dashed rgb(40 180 80 / 0.8);
+  outline-offset: -2px;
+  background: rgb(40 180 80 / 0.06);
+}
+
+.entry-date {
+  outline: 2px solid rgb(40 180 80 / 0.9);
+  background: rgb(40 180 80 / 0.16);
+}
+
+.entry-body {
+  outline: 2px solid rgb(220 80 190 / 0.9);
+  background: rgb(220 80 190 / 0.12);
+}
+
+.diary-entry::after,
+.new-entry::after {
+  content: "";
+  grid-column: 4;
+  min-block-size: 1.5rem;
+  outline: 2px solid rgb(255 150 0 / 0.8);
+  background: rgb(255 150 0 / 0.12);
 }
 
 .load-control {
@@ -154,6 +222,7 @@ body {
   display: grid;
   inline-size: 100%;
   min-inline-size: 0;
+  justify-items: stretch;
 }
 
 .diary-year > .diary-group-content {
@@ -192,7 +261,7 @@ body {
   grid-template-columns:
     var(--date-control-width)
     var(--date-content-gap)
-    minmax(0, var(--reading-width))
+    var(--reading-width)
     minmax(0, 1fr);
   align-items: start;
   inline-size: 100%;
@@ -243,7 +312,7 @@ body {
   grid-template-columns:
     var(--date-control-width)
     var(--date-content-gap)
-    minmax(0, var(--reading-width))
+    var(--reading-width)
     minmax(0, 1fr);
   inline-size: 100%;
   align-items: start;
