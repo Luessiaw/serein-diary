@@ -115,7 +115,7 @@
    * 中使用 true/false，因此这里使用数值开关。下面三项是开启后的具体样式，
    * 通常不需要改。
    */
-  --debug-layout-enabled: 0;
+  --debug-layout-enabled: 1;
   --debug-layout-outline-width-when-enabled: 2px;
   --debug-layout-opacity-when-enabled: 0.7;
   --debug-layout-placeholder-min-height-when-enabled: 1.5rem;

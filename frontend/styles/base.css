@@ -39,7 +39,8 @@ body {
     + var(--date-control-width)
     + var(--date-content-gap)
   );
-  --timeline-grid-width: calc(var(--timeline-left-width) + var(--reading-width) + var(--timeline-left-width));
+  --timeline-right-width: var(--timeline-left-width);
+  --timeline-grid-width: calc(var(--timeline-left-width) + var(--reading-width) + var(--timeline-right-width));
   padding: var(--feed-padding-block) var(--page-gutter);
 }
 
@@ -285,7 +286,7 @@ body {
     var(--date-control-width)
     var(--date-content-gap)
     var(--reading-width)
-    minmax(0, 1fr);
+    var(--timeline-right-width);
   align-items: start;
   inline-size: 100%;
   min-inline-size: 0;
@@ -336,7 +337,7 @@ body {
     var(--date-control-width)
     var(--date-content-gap)
     var(--reading-width)
-    minmax(0, 1fr);
+    var(--timeline-right-width);
   inline-size: 100%;
   align-items: start;
   min-block-size: var(--new-entry-min-height);
