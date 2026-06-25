@@ -11,7 +11,7 @@ Serein 的视觉参数集中在
 
 - **字体排版：** `--font-title` 与 `--font-size-title` 控制可选标题；
   `--font-reading`、`--font-size-reading` 和 `--line-height-reading` 控制正文；
-  `--font-date` 与 `--font-size-date` 控制日期标签。
+  `--font-date`、`--font-size-date` 与 `--font-size-entry-time` 控制日期和同日多篇时的时间标签。
 - **布局：** `--reading-width` 只改变正文行长；`--year-control-width`、
   `--month-control-width` 和 `--date-control-width` 分别调整年、月、日左侧控件
   宽度；`--control-content-gap`、`--page-gutter`、`--feed-gap` 与

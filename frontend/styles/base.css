@@ -157,12 +157,18 @@ body {
 }
 
 .entry-date {
-  display: block;
+  display: grid;
+  gap: var(--space-1);
   color: var(--color-date);
   font-family: var(--font-date);
   font-size: var(--font-size-date);
   letter-spacing: var(--letter-spacing-date);
   text-align: end;
+}
+
+.entry-time {
+  font-size: var(--font-size-entry-time);
+  letter-spacing: 0.04em;
 }
 
 .entry-body {

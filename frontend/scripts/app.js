@@ -36,10 +36,10 @@
     feed.append(createLoadControl());
 
     groupItemsByDate(feedItems).forEach((yearGroup) => {
-      const year = createGroup("diary-year", `${yearGroup.year}年`);
+      const year = createGroup("diary-year", yearGroup.year);
 
       yearGroup.months.forEach((monthGroup) => {
-        const month = createGroup("diary-month", `${Number(monthGroup.month)}月`);
+        const month = createGroup("diary-month", String(Number(monthGroup.month)));
 
         monthGroup.items.forEach((item) => {
           if (item.type === "new") {
@@ -472,7 +472,8 @@
     body.className = "entry-body";
     date.className = "entry-date";
     date.dateTime = metadata.created_at;
-    date.textContent = formatEntryDate(
+    appendEntryDate(
+      date,
       calendarDate,
       metadata.created_at,
       entriesByDate.get(calendarDate),
@@ -528,11 +529,22 @@
     }, new Map());
   }
 
-  function formatEntryDate(date, createdAt, entriesOnDate) {
-    const day = Number(date.slice(-2));
-    const time = createdAt.slice(11, 16);
+  function appendEntryDate(container, date, createdAt, entriesOnDate) {
+    const day = document.createElement("span");
+    const time = document.createElement("span");
 
-    return entriesOnDate > 1 ? `${day}日 ${time}` : `${day}日`;
+    day.className = "entry-day";
+    day.textContent = date.slice(-2);
+
+    container.append(day);
+
+    if (entriesOnDate <= 1) {
+      return;
+    }
+
+    time.className = "entry-time";
+    time.textContent = createdAt.slice(11, 16);
+    container.append(time);
   }
 
   function getCalendarDate(createdAt) {
