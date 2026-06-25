@@ -77,23 +77,27 @@ Box-year
 “年 + 年月间距 + 月 + 月日间距 + 日 + 日正文间距”等宽的隐形空间。
 这块右侧空间在 `base.css` 中由 `--timeline-right-width` 表示，默认等于
 `--timeline-left-width`；调试模式下的橙色框就是这块占位列。
+主体宽度在 `base.css` 中由 `--reading-width + --timeline-left-width +
+--timeline-right-width` 自动计算。日记条目自身宽度使用“日期列、日期正文间距、
+正文和右侧占位”的显式总和，避免 `inline-size: 100%` 在嵌套 grid 中留下额外
+剩余空间。
 
 ## 横向对齐参数
 
 优先修改 `tokens.css` 的“阅读布局”分组：
 
 ```css
---reading-width: 46rem;
---year-control-width: 8rem;
---month-control-width: 4rem;
---date-control-width: 3.5rem;
---year-month-inline-gap: var(--space-1);
---month-date-inline-gap: var(--space-1);
---date-content-gap: clamp(0.25rem, 2vw, 0.5rem);
+--reading-width: 35rem;
+--year-control-width: 4.5rem;
+--month-control-width: 3rem;
+--date-control-width: 3rem;
+--year-month-inline-gap: var(--space-3);
+--month-date-inline-gap: var(--space-3);
+--date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
 --page-gutter: clamp(1rem, 4vw, 3rem);
 ```
 
-- `--reading-width`：正文列宽度，只影响正文，不包含年/月/日控件。
+- `--reading-width`：正文列宽度，只影响正文；主体总宽会由正文宽度和左右等宽占位自动计算。
 - `--year-control-width`：年份左侧控件列宽度。
 - `--month-control-width`：月份左侧控件列宽度。
 - `--date-control-width`：日期/“现在”左侧控件列宽度。
@@ -102,10 +106,11 @@ Box-year
 - `--date-content-gap`：日期列与正文列之间的横向距离。
 - `--page-gutter`：整个滚动区左右边距，主要防止窄屏贴边。
 
-如果要让正文更宽，只改 `--reading-width`。如果要让年、月、日彼此靠近或远离，
-分别改 `--year-month-inline-gap` 和 `--month-date-inline-gap`。如果要让日期靠近
-或远离正文，改 `--date-content-gap`。如果某一类控件的数字太挤或太松，分别改
-对应的 `--*-control-width`。
+如果要让正文更宽或更窄，改 `--reading-width`。主体总宽会自动随正文宽度和
+左侧列宽计算得到。如果要让年、月、日彼此靠近或远离，分别改
+`--year-month-inline-gap` 和 `--month-date-inline-gap`。如果要让日期靠近或远离
+正文，改 `--date-content-gap`；右侧占位会自动跟随左侧总宽变化。如果某一类
+控件的数字太挤或太松，分别改对应的 `--*-control-width`。
 
 年/月控件内部是“箭头 + label”的小网格，并且默认左对齐。因此：
 

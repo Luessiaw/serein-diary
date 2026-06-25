@@ -288,7 +288,12 @@ body {
     var(--reading-width)
     var(--timeline-right-width);
   align-items: start;
-  inline-size: 100%;
+  inline-size: calc(
+    var(--date-control-width)
+    + var(--date-content-gap)
+    + var(--reading-width)
+    + var(--timeline-right-width)
+  );
   min-inline-size: 0;
 }
 
@@ -338,7 +343,12 @@ body {
     var(--date-content-gap)
     var(--reading-width)
     var(--timeline-right-width);
-  inline-size: 100%;
+  inline-size: calc(
+    var(--date-control-width)
+    + var(--date-content-gap)
+    + var(--reading-width)
+    + var(--timeline-right-width)
+  );
   align-items: start;
   min-block-size: var(--new-entry-min-height);
   margin-block-end: var(--new-entry-bottom-space);
