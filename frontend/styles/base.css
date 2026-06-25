@@ -30,47 +30,40 @@ body {
 
 .diary-feed {
   display: grid;
-  gap: var(--year-gap);
-  --timeline-grid-columns:
+  gap: var(--year-block-gap);
+  --timeline-left-width: calc(
     var(--year-control-width)
-    var(--year-month-inline-gap)
-    var(--month-control-width)
-    var(--month-date-inline-gap)
-    var(--date-control-width)
-    var(--date-content-gap)
-    minmax(0, var(--reading-width))
-    var(--date-content-gap)
-    var(--date-control-width)
-    var(--month-date-inline-gap)
-    var(--month-control-width)
-    var(--year-month-inline-gap)
-    var(--year-control-width);
-  --timeline-grid-width: calc(
-    var(--reading-width)
-    + 2 * (
-      var(--year-control-width)
-      + var(--year-month-inline-gap)
-      + var(--month-control-width)
-      + var(--month-date-inline-gap)
-      + var(--date-control-width)
-      + var(--date-content-gap)
-    )
+    + var(--year-month-inline-gap)
+    + var(--month-control-width)
+    + var(--month-date-inline-gap)
+    + var(--date-control-width)
+    + var(--date-content-gap)
   );
+  --timeline-grid-width: calc(var(--timeline-left-width) + var(--reading-width) + var(--timeline-left-width));
   padding: var(--feed-padding-block) var(--page-gutter);
 }
 
 .diary-year {
   display: grid;
-  grid-template-columns: var(--timeline-grid-columns);
+  grid-template-columns:
+    var(--year-control-width)
+    var(--year-month-inline-gap)
+    minmax(0, 1fr);
+  align-items: start;
   inline-size: min(100%, var(--timeline-grid-width));
   justify-self: center;
+  min-inline-size: 0;
 }
 
 .diary-month {
   display: grid;
-  grid-template-columns: var(--timeline-grid-columns);
-  inline-size: min(100%, var(--timeline-grid-width));
-  justify-self: center;
+  grid-template-columns:
+    var(--month-control-width)
+    var(--month-date-inline-gap)
+    minmax(0, 1fr);
+  align-items: start;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .load-control {
@@ -116,8 +109,6 @@ body {
 }
 
 .diary-group-summary {
-  grid-column: 1;
-  grid-row: 1;
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: start;
@@ -149,6 +140,9 @@ body {
 }
 
 .diary-year > .diary-group-summary {
+  grid-column: 1;
+  grid-row: 1;
+  inline-size: var(--year-control-width);
   color: var(--color-year);
   font-family: var(--font-year);
   font-size: var(--font-size-year);
@@ -158,17 +152,21 @@ body {
 
 .diary-group-content {
   display: grid;
-  grid-column: 1 / -1;
-  grid-row: 1;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .diary-year > .diary-group-content {
-  gap: var(--year-month-block-gap);
+  grid-column: 3;
+  grid-row: 1;
+  gap: var(--month-block-gap);
   margin-block-start: 0;
 }
 
 .diary-month > .diary-group-summary {
-  grid-column: 3;
+  grid-column: 1;
+  grid-row: 1;
+  inline-size: var(--month-control-width);
   color: var(--color-month);
   font-family: var(--font-month);
   font-size: var(--font-size-month);
@@ -177,9 +175,9 @@ body {
 }
 
 .diary-month > .diary-group-content {
-  grid-column: 1 / -1;
+  grid-column: 3;
   grid-row: 1;
-  gap: var(--month-date-block-gap);
+  gap: var(--entry-block-gap);
   margin-block-start: 0;
 }
 
@@ -191,15 +189,18 @@ body {
 
 .diary-entry {
   display: grid;
-  grid-template-columns: var(--timeline-grid-columns);
+  grid-template-columns:
+    var(--date-control-width)
+    var(--date-content-gap)
+    minmax(0, var(--reading-width))
+    minmax(0, 1fr);
   align-items: start;
-  inline-size: min(100%, var(--timeline-grid-width));
-  justify-self: center;
+  inline-size: 100%;
   min-inline-size: 0;
 }
 
 .entry-date {
-  grid-column: 5;
+  grid-column: 1;
   display: grid;
   gap: var(--space-1);
   color: var(--color-date);
@@ -217,7 +218,7 @@ body {
 }
 
 .entry-body {
-  grid-column: 7;
+  grid-column: 3;
   min-inline-size: 0;
 }
 
@@ -239,10 +240,13 @@ body {
 
 .new-entry {
   display: grid;
-  grid-template-columns: var(--timeline-grid-columns);
-  inline-size: min(100%, var(--timeline-grid-width));
+  grid-template-columns:
+    var(--date-control-width)
+    var(--date-content-gap)
+    minmax(0, var(--reading-width))
+    minmax(0, 1fr);
+  inline-size: 100%;
   align-items: start;
-  justify-self: center;
   min-block-size: var(--new-entry-min-height);
   margin-block-end: var(--new-entry-bottom-space);
   padding-block-start: var(--space-4);
@@ -369,8 +373,10 @@ body {
 
   .diary-year,
   .diary-month,
+  .diary-entry,
   .new-entry {
     inline-size: min(100%, var(--reading-width));
+    justify-self: center;
   }
 
   .diary-entry,

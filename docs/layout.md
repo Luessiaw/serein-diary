@@ -49,9 +49,32 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 几点需要记住：
 
 - 年份、月份使用原生 `<details>` / `<summary>`，所以折叠功能来自浏览器。
-- 年、月、日和正文都使用“三列布局”：左侧控件列、中央正文列、右侧对称占位列。
+- 当前布局是三层嵌套网格：年份盒子包住月份盒子，月份盒子包住日记条目盒子，
+  日记条目盒子再包住日期和正文。年、月、日因此处在同一条真实布局链上，而
+  不是靠 padding 临时偏移。
 - 新建日记也放在当前年/月分组里；它没有持久化 `created_at`，但前端用打开页面时的临时时间归组。
 - 窄屏下 `.diary-year`、`.diary-month`、`.diary-entry`、`.new-entry` 会退回普通块布局。
+
+抽象成盒子关系如下：
+
+```text
+Box-year
+├── year label: 2026
+└── Box-month
+    ├── month label: 06
+    └── Box-entry
+        ├── date label: 25 / 12:35
+        └── body: 正文
+```
+
+对应的横向列关系是：
+
+```text
+[年] [年-月间距] [月] [月-日间距] [日] [日-正文间距] [正文]
+```
+
+为了让正文而不是整条时间轴保持居中，CSS 会在正文右侧自动保留一块与左侧
+“年 + 年月间距 + 月 + 月日间距 + 日 + 日正文间距”等宽的隐形空间。
 
 ## 横向对齐参数
 
@@ -82,15 +105,19 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 或远离正文，改 `--date-content-gap`。如果某一类控件的数字太挤或太松，分别改
 对应的 `--*-control-width`。
 
+实现上不再使用 `padding-inline` 给日记条目补偿年/月空间。年、月、日和正文
+分别处在嵌套 grid 的真实列中，因此优先改这些 token，而不是直接给
+`.diary-entry`、`.diary-month` 或 `.diary-year` 增加横向 padding。
+
 ## 纵向对齐参数
 
 这些 token 影响年、月、条目之间的垂直节奏：
 
 ```css
 --feed-padding-block: var(--space-6);
---year-gap: var(--feed-gap);
---year-month-block-gap: var(--space-3);
---month-date-block-gap: var(--space-3);
+--year-block-gap: var(--year-gap);
+--month-block-gap: var(--year-month-block-gap);
+--entry-block-gap: var(--month-date-block-gap);
 --group-summary-padding-block: var(--space-1);
 --year-control-padding-block-start: 0;
 --month-control-padding-block-start: 0;
@@ -100,9 +127,9 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 ```
 
 - `--feed-padding-block`：整个日记流顶部和底部留白。
-- `--year-gap`：年份组之间的距离。
-- `--year-month-block-gap`：同一年内月份组之间的垂直距离，也影响多个月份之间的垂直间隔。
-- `--month-date-block-gap`：同一月份内日记条目之间的垂直距离，也影响多个日期之间的垂直间隔。
+- `--year-block-gap`：年份组之间的距离。
+- `--month-block-gap`：同一年内月份组之间的距离。
+- `--entry-block-gap`：同一月份内日记条目之间的距离。
 - `--group-summary-padding-block`：年/月控件自身的上下 padding。它会影响年/月与日期的视觉对齐。
 - `--year-control-padding-block-start`：年份数字距离本行顶部的微调值。
 - `--month-control-padding-block-start`：月份数字距离本行顶部的微调值。
@@ -136,12 +163,12 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 如果 token 不够用，再看 `base.css` 中这些区域：
 
 - `.diary-feed`：整体滚动内容的 grid 和页面 padding。
-- `.diary-year`：年份组的三列布局。
-- `.diary-month`：月份组的三列布局。
+- `.diary-year`：年份盒子，负责“年 / 年月间距 / 月份区域”三列。
+- `.diary-month`：月份盒子，负责“月 / 月日间距 / 条目区域”三列。
 - `.diary-group-summary`：年/月文字与折叠符号。
-- `.diary-group-content`：年/月下方内容区域，目前与 summary 共享第一行以实现顶部对齐。
-- `.diary-entry`：已有日记的三列布局。
+- `.diary-group-content`：年/月右侧内容区域，与 summary 共享第一行以实现顶部对齐。
+- `.diary-entry`：已有日记的“日 / 日正文间距 / 正文 / 右侧隐形占位”布局。
 - `.entry-date`：日期和时间的竖向显示。
-- `.new-entry`：新建日记的三列布局、分隔线、写作区高度和底部留白。
+- `.new-entry`：新建日记的“现在 / 日正文间距 / 写作区 / 右侧隐形占位”布局、分隔线、写作区高度和底部留白。
 
 建议先改 token，再改 `base.css`。若需要新增 token，应放入 `tokens.css` 并在本文补充说明。

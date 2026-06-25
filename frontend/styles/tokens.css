@@ -69,10 +69,11 @@
    * 阅读布局
    *
    * `--reading-width` 只控制正文列宽度，不包含左侧年/月/日控件，也不包含
-   * 右侧对称占位。年、月、日控件宽度和它们之间的横向距离分别控制；如果
-   * 希望正文始终居中，右侧会自动使用同等宽度作为不可见占位。
+   * 用于让正文居中的右侧隐形占位。年、月、日控件宽度和它们之间的横向
+   * 距离分别控制；页面会自动在正文右侧生成同等宽度的空白，使正文而不是
+   * “年+月+日+正文”的整体保持居中。
    */
-  --reading-width: 46rem;
+  --reading-width: 30rem;
   --year-control-width: 5rem;
   --month-control-width: 2rem;
   --date-control-width: 3rem;
@@ -82,9 +83,21 @@
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);
+
+  /*
+   * 纵向布局
+   *
+   * 这三项分别对应嵌套结构中的三层容器：
+   * 年份组之间、同一年内月份组之间、同一月份内日记条目之间。下面保留的
+   * `--year-gap`、`--year-month-block-gap`、`--month-date-block-gap` 是早期
+   * 名称，作为兼容别名存在；新样式优先使用更直观的 block-gap 名称。
+   */
   --year-gap: var(--feed-gap);
   --year-month-block-gap: var(--space-4);
   --month-date-block-gap: var(--space-4);
+  --year-block-gap: var(--year-gap);
+  --month-block-gap: var(--year-month-block-gap);
+  --entry-block-gap: var(--month-date-block-gap);
   --group-summary-padding-block: var(--space-1);
   --year-control-padding-block-start: 0;
   --month-control-padding-block-start: 0;
