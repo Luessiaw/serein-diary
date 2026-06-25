@@ -85,9 +85,9 @@ Box-year
 --year-control-width: 8rem;
 --month-control-width: 4rem;
 --date-control-width: 3.5rem;
---year-month-inline-gap: var(--space-2);
---month-date-inline-gap: var(--space-2);
---date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
+--year-month-inline-gap: var(--space-1);
+--month-date-inline-gap: var(--space-1);
+--date-content-gap: clamp(0.25rem, 2vw, 0.5rem);
 --page-gutter: clamp(1rem, 4vw, 3rem);
 ```
 
@@ -105,6 +105,12 @@ Box-year
 或远离正文，改 `--date-content-gap`。如果某一类控件的数字太挤或太松，分别改
 对应的 `--*-control-width`。
 
+年/月控件内部是“箭头 + label”的小网格，并且默认左对齐。因此：
+
+- `--year-control-width` / `--month-control-width` 控制整个年/月控件列宽。
+- `--group-summary-chevron-gap` 控制箭头与年/月数字之间的距离。
+- `--year-month-inline-gap` / `--month-date-inline-gap` 控制控件列与下一层列之间的距离。
+
 实现上不再使用 `padding-inline` 给日记条目补偿年/月空间。年、月、日和正文
 分别处在嵌套 grid 的真实列中，因此优先改这些 token，而不是直接给
 `.diary-entry`、`.diary-month` 或 `.diary-year` 增加横向 padding。
@@ -119,9 +125,11 @@ Box-year
 --month-block-gap: var(--year-month-block-gap);
 --entry-block-gap: var(--month-date-block-gap);
 --group-summary-padding-block: var(--space-1);
+--group-summary-chevron-gap: var(--space-1);
 --year-control-padding-block-start: 0;
 --month-control-padding-block-start: 0;
 --date-control-padding-block-start: 0;
+--entry-body-padding-block-start: var(--group-summary-padding-block);
 --title-gap: var(--space-1);
 --paragraph-gap: var(--space-2);
 ```
@@ -131,9 +139,11 @@ Box-year
 - `--month-block-gap`：同一年内月份组之间的距离。
 - `--entry-block-gap`：同一月份内日记条目之间的距离。
 - `--group-summary-padding-block`：年/月控件自身的上下 padding。它会影响年/月与日期的视觉对齐。
+- `--group-summary-chevron-gap`：年/月折叠箭头与文字之间的距离。
 - `--year-control-padding-block-start`：年份数字距离本行顶部的微调值。
 - `--month-control-padding-block-start`：月份数字距离本行顶部的微调值。
 - `--date-control-padding-block-start`：日期数字距离本行顶部的微调值。
+- `--entry-body-padding-block-start`：正文/标题距离本行顶部的微调值，用于让正文首行与年、月、日对齐。
 - `--title-gap`：标题与日期/正文之间的距离。
 - `--paragraph-gap`：正文段落之间的距离。
 

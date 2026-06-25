@@ -74,11 +74,11 @@
    * “年+月+日+正文”的整体保持居中。
    */
   --reading-width: 35rem;
-  --year-control-width: 4rem;
-  --month-control-width: 2rem;
+  --year-control-width: 4.5rem;
+  --month-control-width: 3rem;
   --date-control-width: 3rem;
   --year-month-inline-gap: var(--space-3);
-  --month-date-inline-gap: var(--space-2);
+  --month-date-inline-gap: var(--space-3);
   --date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
@@ -99,9 +99,11 @@
   --month-block-gap: var(--year-month-block-gap);
   --entry-block-gap: var(--month-date-block-gap);
   --group-summary-padding-block: var(--space-1);
+  --group-summary-chevron-gap: var(--space-1);
   --year-control-padding-block-start: 0;
   --month-control-padding-block-start: 0;
   --date-control-padding-block-start: 0;
+  --entry-body-padding-block-start: var(--group-summary-padding-block);
   --title-gap: 0;
   --paragraph-gap: var(--space-2);
   --radius-subtle: 0.5rem;

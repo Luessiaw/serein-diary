@@ -193,14 +193,14 @@ body {
   display: grid;
   grid-template-columns: var(--chevron-box-size) 1fr;
   align-items: start;
-  justify-content: end;
-  justify-items: end;
-  gap: var(--space-2);
+  justify-content: start;
+  justify-items: start;
+  column-gap: var(--group-summary-chevron-gap);
   cursor: pointer;
   inline-size: 100%;
   line-height: 1;
   padding-block: var(--group-summary-padding-block);
-  text-align: end;
+  text-align: start;
 }
 
 .diary-group-summary::marker,
@@ -301,7 +301,6 @@ body {
   letter-spacing: var(--letter-spacing-date);
   line-height: 1;
   padding-block-start: var(--date-control-padding-block-start);
-  text-align: end;
 }
 
 .entry-time {
@@ -312,6 +311,7 @@ body {
 .entry-body {
   grid-column: 3;
   min-inline-size: 0;
+  padding-block-start: var(--entry-body-padding-block-start);
 }
 
 .entry-title {
