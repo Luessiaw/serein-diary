@@ -81,13 +81,13 @@
   --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);
   --year-gap: var(--feed-gap);
-  --year-month-gap: var(--space-3);
-  --month-date-gap: var(--space-3);
+  --year-month-gap: var(--space-4);
+  --month-date-gap: var(--space-4);
   --group-summary-padding-block: var(--space-1);
   --year-control-padding-block-start: 0;
   --month-control-padding-block-start: 0;
   --date-control-padding-block-start: 0;
-  --title-gap: var(--space-1);
+  --title-gap: 0;
   --paragraph-gap: var(--space-2);
   --radius-subtle: 0.5rem;
 
