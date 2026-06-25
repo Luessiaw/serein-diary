@@ -129,6 +129,8 @@ body {
 .new-entry::after {
   content: "";
   grid-column: 4;
+  justify-self: stretch;
+  inline-size: 100%;
   min-block-size: var(--debug-layout-placeholder-min-height);
   outline: var(--debug-layout-outline-width) solid rgb(255 150 0 / var(--debug-layout-opacity));
   background: rgb(255 150 0 / calc(var(--debug-layout-opacity) * 0.16));
