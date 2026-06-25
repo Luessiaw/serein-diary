@@ -72,7 +72,7 @@
    * 右侧对称占位。年、月、日控件宽度分别由下面三个 token 控制；如果希望
    * 正文始终居中，右侧会自动使用同等宽度作为不可见占位。
    */
-  --reading-width: 60rem;
+  --reading-width: 46rem;
   --year-control-width: 8rem;
   --month-control-width: 4rem;
   --date-control-width: 3.5rem;
