@@ -12,7 +12,7 @@
     window.history.scrollRestoration = "manual";
   }
 
-  const DEFAULT_PAGE_NAME = "Serein";
+  const FALLBACK_PAGE_NAME = "Serein";
   const settings = readInteractionSettings();
   let draftCreatedAt = createLocalTimestamp();
   const loadState = {
@@ -1213,10 +1213,10 @@
       createSidebarTextSetting({
         id: "serein-setting-page-name",
         label: "页面名称",
-        description: "用于浏览器标签页标题。当前暂存在本机浏览器；未来会通过后端写入 tokens.css。",
+        description: "用于浏览器标签页标题。默认值来自 tokens.css；当前修改只暂存在本机浏览器。",
         value: readPageNamePreference(),
         settingName: "page-name",
-        placeholder: DEFAULT_PAGE_NAME,
+        placeholder: readPageNameToken(),
         onInput(value) {
           setPageName(value);
         },
@@ -1718,23 +1718,52 @@
   }
 
   function normalizePageName(value) {
-    return String(value || "").trim() || DEFAULT_PAGE_NAME;
+    return String(value || "").trim() || readPageNameToken();
   }
 
   function readPageNamePreference() {
     try {
-      return window.localStorage.getItem("serein-page-name") || DEFAULT_PAGE_NAME;
+      const storedValue = window.localStorage.getItem("serein-page-name");
+      return storedValue === null ? readPageNameToken() : storedValue;
     } catch {
-      return DEFAULT_PAGE_NAME;
+      return readPageNameToken();
     }
   }
 
   function writePageNamePreference(value) {
     try {
-      window.localStorage.setItem("serein-page-name", String(value || ""));
+      const nextValue = String(value || "");
+      if (nextValue.trim()) {
+        window.localStorage.setItem("serein-page-name", nextValue);
+      } else {
+        window.localStorage.removeItem("serein-page-name");
+      }
     } catch {
       // Ignore storage failures; the page title still updates for this session.
     }
+  }
+
+  function readPageNameToken() {
+    const styles = window.getComputedStyle(document.documentElement);
+    const rawValue = styles.getPropertyValue("--page-name").trim();
+
+    return parseCssStringToken(rawValue) || FALLBACK_PAGE_NAME;
+  }
+
+  function parseCssStringToken(value) {
+    if (!value) {
+      return "";
+    }
+
+    const quote = value[0];
+    if ((quote === '"' || quote === "'") && value[value.length - 1] === quote) {
+      return value
+        .slice(1, -1)
+        .replace(/\\(["'\\])/gu, "$1")
+        .trim();
+    }
+
+    return value.trim();
   }
 
   function registerEditorExperimentTools() {
