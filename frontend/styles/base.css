@@ -236,8 +236,8 @@ body[data-sidebar-open="true"] .sidebar-backdrop {
   inset-block-start: 50%;
   inset-inline-start: 50%;
   z-index: 30;
-  inline-size: min(26rem, calc(100vw - 2 * var(--space-3)));
-  block-size: min(34rem, calc(100vh - 2 * var(--space-3)));
+  inline-size: min(var(--panel-width), calc(100vw - 2 * var(--space-3)));
+  block-size: min(var(--panel-height), calc(100vh - 2 * var(--space-3)));
   padding: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--color-line) 78%, transparent);
   border-radius: calc(var(--radius-subtle) * 2);

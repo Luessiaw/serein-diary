@@ -66,7 +66,8 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
   `.diary-scroll-region`，因此不会参与日记流宽度、时间轴列宽或滚动加载计算。
   目前 CSS 类名仍沿用 `sidebar-*` 前缀，这是早期侧边栏实现留下的命名。
 - 面板外框使用统一尺寸，不随日期、统计、设置页面内容切换而变化；内容超出时在
-  `.app-sidebar-panels` 内部滚动。
+  `.app-sidebar-panels` 内部滚动。尺寸由 `tokens.css` 中的 `--panel-width` 和
+  `--panel-height` 控制。
 - 面板可以通过左上角菜单按钮或 `Ctrl+K` / `Cmd+K` 唤起，再次按快捷键、
   点击遮罩、点击关闭按钮或按 `Esc` 可关闭。
 - 面板目前包含日期、统计、设置三个页面。导航按钮使用内联 SVG 图标，不依赖
@@ -136,6 +137,8 @@ Box-year
 --month-date-inline-gap: var(--space-3);
 --date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
 --page-gutter: clamp(1rem, 4vw, 3rem);
+--panel-width: 26rem;
+--panel-height: 34rem;
 ```
 
 - `--reading-width`：正文列宽度，只影响正文；主体总宽会由正文宽度和左右等宽占位自动计算。
@@ -146,6 +149,8 @@ Box-year
 - `--month-date-inline-gap`：月份列与日期列之间的横向距离。
 - `--date-content-gap`：日期列与正文列之间的横向距离。
 - `--page-gutter`：整个滚动区左右边距，主要防止窄屏贴边。
+- `--panel-width`：中央面板外框宽度。
+- `--panel-height`：中央面板外框高度。
 
 如果要让正文更宽或更窄，改 `--reading-width`。主体总宽会自动随正文宽度和
 左侧列宽计算得到。如果要让年、月、日彼此靠近或远离，分别改
