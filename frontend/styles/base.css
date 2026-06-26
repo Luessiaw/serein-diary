@@ -566,9 +566,10 @@ body[data-sidebar-open="true"] .app-sidebar {
   color: var(--color-muted);
   background: transparent;
   cursor: help;
-  font-family: var(--font-ui);
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 0.68rem;
-  font-style: italic;
+  font-style: normal;
+  font-weight: 600;
   line-height: 1;
 }
 
