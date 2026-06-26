@@ -1066,6 +1066,7 @@
       tab.setAttribute("aria-label", page.label);
       tab.setAttribute("aria-controls", page.panelId);
       tab.setAttribute("aria-selected", String(selected));
+      tab.dataset.tooltip = page.tooltip;
       tab.dataset.sidebarPage = page.id;
 
       panel.className = "app-sidebar-panel";
@@ -1146,6 +1147,7 @@
       {
         id: "calendar",
         label: "日期",
+        tooltip: "日历",
         panelId: "serein-sidebar-calendar",
         icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="5.5" width="15" height="14" rx="2"></rect><path d="M8 3.8v3.4M16 3.8v3.4M5 10h14"></path></svg>',
         placeholder: "日期页面占位。后续可放日历、日期跳转和时间范围导航。",
@@ -1153,6 +1155,7 @@
       {
         id: "stats",
         label: "统计",
+        tooltip: "统计",
         panelId: "serein-sidebar-stats",
         icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h14"></path><rect x="6" y="11" width="3" height="6" rx="1"></rect><rect x="11" y="7" width="3" height="10" rx="1"></rect><rect x="16" y="4" width="3" height="13" rx="1"></rect></svg>',
         placeholder: "统计页面占位。后续可放写作天数、条目数量和媒体统计。",
@@ -1160,6 +1163,7 @@
       {
         id: "settings",
         label: "设置",
+        tooltip: "设置",
         panelId: "serein-sidebar-settings",
         icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 3.8v2M12 18.2v2M5.9 5.9l1.4 1.4M16.7 16.7l1.4 1.4M3.8 12h2M18.2 12h2M5.9 18.1l1.4-1.4M16.7 7.3l1.4-1.4"></path></svg>',
         placeholder: "设置页面占位。后续可放主题、编辑器、导出和账户相关设置。",

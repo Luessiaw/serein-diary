@@ -283,6 +283,7 @@ body {
 }
 
 .app-sidebar-tab {
+  position: relative;
   display: grid;
   place-items: center;
   inline-size: 2.1rem;
@@ -293,6 +294,34 @@ body {
   color: var(--color-muted);
   background: transparent;
   cursor: pointer;
+}
+
+.app-sidebar-tab::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-1));
+  inset-inline-start: 50%;
+  z-index: 1;
+  padding: 0.18rem var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-line) 70%, transparent);
+  border-radius: 999px;
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-page) 96%, transparent);
+  box-shadow: 0 0.35rem 1rem rgb(0 0 0 / 0.08);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-0.15rem);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: nowrap;
+}
+
+.app-sidebar-tab:hover::after,
+.app-sidebar-tab:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .app-sidebar-tab svg {
