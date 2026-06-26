@@ -377,6 +377,88 @@ body[data-sidebar-open="true"] .app-sidebar {
   font-weight: 600;
 }
 
+.sidebar-calendar {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-3);
+}
+
+.sidebar-calendar-controls {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sidebar-calendar-label {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.sidebar-calendar-control {
+  inline-size: 1.7rem;
+  block-size: 1.7rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.sidebar-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.sidebar-calendar-weekday,
+.sidebar-calendar-empty,
+.sidebar-calendar-day {
+  display: grid;
+  place-items: center;
+  min-block-size: 1.9rem;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.sidebar-calendar-weekday {
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  opacity: 0.72;
+}
+
+.sidebar-calendar-day {
+  color: color-mix(in srgb, var(--color-muted) 48%, transparent);
+}
+
+.sidebar-calendar-day.has-entry {
+  border: 0;
+  color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  cursor: pointer;
+}
+
+.sidebar-calendar-day.has-entry:hover {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
+
+.sidebar-calendar-control:focus-visible,
+.sidebar-calendar-day.has-entry:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-1);
+}
+
 .app-sidebar-placeholder {
   margin: 0;
   color: var(--color-muted);
