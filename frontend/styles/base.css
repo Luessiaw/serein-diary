@@ -219,6 +219,12 @@ body {
   z-index: 28;
   background: rgb(0 0 0 / 0.08);
   backdrop-filter: blur(1px);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+body[data-sidebar-open="true"] .sidebar-backdrop {
+  opacity: 1;
 }
 
 .sidebar-backdrop[hidden] {
@@ -239,6 +245,15 @@ body {
   box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 0.14);
   backdrop-filter: blur(12px);
   overflow: auto;
+  opacity: 0;
+  transform: translateX(-0.75rem) scale(0.985);
+  transform-origin: top left;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+body[data-sidebar-open="true"] .app-sidebar {
+  opacity: 1;
+  transform: translateX(0) scale(1);
 }
 
 .app-sidebar[hidden] {
@@ -931,5 +946,12 @@ body {
   .entry-time {
     justify-self: end;
     text-align: end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-backdrop,
+  .app-sidebar {
+    transition: none;
   }
 }

@@ -1114,8 +1114,32 @@
     const backdrop = elements.backdrop || document.querySelector(".sidebar-backdrop");
     const sidebar = elements.sidebar || document.querySelector(".app-sidebar");
     const nextOpen = Boolean(open);
+    const transitionMs = 180;
 
-    document.body.dataset.sidebarOpen = String(nextOpen);
+    if (nextOpen) {
+      if (backdrop) {
+        backdrop.hidden = false;
+      }
+      if (sidebar) {
+        sidebar.hidden = false;
+      }
+      requestAnimationFrame(() => {
+        document.body.dataset.sidebarOpen = "true";
+      });
+    } else {
+      document.body.dataset.sidebarOpen = "false";
+      window.setTimeout(() => {
+        if (isSidebarOpen()) {
+          return;
+        }
+        if (backdrop) {
+          backdrop.hidden = true;
+        }
+        if (sidebar) {
+          sidebar.hidden = true;
+        }
+      }, transitionMs);
+    }
 
     if (button) {
       button.setAttribute("aria-expanded", String(nextOpen));
@@ -1123,15 +1147,8 @@
       button.setAttribute("aria-label", nextOpen ? "关闭侧边栏" : "打开侧边栏");
     }
 
-    if (backdrop) {
-      backdrop.hidden = !nextOpen;
-    }
-
-    if (sidebar) {
-      sidebar.hidden = !nextOpen;
-      if (nextOpen) {
-        sidebar.querySelector(".app-sidebar-close")?.focus({ preventScroll: true });
-      }
+    if (sidebar && nextOpen) {
+      sidebar.querySelector(".app-sidebar-close")?.focus({ preventScroll: true });
     }
   }
 
