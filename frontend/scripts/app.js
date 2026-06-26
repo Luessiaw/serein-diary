@@ -1017,7 +1017,8 @@
     const header = document.createElement("div");
     const title = document.createElement("h2");
     const close = document.createElement("button");
-    const placeholder = document.createElement("p");
+    const nav = document.createElement("nav");
+    const panels = document.createElement("div");
     const sidebarId = "serein-sidebar";
 
     button.className = "sidebar-menu-button";
@@ -1046,11 +1047,47 @@
     close.textContent = "×";
     close.title = "关闭侧边栏";
     close.setAttribute("aria-label", "关闭侧边栏");
-    placeholder.className = "app-sidebar-placeholder";
-    placeholder.textContent = "侧边栏框架已就绪。信息、设置和导航内容将在后续阶段加入。";
+
+    nav.className = "app-sidebar-nav";
+    nav.setAttribute("aria-label", "侧边栏页面");
+    panels.className = "app-sidebar-panels";
+
+    createSidebarPages().forEach((page, index) => {
+      const tab = document.createElement("button");
+      const panel = document.createElement("section");
+      const panelTitle = document.createElement("h3");
+      const placeholder = document.createElement("p");
+      const selected = index === 0;
+
+      tab.className = "app-sidebar-tab";
+      tab.type = "button";
+      tab.innerHTML = page.icon;
+      tab.title = page.label;
+      tab.setAttribute("aria-label", page.label);
+      tab.setAttribute("aria-controls", page.panelId);
+      tab.setAttribute("aria-selected", String(selected));
+      tab.dataset.sidebarPage = page.id;
+
+      panel.className = "app-sidebar-panel";
+      panel.id = page.panelId;
+      panel.dataset.sidebarPage = page.id;
+      panel.hidden = !selected;
+      panelTitle.className = "app-sidebar-panel-title";
+      panelTitle.textContent = page.label;
+      placeholder.className = "app-sidebar-placeholder";
+      placeholder.textContent = page.placeholder;
+
+      tab.addEventListener("click", () => {
+        setSidebarPage(page.id);
+      });
+
+      panel.append(panelTitle, placeholder);
+      nav.append(tab);
+      panels.append(panel);
+    });
 
     header.append(title, close);
-    sidebar.append(header, placeholder);
+    sidebar.append(header, nav, panels);
     document.body.append(button, backdrop, sidebar);
 
     button.addEventListener("click", () => {
@@ -1102,6 +1139,42 @@
 
   function isSidebarOpen() {
     return document.body.dataset.sidebarOpen === "true";
+  }
+
+  function createSidebarPages() {
+    return [
+      {
+        id: "calendar",
+        label: "日期",
+        panelId: "serein-sidebar-calendar",
+        icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="5.5" width="15" height="14" rx="2"></rect><path d="M8 3.8v3.4M16 3.8v3.4M5 10h14"></path></svg>',
+        placeholder: "日期页面占位。后续可放日历、日期跳转和时间范围导航。",
+      },
+      {
+        id: "stats",
+        label: "统计",
+        panelId: "serein-sidebar-stats",
+        icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19h14"></path><rect x="6" y="11" width="3" height="6" rx="1"></rect><rect x="11" y="7" width="3" height="10" rx="1"></rect><rect x="16" y="4" width="3" height="13" rx="1"></rect></svg>',
+        placeholder: "统计页面占位。后续可放写作天数、条目数量和媒体统计。",
+      },
+      {
+        id: "settings",
+        label: "设置",
+        panelId: "serein-sidebar-settings",
+        icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 3.8v2M12 18.2v2M5.9 5.9l1.4 1.4M16.7 16.7l1.4 1.4M3.8 12h2M18.2 12h2M5.9 18.1l1.4-1.4M16.7 7.3l1.4-1.4"></path></svg>',
+        placeholder: "设置页面占位。后续可放主题、编辑器、导出和账户相关设置。",
+      },
+    ];
+  }
+
+  function setSidebarPage(pageId) {
+    document.querySelectorAll(".app-sidebar-tab").forEach((tab) => {
+      tab.setAttribute("aria-selected", String(tab.dataset.sidebarPage === pageId));
+    });
+
+    document.querySelectorAll(".app-sidebar-panel").forEach((panel) => {
+      panel.hidden = panel.dataset.sidebarPage !== pageId;
+    });
   }
 
   function createEditorExperimentToggle() {
