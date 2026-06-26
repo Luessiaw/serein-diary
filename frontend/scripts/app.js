@@ -20,6 +20,7 @@
     errorMessage: "",
   };
   const groupOpenState = new Map();
+  let loadCheckAfterLayoutChangeRunning = false;
 
   initializeLoadedWindow();
   renderFeed({ focusNewEntry: true, scrollToEnd: true });
@@ -267,6 +268,38 @@
     void loadEarlierEntries();
   }
 
+  function scheduleLoadCheckAfterLayoutChange() {
+    requestAnimationFrame(() => {
+      void loadEarlierEntriesUntilStable();
+    });
+  }
+
+  async function loadEarlierEntriesUntilStable() {
+    if (loadCheckAfterLayoutChangeRunning) {
+      return;
+    }
+
+    loadCheckAfterLayoutChangeRunning = true;
+
+    try {
+      let attempts = 0;
+      const maxAttempts = 20;
+
+      while (attempts < maxAttempts && shouldLoadEarlierEntries()) {
+        attempts += 1;
+
+        const loaded = await loadEarlierEntries();
+        if (!loaded) {
+          break;
+        }
+
+        await waitForNextFrame();
+      }
+    } finally {
+      loadCheckAfterLayoutChangeRunning = false;
+    }
+  }
+
   function shouldLoadEarlierEntries() {
     if (loadState.status === "loading" || loadState.status === "complete") {
       return false;
@@ -278,9 +311,9 @@
       return false;
     }
 
-    const entries = [...app.querySelectorAll(".diary-entry")];
+    const entries = getVisibleEntries();
     if (entries.length === 0) {
-      return false;
+      return app.scrollTop <= app.clientHeight;
     }
 
     const triggerIndex = Math.min(
@@ -294,7 +327,7 @@
 
   async function loadEarlierEntries() {
     if (loadState.status === "loading" || loadState.status === "complete") {
-      return;
+      return false;
     }
 
     const anchor = getScrollAnchor();
@@ -323,6 +356,7 @@
       );
       loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
       renderFeedRestoringAnchor(anchorBeforeFinalRender);
+      return true;
     } catch (error) {
       /*
        * The error control can also differ in height from the loading control,
@@ -333,12 +367,19 @@
       loadState.status = "error";
       loadState.errorMessage = error instanceof Error ? error.message : "未知错误";
       renderFeedRestoringAnchor(anchorBeforeErrorRender);
+      return false;
     }
+  }
+
+  function waitForNextFrame() {
+    return new Promise((resolve) => {
+      requestAnimationFrame(resolve);
+    });
   }
 
   function getScrollAnchor() {
     const appTop = app.getBoundingClientRect().top;
-    const entries = [...app.querySelectorAll(".diary-entry")];
+    const entries = getVisibleEntries();
     const visibleEntry = entries.find((entry) => (
       entry.getBoundingClientRect().bottom >= appTop
     ));
@@ -351,6 +392,12 @@
       id: visibleEntry.dataset.entryId,
       top: visibleEntry.getBoundingClientRect().top,
     };
+  }
+
+  function getVisibleEntries() {
+    return [...app.querySelectorAll(".diary-entry")].filter((entry) => (
+      entry.getClientRects().length > 0
+    ));
   }
 
   function renderFeedRestoringAnchor(anchor) {
@@ -488,6 +535,10 @@
       group.dataset.open = String(nextOpen);
       summary.setAttribute("aria-expanded", String(nextOpen));
       content.hidden = !nextOpen;
+
+      if (!nextOpen) {
+        scheduleLoadCheckAfterLayoutChange();
+      }
     });
     group.append(summary, content);
 
