@@ -430,9 +430,9 @@ body {
 }
 
 .new-entry-header {
+  grid-area: title;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
 }
 
 .new-entry-cancel,
@@ -446,7 +446,14 @@ body {
 
 .new-entry-form {
   display: grid;
+  grid-template-areas:
+    "title actions"
+    "toolbar toolbar"
+    "content content"
+    "message message";
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-3);
+  align-items: start;
 }
 
 .new-entry-title-input,
@@ -471,12 +478,14 @@ body {
 }
 
 .new-entry-content-input {
+  grid-area: content;
   min-block-size: var(--new-entry-min-height);
   overflow-y: hidden;
   resize: none;
 }
 
 .tiptap-toolbar {
+  grid-area: toolbar;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -613,6 +622,7 @@ body {
 }
 
 .new-entry-message {
+  grid-area: message;
   min-block-size: 1.5em;
   margin: 0;
   color: var(--color-muted);
@@ -621,11 +631,13 @@ body {
 }
 
 .new-entry-actions {
+  grid-area: actions;
   display: flex;
   flex: none;
   align-items: center;
   justify-content: end;
   gap: var(--space-2);
+  padding-block-start: 0.1rem;
 }
 
 .new-entry-cancel,

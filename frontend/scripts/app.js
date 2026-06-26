@@ -170,6 +170,7 @@
     draftStatus.title = "草稿状态（暂未启用）";
     draftStatus.setAttribute("role", "img");
     draftStatus.setAttribute("aria-label", "草稿状态（暂未启用）");
+    draftStatus.setAttribute("aria-hidden", "true");
     save.className = "new-entry-save";
     save.type = "submit";
     save.textContent = "✓";
@@ -199,8 +200,8 @@
     });
 
     actions.append(draftStatus, cancel, save);
-    header.append(title, actions);
-    form.append(header, toolbar, content, message);
+    header.append(title);
+    form.append(header, toolbar, content, message, actions);
     body.append(form);
     area.append(date, body);
     if (focusNewEntry) {
