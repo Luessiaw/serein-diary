@@ -1080,10 +1080,10 @@
         setSidebarPage(page.id);
       });
 
-      panel.append(panelTitle);
       if (page.id === "calendar") {
         panel.append(createSidebarCalendar());
       } else {
+        panel.append(panelTitle);
         panel.append(placeholder);
       }
       nav.append(tab);

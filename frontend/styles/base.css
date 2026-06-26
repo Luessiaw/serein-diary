@@ -442,6 +442,7 @@ body[data-sidebar-open="true"] .app-sidebar {
   background: color-mix(in srgb, var(--color-page) 96%, transparent);
   box-shadow: 0 0.85rem 2rem rgb(0 0 0 / 0.12);
   overflow-y: auto;
+  animation: sidebar-calendar-picker-in 140ms ease both;
 }
 
 .sidebar-calendar-picker.is-year-picker {
@@ -1035,6 +1036,18 @@ body[data-sidebar-open="true"] .app-sidebar {
   }
 }
 
+@keyframes sidebar-calendar-picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 42rem) {
   .diary-feed {
     gap: var(--feed-gap-compact);
@@ -1095,7 +1108,9 @@ body[data-sidebar-open="true"] .app-sidebar {
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar-backdrop,
-  .app-sidebar {
+  .app-sidebar,
+  .sidebar-calendar-picker {
+    animation: none;
     transition: none;
   }
 }
