@@ -300,7 +300,7 @@
 
       pendingLoadCheckAfterLayoutChange = false;
 
-      while (attempts < maxAttempts && shouldLoadEarlierEntries({
+      while (attempts < maxAttempts && shouldLoadEarlierEntriesAfterLayoutChange({
         source: "post-layout",
         verbose: true,
       })) {
@@ -376,6 +376,35 @@
       triggerOffsetTop: triggerEntry.offsetTop,
       scrollTop: app.scrollTop,
       visibleEntryCount: entries.length,
+    });
+    return shouldLoad;
+  }
+
+  function shouldLoadEarlierEntriesAfterLayoutChange(options = {}) {
+    const { source = "unknown", verbose = false } = options;
+
+    if (loadState.status === "loading" || loadState.status === "complete") {
+      debugShouldLoad(false, "blocked-by-status", { source, verbose });
+      return false;
+    }
+
+    if (loadState.visibleStartIndex <= 0) {
+      loadState.status = "complete";
+      debugShouldLoad(false, "no-earlier-content", { source, verbose });
+      renderFeed();
+      return false;
+    }
+
+    const overflow = app.scrollHeight - app.clientHeight;
+    const shouldLoad = overflow <= settings.layoutFillTolerance;
+
+    debugShouldLoad(shouldLoad, "layout-fill-threshold", {
+      source,
+      verbose,
+      scrollHeight: app.scrollHeight,
+      clientHeight: app.clientHeight,
+      overflow,
+      layoutFillTolerance: settings.layoutFillTolerance,
     });
     return shouldLoad;
   }
@@ -654,6 +683,7 @@
       pageSize: readIntegerToken(styles, "--load-page-size", 4),
       triggerEntryIndex: readIntegerToken(styles, "--load-trigger-entry-index", 5),
       simulatedDelayMs: readIntegerToken(styles, "--load-simulated-delay-ms", 1000),
+      layoutFillTolerance: readNonNegativeIntegerToken(styles, "--load-layout-fill-tolerance", 0),
     };
   }
 
@@ -661,6 +691,12 @@
     const value = Number.parseInt(styles.getPropertyValue(name), 10);
 
     return Number.isFinite(value) && value > 0 ? value : fallback;
+  }
+
+  function readNonNegativeIntegerToken(styles, name, fallback) {
+    const value = Number.parseInt(styles.getPropertyValue(name), 10);
+
+    return Number.isFinite(value) && value >= 0 ? value : fallback;
   }
 
   function createNewDraft() {

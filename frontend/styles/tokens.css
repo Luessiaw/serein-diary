@@ -142,13 +142,15 @@
    *
    * 这些变量用于当前静态原型的分页模拟。前三个数值会被 JavaScript 读取：
    * 初始加载最近多少篇、每次向上加载多少篇，以及滚动到已加载列表顶部第
-   * 几篇附近时触发下一次加载。未来接入后端后，这组参数仍可作为前端体验
-   * 调校入口。
+   * 几篇附近时触发下一次加载。`--load-layout-fill-tolerance` 控制折叠年/月后
+   * 页面高度不足时的补拉容差：当 scrollHeight - clientHeight 小于等于此值时，
+   * 才继续自动补拉更早内容。未来接入后端后，这组参数仍可作为前端体验调校入口。
    */
   --load-initial-count: 4;
   --load-page-size: 2;
   --load-trigger-entry-index: 1;
   --load-simulated-delay-ms: 1000;
+  --load-layout-fill-tolerance: 0;
   --load-control-gap: var(--space-2);
   --load-control-padding-block: var(--space-2);
   --spinner-size: 0.9rem;
