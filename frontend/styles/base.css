@@ -209,6 +209,8 @@ body {
 .sidebar-menu-button[aria-expanded="true"] {
   border-color: var(--color-accent);
   color: var(--color-accent);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sidebar-backdrop {
