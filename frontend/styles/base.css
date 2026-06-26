@@ -391,12 +391,23 @@ body[data-sidebar-open="true"] .app-sidebar {
 }
 
 .sidebar-calendar-label {
+  display: grid;
+  gap: 0.1rem;
   margin: 0;
+  justify-items: center;
+}
+
+.sidebar-calendar-label-button {
+  border: 0;
+  border-radius: var(--radius-subtle);
+  padding: 0.08rem var(--space-2);
   color: var(--color-ink);
+  background: transparent;
+  cursor: pointer;
   font-family: var(--font-ui);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  text-align: center;
+  line-height: 1.25;
 }
 
 .sidebar-calendar-control {
@@ -411,6 +422,44 @@ body[data-sidebar-open="true"] .app-sidebar {
   font-family: var(--font-ui);
   font-size: 0.9rem;
   line-height: 1;
+}
+
+.sidebar-calendar-control:disabled {
+  cursor: default;
+  opacity: 0.28;
+}
+
+.sidebar-calendar-picker {
+  display: grid;
+  gap: 0.15rem;
+  max-block-size: 9rem;
+  margin-block: calc(-1 * var(--space-1)) var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--color-line) 70%, transparent);
+  border-radius: var(--radius-subtle);
+  background: color-mix(in srgb, var(--color-page) 96%, transparent);
+  overflow-y: auto;
+}
+
+.sidebar-calendar-picker[hidden] {
+  display: none;
+}
+
+.sidebar-calendar-picker-option {
+  border: 0;
+  border-radius: var(--radius-subtle);
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.sidebar-calendar-picker-option[aria-selected="true"] {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .sidebar-calendar-grid {
@@ -453,7 +502,9 @@ body[data-sidebar-open="true"] .app-sidebar {
   background: color-mix(in srgb, var(--color-accent) 16%, transparent);
 }
 
+.sidebar-calendar-label-button:focus-visible,
 .sidebar-calendar-control:focus-visible,
+.sidebar-calendar-picker-option:focus-visible,
 .sidebar-calendar-day.has-entry:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: var(--space-1);

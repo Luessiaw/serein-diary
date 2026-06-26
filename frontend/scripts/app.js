@@ -1206,17 +1206,34 @@
     const controls = document.createElement("div");
     const previousYear = document.createElement("button");
     const previousMonth = document.createElement("button");
-    const label = document.createElement("p");
+    const label = document.createElement("div");
+    const yearLabel = document.createElement("button");
+    const monthLabel = document.createElement("button");
     const nextMonth = document.createElement("button");
     const nextYear = document.createElement("button");
+    const picker = document.createElement("div");
     const grid = document.createElement("div");
     const cursor = getSidebarCalendarCursor();
 
     calendar.className = "sidebar-calendar";
     controls.className = "sidebar-calendar-controls";
     label.className = "sidebar-calendar-label";
+    yearLabel.className = "sidebar-calendar-label-button sidebar-calendar-year-label";
+    monthLabel.className = "sidebar-calendar-label-button sidebar-calendar-month-label";
+    picker.className = "sidebar-calendar-picker";
+    picker.hidden = true;
     grid.className = "sidebar-calendar-grid";
 
+    yearLabel.type = "button";
+    monthLabel.type = "button";
+    yearLabel.setAttribute("aria-label", "选择年份");
+    monthLabel.setAttribute("aria-label", "选择月份");
+    yearLabel.addEventListener("click", () => {
+      toggleSidebarCalendarPicker(calendar, "year");
+    });
+    monthLabel.addEventListener("click", () => {
+      toggleSidebarCalendarPicker(calendar, "month");
+    });
     configureCalendarControl(previousYear, "‹‹", "上一年", () => {
       moveSidebarCalendar(calendar, -1, 0);
     });
@@ -1232,8 +1249,9 @@
 
     calendar.dataset.year = String(cursor.year);
     calendar.dataset.month = String(cursor.month);
+    label.append(yearLabel, monthLabel);
     controls.append(previousYear, previousMonth, label, nextMonth, nextYear);
-    calendar.append(controls, grid);
+    calendar.append(controls, picker, grid);
     renderSidebarCalendar(calendar);
 
     return calendar;
@@ -1256,7 +1274,7 @@
     const latestDate = getMockDiaryDates().at(-1) || getCalendarDate(createLocalTimestamp());
     const [year, month] = latestDate.split("-").map(Number);
 
-    sidebarCalendarCursor = { year, month };
+    sidebarCalendarCursor = normalizeCalendarCursor({ year, month });
     return sidebarCalendarCursor;
   }
 
@@ -1266,31 +1284,59 @@
     const nextDate = new Date(currentYear, currentMonth - 1 + monthDelta, 1);
 
     nextDate.setFullYear(nextDate.getFullYear() + yearDelta);
-    sidebarCalendarCursor = {
+    const nextCursor = normalizeCalendarCursor({
       year: nextDate.getFullYear(),
       month: nextDate.getMonth() + 1,
-    };
+    });
+
+    if (
+      nextCursor.year === Number(calendar.dataset.year)
+      && nextCursor.month === Number(calendar.dataset.month)
+    ) {
+      return;
+    }
+
+    sidebarCalendarCursor = nextCursor;
     calendar.dataset.year = String(sidebarCalendarCursor.year);
     calendar.dataset.month = String(sidebarCalendarCursor.month);
+    closeSidebarCalendarPicker(calendar);
     renderSidebarCalendar(calendar);
   }
 
   function renderSidebarCalendar(calendar) {
     const year = Number(calendar.dataset.year);
     const month = Number(calendar.dataset.month);
-    const label = calendar.querySelector(".sidebar-calendar-label");
+    const yearLabel = calendar.querySelector(".sidebar-calendar-year-label");
+    const monthLabel = calendar.querySelector(".sidebar-calendar-month-label");
     const grid = calendar.querySelector(".sidebar-calendar-grid");
+    const previousYear = calendar.querySelector('[aria-label="上一年"]');
+    const previousMonth = calendar.querySelector('[aria-label="上一月"]');
+    const nextMonth = calendar.querySelector('[aria-label="下一月"]');
+    const nextYear = calendar.querySelector('[aria-label="下一年"]');
     const diaryDates = new Set(getMockDiaryDates());
     const firstDay = new Date(year, month - 1, 1);
     const daysInMonth = new Date(year, month, 0).getDate();
     const leadingEmptyDays = firstDay.getDay();
     const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
 
-    if (!label || !grid) {
+    if (!yearLabel || !monthLabel || !grid) {
       return;
     }
 
-    label.textContent = `${year}.${String(month).padStart(2, "0")}`;
+    yearLabel.textContent = `${year} 年`;
+    monthLabel.textContent = `${String(month).padStart(2, "0")} 月`;
+    if (previousYear) {
+      previousYear.disabled = false;
+    }
+    if (previousMonth) {
+      previousMonth.disabled = false;
+    }
+    if (nextMonth) {
+      nextMonth.disabled = isCalendarFuture(year, month + 1);
+    }
+    if (nextYear) {
+      nextYear.disabled = isCalendarFuture(year + 1, month);
+    }
     grid.replaceChildren();
     weekdays.forEach((weekday) => {
       const cell = document.createElement("span");
@@ -1330,6 +1376,178 @@
     return [...new Set(getAllReadingSamples().map((sample) => (
       getCalendarDate(sample.data.metadata.created_at)
     )))].sort();
+  }
+
+  function toggleSidebarCalendarPicker(calendar, mode) {
+    const picker = calendar.querySelector(".sidebar-calendar-picker");
+
+    if (!picker) {
+      return;
+    }
+
+    if (!picker.hidden && picker.dataset.mode === mode) {
+      closeSidebarCalendarPicker(calendar);
+      return;
+    }
+
+    renderSidebarCalendarPicker(calendar, mode);
+  }
+
+  function closeSidebarCalendarPicker(calendar) {
+    const picker = calendar.querySelector(".sidebar-calendar-picker");
+
+    if (picker) {
+      picker.hidden = true;
+      delete picker.dataset.mode;
+    }
+  }
+
+  function renderSidebarCalendarPicker(calendar, mode) {
+    const picker = calendar.querySelector(".sidebar-calendar-picker");
+    const year = Number(calendar.dataset.year);
+    const month = Number(calendar.dataset.month);
+    const limit = getCalendarFutureLimit();
+
+    if (!picker) {
+      return;
+    }
+
+    picker.replaceChildren();
+    picker.hidden = false;
+    picker.dataset.mode = mode;
+
+    if (mode === "year") {
+      const years = getSelectableCalendarYears();
+
+      years.forEach((selectableYear) => {
+        const option = createSidebarCalendarPickerOption(
+          `${selectableYear} 年`,
+          selectableYear === year,
+          () => {
+            const nextCursor = normalizeCalendarCursor({ year: selectableYear, month });
+
+            setSidebarCalendarCursor(calendar, nextCursor);
+          },
+        );
+
+        picker.append(option);
+      });
+      scrollSelectedCalendarPickerOptionIntoView(picker);
+      return;
+    }
+
+    for (let selectableMonth = 1; selectableMonth <= 12; selectableMonth += 1) {
+      if (year === limit.year && selectableMonth > limit.month) {
+        break;
+      }
+
+      const option = createSidebarCalendarPickerOption(
+        `${String(selectableMonth).padStart(2, "0")} 月`,
+        selectableMonth === month,
+        () => {
+          setSidebarCalendarCursor(calendar, { year, month: selectableMonth });
+        },
+      );
+
+      picker.append(option);
+    }
+    scrollSelectedCalendarPickerOptionIntoView(picker);
+  }
+
+  function createSidebarCalendarPickerOption(label, selected, onClick) {
+    const option = document.createElement("button");
+
+    option.className = "sidebar-calendar-picker-option";
+    option.type = "button";
+    option.textContent = label;
+    option.setAttribute("aria-selected", String(selected));
+    option.addEventListener("click", onClick);
+    return option;
+  }
+
+  function setSidebarCalendarCursor(calendar, cursor) {
+    sidebarCalendarCursor = normalizeCalendarCursor(cursor);
+    calendar.dataset.year = String(sidebarCalendarCursor.year);
+    calendar.dataset.month = String(sidebarCalendarCursor.month);
+    closeSidebarCalendarPicker(calendar);
+    renderSidebarCalendar(calendar);
+  }
+
+  function scrollSelectedCalendarPickerOptionIntoView(picker) {
+    requestAnimationFrame(() => {
+      picker.querySelector('[aria-selected="true"]')?.scrollIntoView({
+        block: "center",
+      });
+    });
+  }
+
+  function getSelectableCalendarYears() {
+    const diaryYears = getMockDiaryDates().map((date) => Number(date.slice(0, 4)));
+    const currentYear = getCalendarFutureLimit().year;
+    const firstYear = Math.min(...diaryYears, currentYear);
+    const years = [];
+
+    for (let year = firstYear; year <= currentYear; year += 1) {
+      years.push(year);
+    }
+
+    return years;
+  }
+
+  function normalizeCalendarCursor(cursor) {
+    const limit = getCalendarFutureLimit();
+    let year = Number(cursor.year);
+    let month = Number(cursor.month);
+
+    if (!Number.isFinite(year)) {
+      year = limit.year;
+    }
+    if (!Number.isFinite(month)) {
+      month = limit.month;
+    }
+    if (year > limit.year) {
+      year = limit.year;
+      month = limit.month;
+    }
+    if (year === limit.year && month > limit.month) {
+      month = limit.month;
+    }
+    if (month < 1) {
+      month = 1;
+    }
+    if (month > 12) {
+      month = 12;
+    }
+
+    return { year, month };
+  }
+
+  function isCalendarFuture(year, month) {
+    const normalized = normalizeCalendarMonth(year, month);
+    const limit = getCalendarFutureLimit();
+
+    return (
+      normalized.year > limit.year
+      || (normalized.year === limit.year && normalized.month > limit.month)
+    );
+  }
+
+  function normalizeCalendarMonth(year, month) {
+    const date = new Date(Number(year), Number(month) - 1, 1);
+
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+    };
+  }
+
+  function getCalendarFutureLimit() {
+    const now = new Date();
+
+    return {
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+    };
   }
 
   function handleCalendarDateJump(date) {
