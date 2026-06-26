@@ -1310,28 +1310,16 @@
   function createSidebarSettingLabel(config) {
     const labelWrap = document.createElement("div");
     const label = document.createElement("label");
-    const info = document.createElement("button");
-    const tooltip = document.createElement("span");
-    const tooltipId = `${config.id}-info`;
+    const description = document.createElement("p");
 
     labelWrap.className = "sidebar-setting-label-wrap";
     label.className = "sidebar-setting-label";
     label.htmlFor = config.id;
     label.textContent = config.label;
-    info.className = "sidebar-setting-info";
-    info.type = "button";
-    info.textContent = "i";
-    info.setAttribute("aria-label", `${config.label}说明`);
-    info.setAttribute("aria-describedby", tooltipId);
-    tooltip.className = "sidebar-setting-tooltip";
-    tooltip.id = tooltipId;
-    tooltip.setAttribute("role", "tooltip");
-    tooltip.textContent = config.description;
-    info.addEventListener("click", () => {
-      info.focus({ preventScroll: true });
-    });
+    description.className = "sidebar-setting-description";
+    description.textContent = config.description;
 
-    labelWrap.append(label, info, tooltip);
+    labelWrap.append(label, description);
     return labelWrap;
   }
 
