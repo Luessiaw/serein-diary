@@ -12,11 +12,14 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 <button class="sidebar-menu-button">...</button>
 <div class="sidebar-backdrop"></div>
 <aside class="app-sidebar">
-  <nav class="app-sidebar-nav">
-    <button class="app-sidebar-tab">日期</button>
-    <button class="app-sidebar-tab">统计</button>
-    <button class="app-sidebar-tab">设置</button>
-  </nav>
+  <div class="app-sidebar-header">
+    <nav class="app-sidebar-nav">
+      <button class="app-sidebar-tab">日期</button>
+      <button class="app-sidebar-tab">统计</button>
+      <button class="app-sidebar-tab">设置</button>
+    </nav>
+    <button class="app-sidebar-close">关闭</button>
+  </div>
   <div class="app-sidebar-panels">...</div>
 </aside>
 
@@ -62,7 +65,7 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 - 侧边栏相关节点直接挂在 `<body>` 下，是浮动界面层，不放入 `.diary-scroll-region`，
   因此不会参与日记流宽度、时间轴列宽或滚动加载计算。
 - 侧边栏目前只有三个占位页面：日期、统计、设置。导航按钮使用内联 SVG 图标，不依赖
-  外部图片素材。
+  外部图片素材；当前页面使用类似浏览器标签页的圆角上边框，与下方内容区顶线融合。
 - 年份、月份使用普通 `<section>`、`<button>` 和内容 `<div>` 组成；折叠状态由
   `data-open`、`aria-expanded` 和 `hidden` 控制。这样布局由普通 grid 元素承担，
   避免 `<details>` / `<summary>` 的特殊渲染模型影响列定位。

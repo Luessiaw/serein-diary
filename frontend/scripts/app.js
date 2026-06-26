@@ -1084,8 +1084,8 @@
       panels.append(panel);
     });
 
-    header.append(close);
-    sidebar.append(header, nav, panels);
+    header.append(nav, close);
+    sidebar.append(header, panels);
     document.body.append(button, backdrop, sidebar);
 
     button.addEventListener("click", () => {

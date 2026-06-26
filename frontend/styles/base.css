@@ -248,8 +248,11 @@ body {
 .app-sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: end;
-  margin-block-end: var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-4);
+  padding: var(--space-3) var(--space-3) 0;
+  border-block-end: 1px solid color-mix(in srgb, var(--color-line) 70%, transparent);
 }
 
 .app-sidebar-close {
@@ -268,20 +271,20 @@ body {
 
 .app-sidebar-nav {
   display: flex;
-  gap: var(--space-2);
-  margin-block-end: var(--space-4);
-  padding-block-end: var(--space-3);
-  border-block-end: 1px solid color-mix(in srgb, var(--color-line) 70%, transparent);
+  align-self: end;
+  gap: 0.15rem;
+  min-inline-size: 0;
 }
 
 .app-sidebar-tab {
   position: relative;
   display: grid;
   place-items: center;
-  inline-size: 2.1rem;
-  block-size: 2.1rem;
+  inline-size: 2.4rem;
+  block-size: 2.2rem;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-block-end: 0;
+  border-radius: var(--radius-subtle) var(--radius-subtle) 0 0;
   padding: 0;
   color: var(--color-muted);
   background: transparent;
@@ -327,9 +330,20 @@ body {
 }
 
 .app-sidebar-tab[aria-selected="true"] {
-  border-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  position: relative;
+  border-color: color-mix(in srgb, var(--color-line) 92%, transparent);
+  border-block-end-color: transparent;
   color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--color-page) 96%, transparent);
+}
+
+.app-sidebar-tab[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -1px;
+  block-size: 1px;
+  background: color-mix(in srgb, var(--color-page) 96%, transparent);
 }
 
 .app-sidebar-panels {
