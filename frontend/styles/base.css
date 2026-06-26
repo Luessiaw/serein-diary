@@ -248,16 +248,8 @@ body {
 .app-sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-block-end: var(--space-4);
-}
-
-.app-sidebar-title {
-  margin: 0;
-  font-family: var(--font-title);
-  font-size: var(--font-size-title);
-  font-weight: 500;
+  justify-content: end;
+  margin-block-end: var(--space-3);
 }
 
 .app-sidebar-close {

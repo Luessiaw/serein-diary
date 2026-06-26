@@ -1015,7 +1015,6 @@
     const backdrop = document.createElement("div");
     const sidebar = document.createElement("aside");
     const header = document.createElement("div");
-    const title = document.createElement("h2");
     const close = document.createElement("button");
     const nav = document.createElement("nav");
     const panels = document.createElement("div");
@@ -1040,8 +1039,6 @@
     sidebar.setAttribute("role", "dialog");
 
     header.className = "app-sidebar-header";
-    title.className = "app-sidebar-title";
-    title.textContent = "Serein";
     close.className = "app-sidebar-close";
     close.type = "button";
     close.textContent = "×";
@@ -1087,7 +1084,7 @@
       panels.append(panel);
     });
 
-    header.append(title, close);
+    header.append(close);
     sidebar.append(header, nav, panels);
     document.body.append(button, backdrop, sidebar);
 
