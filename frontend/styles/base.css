@@ -217,8 +217,8 @@ body {
   position: fixed;
   inset: 0;
   z-index: 28;
-  background: rgb(0 0 0 / 0.08);
-  backdrop-filter: blur(1px);
+  background: rgb(0 0 0 / 0.1);
+  backdrop-filter: blur(2px);
   opacity: 0;
   transition: opacity 180ms ease;
 }
@@ -233,10 +233,11 @@ body[data-sidebar-open="true"] .sidebar-backdrop {
 
 .app-sidebar {
   position: fixed;
-  inset-block: var(--space-3);
-  inset-inline-start: var(--space-3);
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
   z-index: 30;
-  inline-size: min(22rem, calc(100vw - 2 * var(--space-3)));
+  inline-size: min(26rem, calc(100vw - 2 * var(--space-3)));
+  max-block-size: min(42rem, calc(100vh - 2 * var(--space-3)));
   padding: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--color-line) 78%, transparent);
   border-radius: calc(var(--radius-subtle) * 2);
@@ -246,14 +247,14 @@ body[data-sidebar-open="true"] .sidebar-backdrop {
   backdrop-filter: blur(12px);
   overflow: auto;
   opacity: 0;
-  transform: translateX(-0.75rem) scale(0.985);
-  transform-origin: top left;
+  transform: translate(-50%, -48%) scale(0.985);
+  transform-origin: center;
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
 body[data-sidebar-open="true"] .app-sidebar {
   opacity: 1;
-  transform: translateX(0) scale(1);
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .app-sidebar[hidden] {

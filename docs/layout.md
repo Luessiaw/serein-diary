@@ -11,7 +11,7 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 ```html
 <button class="sidebar-menu-button">...</button>
 <div class="sidebar-backdrop"></div>
-<aside class="app-sidebar">
+<aside class="app-sidebar" role="dialog">
   <div class="app-sidebar-header">
     <nav class="app-sidebar-nav">
       <button class="app-sidebar-tab">日期</button>
@@ -62,9 +62,12 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 
 几点需要记住：
 
-- 侧边栏相关节点直接挂在 `<body>` 下，是浮动界面层，不放入 `.diary-scroll-region`，
-  因此不会参与日记流宽度、时间轴列宽或滚动加载计算。
-- 侧边栏目前包含日期、统计、设置三个页面。导航按钮使用内联 SVG 图标，不依赖
+- 面板相关节点直接挂在 `<body>` 下，是屏幕中央的浮动 dialog 卡片，不放入
+  `.diary-scroll-region`，因此不会参与日记流宽度、时间轴列宽或滚动加载计算。
+  目前 CSS 类名仍沿用 `sidebar-*` 前缀，这是早期侧边栏实现留下的命名。
+- 面板可以通过左上角菜单按钮或 `Ctrl+K` / `Cmd+K` 唤起，再次按快捷键、
+  点击遮罩、点击关闭按钮或按 `Esc` 可关闭。
+- 面板目前包含日期、统计、设置三个页面。导航按钮使用内联 SVG 图标，不依赖
   外部图片素材；当前页面使用类似浏览器标签页的圆角上边框，与下方内容区顶线融合。
 - 日期页已包含静态月历控件：年份控制和月份控制分成两行，年份和月份文字可点击打开
   浮动的可滚动选择卡片，点击卡片外部会关闭，且不能跳转到未来月份；使用 mock 日记
@@ -73,7 +76,7 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
   输入框/下拉菜单”的形式；页面名称默认读取 `tokens.css` 中的 `--page-name`，
   输入框修改值暂存于浏览器本地并同步到网页标题，清空输入则回到 token 默认值。未来
   后端只需要写入 `tokens.css` 即可持久化站点标题；布局调试和编辑器模式替代早期页面
-  右下角的浮动按钮。设置页面自身不显示“设置”标题，以保持侧边栏紧凑。
+  右下角的浮动按钮。设置页面自身不显示“设置”标题，以保持面板紧凑。
 - 年份、月份使用普通 `<section>`、`<button>` 和内容 `<div>` 组成；折叠状态由
   `data-open`、`aria-expanded` 和 `hidden` 控制。这样布局由普通 grid 元素承担，
   避免 `<details>` / `<summary>` 的特殊渲染模型影响列定位。
@@ -229,7 +232,7 @@ sticky。月份标签的 sticky 触发线默认位于“页面顶端 + 年份吸
 
 ## 布局调试边框
 
-侧边栏“设置”页中的“布局调试”下拉菜单用于即时开关布局调试边框。开启后，年、
+中央面板“设置”页中的“布局调试”下拉菜单用于即时开关布局调试边框。开启后，年、
 月、日、正文和右侧占位列的真实边界会显示出来；状态会保存在当前浏览器的
 `localStorage` 中，刷新页面后仍会保留。早期右下角浮动 `Debug` 按钮已移除，
 避免干扰日记阅读和写作。
@@ -251,7 +254,7 @@ SereinDebugLayout.setDebugMode(false)
 
 ## 编辑器实验开关
 
-侧边栏“设置”页中的“编辑器模式”下拉菜单用于切换新建日记正文区域：
+中央面板“设置”页中的“编辑器模式”下拉菜单用于切换新建日记正文区域：
 
 - `Textarea`：原生文本框，保持最轻量、最稳定的输入体验。
 - `Tiptap demo`：加载 Tiptap 实验编辑器，用于测试富文本工具栏和 Markdown 导出。

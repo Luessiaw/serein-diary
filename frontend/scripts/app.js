@@ -1025,8 +1025,8 @@
 
     button.className = "sidebar-menu-button";
     button.type = "button";
-    button.title = "打开侧边栏";
-    button.setAttribute("aria-label", "打开侧边栏");
+    button.title = "打开面板（Ctrl+K）";
+    button.setAttribute("aria-label", "打开面板");
     button.setAttribute("aria-controls", sidebarId);
     button.setAttribute("aria-expanded", "false");
     button.innerHTML = "<span></span><span></span><span></span>";
@@ -1037,7 +1037,7 @@
     sidebar.className = "app-sidebar";
     sidebar.id = sidebarId;
     sidebar.hidden = true;
-    sidebar.setAttribute("aria-label", "信息与设置侧边栏");
+    sidebar.setAttribute("aria-label", "信息与设置面板");
     sidebar.setAttribute("aria-modal", "true");
     sidebar.setAttribute("role", "dialog");
 
@@ -1045,11 +1045,11 @@
     close.className = "app-sidebar-close";
     close.type = "button";
     close.textContent = "×";
-    close.title = "关闭侧边栏";
-    close.setAttribute("aria-label", "关闭侧边栏");
+    close.title = "关闭面板";
+    close.setAttribute("aria-label", "关闭面板");
 
     nav.className = "app-sidebar-nav";
-    nav.setAttribute("aria-label", "侧边栏页面");
+    nav.setAttribute("aria-label", "面板页面");
     panels.className = "app-sidebar-panels";
 
     createSidebarPages().forEach((page, index) => {
@@ -1099,7 +1099,7 @@
     document.body.append(button, backdrop, sidebar);
 
     button.addEventListener("click", () => {
-      setSidebarOpen(true, { button, backdrop, sidebar });
+      setSidebarOpen(!isSidebarOpen(), { button, backdrop, sidebar });
     });
     close.addEventListener("click", () => {
       setSidebarOpen(false, { button, backdrop, sidebar });
@@ -1110,12 +1110,16 @@
       button.focus({ preventScroll: true });
     });
     document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape" || !isSidebarOpen()) {
+      if (event.key === "Escape" && isSidebarOpen()) {
+        setSidebarOpen(false, { button, backdrop, sidebar });
+        button.focus({ preventScroll: true });
         return;
       }
 
-      setSidebarOpen(false, { button, backdrop, sidebar });
-      button.focus({ preventScroll: true });
+      if (event.key.toLowerCase() === "k" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        setSidebarOpen(!isSidebarOpen(), { button, backdrop, sidebar });
+      }
     });
   }
 
@@ -1153,8 +1157,8 @@
 
     if (button) {
       button.setAttribute("aria-expanded", String(nextOpen));
-      button.title = nextOpen ? "关闭侧边栏" : "打开侧边栏";
-      button.setAttribute("aria-label", nextOpen ? "关闭侧边栏" : "打开侧边栏");
+      button.title = nextOpen ? "关闭面板（Ctrl+K）" : "打开面板（Ctrl+K）";
+      button.setAttribute("aria-label", nextOpen ? "关闭面板" : "打开面板");
     }
 
     if (sidebar && nextOpen) {
