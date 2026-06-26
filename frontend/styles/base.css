@@ -237,7 +237,7 @@ body[data-sidebar-open="true"] .sidebar-backdrop {
   inset-inline-start: 50%;
   z-index: 30;
   inline-size: min(26rem, calc(100vw - 2 * var(--space-3)));
-  max-block-size: min(42rem, calc(100vh - 2 * var(--space-3)));
+  block-size: min(34rem, calc(100vh - 2 * var(--space-3)));
   padding: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--color-line) 78%, transparent);
   border-radius: calc(var(--radius-subtle) * 2);
@@ -245,7 +245,9 @@ body[data-sidebar-open="true"] .sidebar-backdrop {
   background: color-mix(in srgb, var(--color-page) 94%, transparent);
   box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 0.14);
   backdrop-filter: blur(12px);
-  overflow: auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
   opacity: 0;
   transform: translate(-50%, -48%) scale(0.985);
   transform-origin: center;
@@ -364,6 +366,9 @@ body[data-sidebar-open="true"] .app-sidebar {
 
 .app-sidebar-panels {
   display: grid;
+  min-block-size: 0;
+  overflow: auto;
+  padding-inline-end: var(--space-1);
 }
 
 .app-sidebar-panel[hidden] {
