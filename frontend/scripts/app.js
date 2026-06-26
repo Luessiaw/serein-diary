@@ -131,11 +131,12 @@
     const message = document.createElement("p");
     const header = document.createElement("div");
     const actions = document.createElement("div");
+    const toolbar = document.createElement("div");
     const cancel = document.createElement("button");
     const draftStatus = document.createElement("span");
     const save = document.createElement("button");
 
-    const contentControl = createNewEntryContentControl(content, message);
+    const contentControl = createNewEntryContentControl(content, message, toolbar);
     activeNewEntryContentControl = contentControl;
 
     form.className = "new-entry-form";
@@ -157,6 +158,9 @@
     message.setAttribute("role", "status");
     header.className = "new-entry-header";
     actions.className = "new-entry-actions";
+    toolbar.className = "tiptap-toolbar";
+    toolbar.setAttribute("aria-label", "Tiptap formatting toolbar");
+    toolbar.hidden = content instanceof HTMLTextAreaElement;
     cancel.className = "new-entry-cancel";
     cancel.type = "button";
     cancel.textContent = "×";
@@ -196,7 +200,7 @@
 
     actions.append(draftStatus, cancel, save);
     header.append(title, actions);
-    form.append(header, content, message);
+    form.append(header, toolbar, content, message);
     body.append(form);
     area.append(date, body);
     if (focusNewEntry) {
@@ -211,12 +215,12 @@
     return area;
   }
 
-  function createNewEntryContentControl(content, message) {
+  function createNewEntryContentControl(content, message, toolbar) {
     if (content instanceof HTMLTextAreaElement) {
       return createTextareaContentControl(content);
     }
 
-    return createTiptapContentControl(content, message);
+    return createTiptapContentControl(content, message, toolbar);
   }
 
   function createTextareaContentControl(content) {
@@ -243,7 +247,7 @@
     };
   }
 
-  function createTiptapContentControl(content, message) {
+  function createTiptapContentControl(content, message, toolbar) {
     const state = {
       editor: null,
       loadError: null,
@@ -256,7 +260,8 @@
         content.setAttribute("aria-multiline", "true");
         content.tabIndex = 0;
         message.textContent = "Tiptap demo 正在加载……";
-        void initializeTiptapEditor(content, state, message);
+        renderTiptapToolbar(toolbar, state);
+        void initializeTiptapEditor(content, state, message, toolbar);
       },
       readMarkdown() {
         if (state.editor) {
@@ -287,7 +292,7 @@
     };
   }
 
-  async function initializeTiptapEditor(element, state, message) {
+  async function initializeTiptapEditor(element, state, message, toolbar) {
     try {
       const [{ Editor }, { default: StarterKit }, { default: Placeholder }] = await Promise.all([
         import("https://esm.sh/@tiptap/core@2.11.7"),
@@ -313,7 +318,17 @@
             class: "tiptap-prose",
           },
         },
+        onCreate() {
+          updateTiptapToolbarState(toolbar, state.editor);
+        },
+        onSelectionUpdate() {
+          updateTiptapToolbarState(toolbar, state.editor);
+        },
+        onUpdate() {
+          updateTiptapToolbarState(toolbar, state.editor);
+        },
       });
+      updateTiptapToolbarState(toolbar, state.editor);
       message.textContent = "Tiptap demo 已启用；当前仅验证前端输入和 Markdown 输出。";
     } catch (error) {
       state.loadError = error;
@@ -321,6 +336,91 @@
       element.classList.add("tiptap-editor-fallback");
       message.textContent = "Tiptap demo 加载失败，已回退为浏览器原生输入区域。";
       console.warn("[Serein editor] Tiptap demo failed to load.", error);
+    }
+  }
+
+  function renderTiptapToolbar(toolbar, state) {
+    const groups = [
+      [
+        { label: "P", title: "段落", command: (editor) => editor.chain().focus().setParagraph().run(), active: (editor) => editor.isActive("paragraph") },
+        { label: "H2", title: "二级标题", command: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(), active: (editor) => editor.isActive("heading", { level: 2 }) },
+        { label: "H3", title: "三级标题", command: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(), active: (editor) => editor.isActive("heading", { level: 3 }) },
+      ],
+      [
+        { label: "B", title: "粗体", command: (editor) => editor.chain().focus().toggleBold().run(), active: (editor) => editor.isActive("bold") },
+        { label: "I", title: "斜体", command: (editor) => editor.chain().focus().toggleItalic().run(), active: (editor) => editor.isActive("italic") },
+        { label: "S", title: "删除线", command: (editor) => editor.chain().focus().toggleStrike().run(), active: (editor) => editor.isActive("strike") },
+        { label: "`", title: "行内代码", command: (editor) => editor.chain().focus().toggleCode().run(), active: (editor) => editor.isActive("code") },
+      ],
+      [
+        { label: "•", title: "无序列表", command: (editor) => editor.chain().focus().toggleBulletList().run(), active: (editor) => editor.isActive("bulletList") },
+        { label: "1.", title: "有序列表", command: (editor) => editor.chain().focus().toggleOrderedList().run(), active: (editor) => editor.isActive("orderedList") },
+        { label: "❝", title: "引用", command: (editor) => editor.chain().focus().toggleBlockquote().run(), active: (editor) => editor.isActive("blockquote") },
+        { label: "{ }", title: "代码块", command: (editor) => editor.chain().focus().toggleCodeBlock().run(), active: (editor) => editor.isActive("codeBlock") },
+      ],
+      [
+        { label: "↶", title: "撤销", command: (editor) => editor.chain().focus().undo().run() },
+        { label: "↷", title: "重做", command: (editor) => editor.chain().focus().redo().run() },
+      ],
+    ];
+
+    toolbar.replaceChildren();
+    groups.forEach((group) => {
+      const groupElement = document.createElement("div");
+
+      groupElement.className = "tiptap-toolbar-group";
+      group.forEach((item) => {
+        const button = document.createElement("button");
+
+        button.className = "tiptap-toolbar-button";
+        button.type = "button";
+        button.textContent = item.label;
+        button.title = item.title;
+        button.setAttribute("aria-label", item.title);
+        button.tabIndex = -1;
+        button.disabled = true;
+        button.addEventListener("click", () => {
+          if (!state.editor) {
+            return;
+          }
+
+          item.command(state.editor);
+          updateTiptapToolbarState(toolbar, state.editor);
+        });
+        groupElement.append(button);
+      });
+      toolbar.append(groupElement);
+    });
+  }
+
+  function updateTiptapToolbarState(toolbar, editor) {
+    if (!toolbar || !editor) {
+      return;
+    }
+
+    [...toolbar.querySelectorAll(".tiptap-toolbar-button")].forEach((button) => {
+      button.disabled = false;
+    });
+
+    setToolbarButtonState(toolbar, "段落", editor.isActive("paragraph"));
+    setToolbarButtonState(toolbar, "二级标题", editor.isActive("heading", { level: 2 }));
+    setToolbarButtonState(toolbar, "三级标题", editor.isActive("heading", { level: 3 }));
+    setToolbarButtonState(toolbar, "粗体", editor.isActive("bold"));
+    setToolbarButtonState(toolbar, "斜体", editor.isActive("italic"));
+    setToolbarButtonState(toolbar, "删除线", editor.isActive("strike"));
+    setToolbarButtonState(toolbar, "行内代码", editor.isActive("code"));
+    setToolbarButtonState(toolbar, "无序列表", editor.isActive("bulletList"));
+    setToolbarButtonState(toolbar, "有序列表", editor.isActive("orderedList"));
+    setToolbarButtonState(toolbar, "引用", editor.isActive("blockquote"));
+    setToolbarButtonState(toolbar, "代码块", editor.isActive("codeBlock"));
+  }
+
+  function setToolbarButtonState(toolbar, label, isActive) {
+    const button = [...toolbar.querySelectorAll(".tiptap-toolbar-button")]
+      .find((candidate) => candidate.getAttribute("aria-label") === label);
+
+    if (button) {
+      button.setAttribute("aria-pressed", String(Boolean(isActive)));
     }
   }
 

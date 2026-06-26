@@ -476,6 +476,59 @@ body {
   resize: none;
 }
 
+.tiptap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block: calc(-1 * var(--space-1)) var(--space-1);
+  color: var(--color-muted);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+}
+
+.tiptap-toolbar[hidden] {
+  display: none;
+}
+
+.tiptap-toolbar-group {
+  display: flex;
+  gap: 0.2rem;
+  padding-inline-end: var(--space-2);
+  border-inline-end: 1px solid color-mix(in srgb, var(--color-line) 70%, transparent);
+}
+
+.tiptap-toolbar-group:last-child {
+  border-inline-end: 0;
+}
+
+.tiptap-toolbar-button {
+  min-inline-size: 1.45rem;
+  block-size: 1.45rem;
+  border: 0;
+  border-radius: var(--radius-subtle);
+  padding: 0 var(--space-1);
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.tiptap-toolbar-button[aria-pressed="true"] {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.tiptap-toolbar-button:disabled {
+  cursor: wait;
+  opacity: 0.45;
+}
+
+.tiptap-toolbar-button:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: var(--space-1);
+}
+
 .tiptap-editor-shell {
   cursor: text;
 }
