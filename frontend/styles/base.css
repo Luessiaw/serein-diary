@@ -196,11 +196,34 @@ body {
   line-height: 1.2;
 }
 
+.editor-experiment-toggle {
+  position: fixed;
+  inset-block-end: calc(var(--space-3) + 2.4rem);
+  inset-inline-end: var(--space-3);
+  z-index: 20;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-page) 88%, transparent);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.08);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
 .layout-debug-toggle[aria-pressed="true"] {
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
 
+.editor-experiment-toggle[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.editor-experiment-toggle:focus-visible,
 .layout-debug-toggle:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: var(--space-1);
@@ -451,6 +474,82 @@ body {
   min-block-size: var(--new-entry-min-height);
   overflow-y: hidden;
   resize: none;
+}
+
+.tiptap-editor-shell {
+  cursor: text;
+}
+
+.tiptap-editor-shell .tiptap-prose {
+  min-block-size: var(--new-entry-min-height);
+  outline: none;
+}
+
+.tiptap-editor-shell .tiptap-prose > *:first-child {
+  margin-block-start: 0;
+}
+
+.tiptap-editor-shell .tiptap-prose > *:last-child {
+  margin-block-end: 0;
+}
+
+.tiptap-editor-shell .tiptap-prose p {
+  margin: 0;
+}
+
+.tiptap-editor-shell .tiptap-prose p + p {
+  margin-block-start: var(--paragraph-gap);
+}
+
+.tiptap-editor-shell .tiptap-prose h2,
+.tiptap-editor-shell .tiptap-prose h3 {
+  margin: var(--space-3) 0 var(--space-2);
+  font-family: var(--font-title);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.tiptap-editor-shell .tiptap-prose h2 {
+  font-size: var(--font-size-title);
+}
+
+.tiptap-editor-shell .tiptap-prose h3 {
+  font-size: calc(var(--font-size-title) * 0.86);
+}
+
+.tiptap-editor-shell .tiptap-prose ul,
+.tiptap-editor-shell .tiptap-prose ol,
+.tiptap-editor-shell .tiptap-prose blockquote {
+  margin-block: var(--paragraph-gap);
+}
+
+.tiptap-editor-shell .tiptap-prose blockquote {
+  margin-inline: 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1px solid var(--color-line);
+  color: var(--color-muted);
+}
+
+.tiptap-editor-shell .tiptap-prose pre {
+  overflow-x: auto;
+  padding: var(--space-2);
+  border-radius: var(--radius-subtle);
+  background: color-mix(in srgb, var(--color-line) 35%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+}
+
+.tiptap-editor-shell .tiptap-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  block-size: 0;
+  color: var(--color-muted);
+  pointer-events: none;
+}
+
+.tiptap-editor-fallback:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-muted);
 }
 
 /* .new-entry-title-input:focus-visible, */

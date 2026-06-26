@@ -26,12 +26,15 @@
   };
   let loadCheckAfterLayoutChangeRunning = false;
   let pendingLoadCheckAfterLayoutChange = false;
+  let activeNewEntryContentControl = null;
 
+  initializeEditorExperimentState();
   initializeLoadedWindow();
   renderFeed({ focusNewEntry: true, scrollToEnd: true });
   app.addEventListener("scroll", handleScroll, { passive: true });
   registerLoadDebugTools();
   registerLayoutDebugTools();
+  createEditorExperimentToggle();
   createLayoutDebugToggle();
 
   function renderFeed(options = {}) {
@@ -124,7 +127,7 @@
 
     const form = document.createElement("form");
     const title = document.createElement("input");
-    const content = document.createElement("textarea");
+    const content = document.createElement(isTiptapExperimentEnabled() ? "div" : "textarea");
     const message = document.createElement("p");
     const header = document.createElement("div");
     const actions = document.createElement("div");
@@ -132,16 +135,24 @@
     const draftStatus = document.createElement("span");
     const save = document.createElement("button");
 
+    const contentControl = createNewEntryContentControl(content, message);
+    activeNewEntryContentControl = contentControl;
+
     form.className = "new-entry-form";
     title.className = "new-entry-title-input";
     title.name = "title";
     title.placeholder = "标题";
     title.setAttribute("aria-label", "Diary title");
     content.className = "new-entry-content-input";
-    content.name = "content";
-    content.placeholder = "写下此刻……";
-    content.rows = 1;
     content.setAttribute("aria-label", "Diary content");
+    if (content instanceof HTMLTextAreaElement) {
+      content.name = "content";
+      content.placeholder = "写下此刻……";
+      content.rows = 1;
+    } else {
+      content.classList.add("tiptap-editor-shell");
+      content.dataset.placeholder = "写下此刻……";
+    }
     message.className = "new-entry-message";
     message.setAttribute("role", "status");
     header.className = "new-entry-header";
@@ -161,22 +172,21 @@
     save.title = "保存日记";
     save.setAttribute("aria-label", "保存日记");
 
-    content.addEventListener("input", () => {
-      resizeContentInput(content);
-    });
+    contentControl.mount();
 
     cancel.addEventListener("click", () => {
       form.reset();
+      contentControl.clear();
       message.textContent = "已清空未保存内容。";
       title.focus({ preventScroll: true });
     });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
 
-      const body = content.value.trim();
+      const body = contentControl.readMarkdown().trim();
       if (!body) {
         message.textContent = "请先写下一些内容。";
-        content.focus({ preventScroll: true });
+        contentControl.focus();
         return;
       }
 
@@ -191,14 +201,237 @@
     area.append(date, body);
     if (focusNewEntry) {
       requestAnimationFrame(() => {
-        resizeContentInput(content);
-        content.focus({ preventScroll: true });
+        contentControl.resize();
+        contentControl.focus();
       });
     } else {
-      resizeContentInput(content);
+      contentControl.resize();
     }
 
     return area;
+  }
+
+  function createNewEntryContentControl(content, message) {
+    if (content instanceof HTMLTextAreaElement) {
+      return createTextareaContentControl(content);
+    }
+
+    return createTiptapContentControl(content, message);
+  }
+
+  function createTextareaContentControl(content) {
+    return {
+      kind: "textarea",
+      mount() {
+        content.addEventListener("input", () => {
+          resizeContentInput(content);
+        });
+      },
+      readMarkdown() {
+        return content.value;
+      },
+      clear() {
+        content.value = "";
+        resizeContentInput(content);
+      },
+      focus() {
+        content.focus({ preventScroll: true });
+      },
+      resize() {
+        resizeContentInput(content);
+      },
+    };
+  }
+
+  function createTiptapContentControl(content, message) {
+    const state = {
+      editor: null,
+      loadError: null,
+    };
+
+    return {
+      kind: "tiptap",
+      mount() {
+        content.setAttribute("role", "textbox");
+        content.setAttribute("aria-multiline", "true");
+        content.tabIndex = 0;
+        message.textContent = "Tiptap demo 正在加载……";
+        void initializeTiptapEditor(content, state, message);
+      },
+      readMarkdown() {
+        if (state.editor) {
+          return exportTiptapMarkdown(state.editor);
+        }
+
+        return content.textContent || "";
+      },
+      clear() {
+        if (state.editor) {
+          state.editor.commands.clearContent(true);
+          return;
+        }
+
+        content.textContent = "";
+      },
+      focus() {
+        if (state.editor) {
+          state.editor.commands.focus("end");
+          return;
+        }
+
+        content.focus({ preventScroll: true });
+      },
+      resize() {
+        // Tiptap grows with content through normal document flow.
+      },
+    };
+  }
+
+  async function initializeTiptapEditor(element, state, message) {
+    try {
+      const [{ Editor }, { default: StarterKit }, { default: Placeholder }] = await Promise.all([
+        import("https://esm.sh/@tiptap/core@2.11.7"),
+        import("https://esm.sh/@tiptap/starter-kit@2.11.7"),
+        import("https://esm.sh/@tiptap/extension-placeholder@2.11.7"),
+      ]);
+
+      state.editor = new Editor({
+        element,
+        extensions: [
+          StarterKit.configure({
+            heading: {
+              levels: [2, 3],
+            },
+          }),
+          Placeholder.configure({
+            placeholder: element.dataset.placeholder || "写下此刻……",
+          }),
+        ],
+        content: "",
+        editorProps: {
+          attributes: {
+            class: "tiptap-prose",
+          },
+        },
+      });
+      message.textContent = "Tiptap demo 已启用；当前仅验证前端输入和 Markdown 输出。";
+    } catch (error) {
+      state.loadError = error;
+      element.contentEditable = "true";
+      element.classList.add("tiptap-editor-fallback");
+      message.textContent = "Tiptap demo 加载失败，已回退为浏览器原生输入区域。";
+      console.warn("[Serein editor] Tiptap demo failed to load.", error);
+    }
+  }
+
+  function exportTiptapMarkdown(editor) {
+    const json = editor.getJSON();
+
+    return tiptapNodeToMarkdown(json).trim();
+  }
+
+  function tiptapNodeToMarkdown(node) {
+    if (!node) {
+      return "";
+    }
+
+    if (node.type === "doc") {
+      return (node.content || [])
+        .map(tiptapNodeToMarkdown)
+        .filter(Boolean)
+        .join("\n\n");
+    }
+
+    if (node.type === "paragraph") {
+      return tiptapInlineContentToMarkdown(node.content || []);
+    }
+
+    if (node.type === "heading") {
+      const level = Math.min(Math.max(node.attrs?.level || 2, 1), 6);
+      const text = tiptapInlineContentToMarkdown(node.content || []);
+
+      return `${"#".repeat(level)} ${text}`;
+    }
+
+    if (node.type === "blockquote") {
+      return tiptapNodeChildrenToMarkdown(node)
+        .split("\n")
+        .map((line) => `> ${line}`)
+        .join("\n");
+    }
+
+    if (node.type === "bulletList") {
+      return (node.content || [])
+        .map((child) => `- ${tiptapNodeToMarkdown(child)}`)
+        .join("\n");
+    }
+
+    if (node.type === "orderedList") {
+      return (node.content || [])
+        .map((child, index) => `${index + 1}. ${tiptapNodeToMarkdown(child)}`)
+        .join("\n");
+    }
+
+    if (node.type === "listItem") {
+      return tiptapNodeChildrenToMarkdown(node);
+    }
+
+    if (node.type === "codeBlock") {
+      return "```\n" + tiptapInlineContentToMarkdown(node.content || []) + "\n```";
+    }
+
+    if (node.type === "horizontalRule") {
+      return "---";
+    }
+
+    return tiptapNodeChildrenToMarkdown(node);
+  }
+
+  function tiptapNodeChildrenToMarkdown(node) {
+    return (node.content || [])
+      .map(tiptapNodeToMarkdown)
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  function tiptapInlineContentToMarkdown(content) {
+    return content.map((node) => {
+      if (node.type === "text") {
+        return applyTiptapMarks(escapeMarkdownText(node.text || ""), node.marks || []);
+      }
+
+      if (node.type === "hardBreak") {
+        return "\n";
+      }
+
+      return tiptapNodeToMarkdown(node);
+    }).join("");
+  }
+
+  function applyTiptapMarks(text, marks) {
+    return marks.reduce((value, mark) => {
+      if (mark.type === "bold") {
+        return `**${value}**`;
+      }
+      if (mark.type === "italic") {
+        return `*${value}*`;
+      }
+      if (mark.type === "strike") {
+        return `~~${value}~~`;
+      }
+      if (mark.type === "code") {
+        return "`" + value.replace(/`/g, "\\`") + "`";
+      }
+      if (mark.type === "link") {
+        return `[${value}](${mark.attrs?.href || ""})`;
+      }
+
+      return value;
+    }, text);
+  }
+
+  function escapeMarkdownText(text) {
+    return text.replace(/\\/g, "\\\\");
   }
 
   function addStaticEntry(title, content) {
@@ -672,6 +905,89 @@
       window.localStorage.setItem("serein-load-debug", String(enabled));
     } catch {
       // Ignore storage failures; console debugging still works for this session.
+    }
+  }
+
+  function createEditorExperimentToggle() {
+    const button = document.createElement("button");
+
+    registerEditorExperimentTools();
+    button.className = "editor-experiment-toggle";
+    button.type = "button";
+    button.title = "切换新建区编辑器实验";
+    button.setAttribute("aria-label", "切换新建区编辑器实验");
+    setTiptapExperimentEnabled(readEditorExperimentPreference(), { persist: false, button });
+    button.addEventListener("click", () => {
+      setTiptapExperimentEnabled(!isTiptapExperimentEnabled(), { button });
+      renderFeed({ focusNewEntry: true, scrollToEnd: true });
+    });
+    document.body.append(button);
+  }
+
+  function registerEditorExperimentTools() {
+    window.SereinEditorExperiment = {
+      dumpMarkdown: dumpCurrentEditorMarkdown,
+      getMode: () => (isTiptapExperimentEnabled() ? "tiptap" : "textarea"),
+      setTiptapEnabled(enabled) {
+        setTiptapExperimentEnabled(enabled);
+        renderFeed({ focusNewEntry: true, scrollToEnd: true });
+        return isTiptapExperimentEnabled();
+      },
+    };
+  }
+
+  function dumpCurrentEditorMarkdown() {
+    const markdown = activeNewEntryContentControl?.readMarkdown() || "";
+
+    console.log(markdown);
+    return markdown;
+  }
+
+  function initializeEditorExperimentState() {
+    if (readEditorExperimentPreference()) {
+      document.documentElement.dataset.editorExperiment = "tiptap";
+    }
+  }
+
+  function setTiptapExperimentEnabled(enabled, options = {}) {
+    const { persist = true, button = document.querySelector(".editor-experiment-toggle") } = options;
+    const nextEnabled = Boolean(enabled);
+
+    if (nextEnabled) {
+      document.documentElement.dataset.editorExperiment = "tiptap";
+    } else {
+      delete document.documentElement.dataset.editorExperiment;
+    }
+
+    if (persist) {
+      writeEditorExperimentPreference(nextEnabled);
+    }
+
+    if (button) {
+      button.textContent = nextEnabled ? "Tiptap demo" : "Textarea";
+      button.setAttribute("aria-pressed", String(nextEnabled));
+    }
+
+    return nextEnabled;
+  }
+
+  function isTiptapExperimentEnabled() {
+    return document.documentElement.dataset.editorExperiment === "tiptap";
+  }
+
+  function readEditorExperimentPreference() {
+    try {
+      return window.localStorage.getItem("serein-editor-experiment") === "tiptap";
+    } catch {
+      return false;
+    }
+  }
+
+  function writeEditorExperimentPreference(enabled) {
+    try {
+      window.localStorage.setItem("serein-editor-experiment", enabled ? "tiptap" : "textarea");
+    } catch {
+      // Ignore storage failures; the toggle still works for this session.
     }
   }
 
