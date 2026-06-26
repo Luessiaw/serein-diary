@@ -1213,7 +1213,7 @@
       createSidebarTextSetting({
         id: "serein-setting-page-name",
         label: "页面名称",
-        description: "用于浏览器标签页标题。默认值来自 tokens.css；当前修改只暂存在本机浏览器。",
+        description: "用于浏览器标签页标题。",
         value: readPageNamePreference(),
         settingName: "page-name",
         placeholder: readPageNameToken(),
@@ -1224,7 +1224,7 @@
       createSidebarSelectSetting({
         id: "serein-setting-layout-debug",
         label: "布局调试",
-        description: "显示年、月、日、正文和占位列的边框，用于检查排版。",
+        description: "显示页面各组件的边框，用于检查排版。",
         value: isLayoutDebugModeEnabled() ? "on" : "off",
         options: [
           { value: "off", label: "关闭" },
@@ -1238,7 +1238,7 @@
       createSidebarSelectSetting({
         id: "serein-setting-editor-mode",
         label: "编辑器模式",
-        description: "切换新建日记正文区域的输入控件，用于比较原生文本框和 Tiptap demo。",
+        description: "切换原生文本框和Tiptap控件。",
         value: isTiptapExperimentEnabled() ? "tiptap" : "textarea",
         options: [
           { value: "textarea", label: "Textarea" },
