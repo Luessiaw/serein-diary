@@ -20,11 +20,16 @@
     errorMessage: "",
   };
   const groupOpenState = new Map();
+  const loadDebugState = {
+    enabled: readLoadDebugPreference(),
+    history: [],
+  };
   let loadCheckAfterLayoutChangeRunning = false;
 
   initializeLoadedWindow();
   renderFeed({ focusNewEntry: true, scrollToEnd: true });
   app.addEventListener("scroll", handleScroll, { passive: true });
+  registerLoadDebugTools();
   registerLayoutDebugTools();
   createLayoutDebugToggle();
 
@@ -246,7 +251,8 @@
       retry.type = "button";
       retry.textContent = "重试";
       retry.addEventListener("click", () => {
-        void loadEarlierEntries();
+        debugLoad("retry clicked");
+        void loadEarlierEntries({ source: "retry" });
       });
       control.append(message, retry);
     } else if (loadState.status === "complete") {
@@ -261,14 +267,17 @@
   }
 
   function handleScroll() {
-    if (!shouldLoadEarlierEntries()) {
+    if (!shouldLoadEarlierEntries({ source: "scroll" })) {
       return;
     }
 
-    void loadEarlierEntries();
+    debugLoad("scroll triggered earlier-load");
+    void loadEarlierEntries({ source: "scroll" });
   }
 
   function scheduleLoadCheckAfterLayoutChange() {
+    debugLoad("scheduled post-layout load check");
+
     requestAnimationFrame(() => {
       void loadEarlierEntriesUntilStable();
     });
@@ -276,44 +285,72 @@
 
   async function loadEarlierEntriesUntilStable() {
     if (loadCheckAfterLayoutChangeRunning) {
+      debugLoad("post-layout load check skipped because another check is running");
       return;
     }
 
     loadCheckAfterLayoutChangeRunning = true;
+    debugLoad("post-layout load check started");
 
     try {
       let attempts = 0;
       const maxAttempts = 20;
 
-      while (attempts < maxAttempts && shouldLoadEarlierEntries()) {
+      while (attempts < maxAttempts && shouldLoadEarlierEntries({
+        source: "post-layout",
+        verbose: true,
+      })) {
         attempts += 1;
+        debugLoad("post-layout load attempt", { attempt: attempts, maxAttempts });
 
-        const loaded = await loadEarlierEntries();
+        const loaded = await loadEarlierEntries({ source: "post-layout", attempt: attempts });
         if (!loaded) {
+          debugLoad("post-layout load loop stopped because load returned false", {
+            attempt: attempts,
+          });
           break;
         }
 
         await waitForNextFrame();
       }
+
+      if (attempts >= maxAttempts) {
+        debugLoad("post-layout load loop reached safety limit", { maxAttempts });
+      } else {
+        debugLoad("post-layout load check reached stable state", { attempts });
+      }
     } finally {
       loadCheckAfterLayoutChangeRunning = false;
+      debugLoad("post-layout load check finished");
     }
   }
 
-  function shouldLoadEarlierEntries() {
+  function shouldLoadEarlierEntries(options = {}) {
+    const { source = "unknown", verbose = false } = options;
+
     if (loadState.status === "loading" || loadState.status === "complete") {
+      debugShouldLoad(false, "blocked-by-status", { source, verbose });
       return false;
     }
 
     if (loadState.visibleStartIndex <= 0) {
       loadState.status = "complete";
+      debugShouldLoad(false, "no-earlier-content", { source, verbose });
       renderFeed();
       return false;
     }
 
     const entries = getVisibleEntries();
     if (entries.length === 0) {
-      return app.scrollTop <= app.clientHeight;
+      const shouldLoad = app.scrollTop <= app.clientHeight;
+
+      debugShouldLoad(shouldLoad, "no-visible-entries", {
+        source,
+        verbose,
+        scrollTop: app.scrollTop,
+        clientHeight: app.clientHeight,
+      });
+      return shouldLoad;
     }
 
     const triggerIndex = Math.min(
@@ -322,19 +359,36 @@
     ) - 1;
     const triggerEntry = entries[triggerIndex];
 
-    return app.scrollTop <= triggerEntry.offsetTop;
+    const shouldLoad = app.scrollTop <= triggerEntry.offsetTop;
+
+    debugShouldLoad(shouldLoad, "trigger-entry-threshold", {
+      source,
+      verbose,
+      triggerIndex,
+      triggerEntryId: triggerEntry.dataset.entryId,
+      triggerOffsetTop: triggerEntry.offsetTop,
+      scrollTop: app.scrollTop,
+      visibleEntryCount: entries.length,
+    });
+    return shouldLoad;
   }
 
-  async function loadEarlierEntries() {
+  async function loadEarlierEntries(options = {}) {
+    const { source = "unknown", attempt = null } = options;
+
     if (loadState.status === "loading" || loadState.status === "complete") {
+      debugLoad("loadEarlierEntries blocked", { source, attempt });
       return false;
     }
 
     const anchor = getScrollAnchor();
 
+    debugLoad("loadEarlierEntries started", { source, attempt, anchor });
+
     loadState.status = "loading";
     loadState.errorMessage = "";
     renderFeedRestoringAnchor(anchor);
+    debugLoad("loading control rendered", { source, attempt, anchor });
 
     try {
       await simulateLoadingDelay();
@@ -349,6 +403,7 @@
        * visibly jump by the height of the temporary loading bar.
        */
       const anchorBeforeFinalRender = getScrollAnchor() || anchor;
+      const previousVisibleStartIndex = loadState.visibleStartIndex;
 
       loadState.visibleStartIndex = Math.max(
         0,
@@ -356,6 +411,13 @@
       );
       loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
       renderFeedRestoringAnchor(anchorBeforeFinalRender);
+      debugLoad("loadEarlierEntries completed", {
+        source,
+        attempt,
+        previousVisibleStartIndex,
+        nextVisibleStartIndex: loadState.visibleStartIndex,
+        anchorBeforeFinalRender,
+      });
       return true;
     } catch (error) {
       /*
@@ -367,6 +429,12 @@
       loadState.status = "error";
       loadState.errorMessage = error instanceof Error ? error.message : "未知错误";
       renderFeedRestoringAnchor(anchorBeforeErrorRender);
+      debugLoad("loadEarlierEntries failed", {
+        source,
+        attempt,
+        errorMessage: loadState.errorMessage,
+        anchorBeforeErrorRender,
+      });
       return false;
     }
   }
@@ -441,6 +509,119 @@
     return new Promise((resolve) => {
       window.setTimeout(resolve, settings.simulatedDelayMs);
     });
+  }
+
+  function registerLoadDebugTools() {
+    window.SereinDebugLoad = {
+      clearLogs: clearLoadDebugLogs,
+      dumpLogs: dumpLoadDebugLogs,
+      inspect: inspectLoadState,
+      setEnabled: setLoadDebugEnabled,
+      get enabled() {
+        return loadDebugState.enabled;
+      },
+    };
+
+    debugLoad("debug tools registered", {
+      hint: "Use SereinDebugLoad.inspect(), SereinDebugLoad.dumpLogs(), or SereinDebugLoad.setEnabled(false).",
+    });
+  }
+
+  function setLoadDebugEnabled(enabled) {
+    loadDebugState.enabled = Boolean(enabled);
+    writeLoadDebugPreference(loadDebugState.enabled);
+    console.info(`[Serein load] debug ${loadDebugState.enabled ? "enabled" : "disabled"}`);
+    return loadDebugState.enabled;
+  }
+
+  function inspectLoadState() {
+    const snapshot = createLoadDebugSnapshot();
+
+    console.table(snapshot);
+    return snapshot;
+  }
+
+  function clearLoadDebugLogs() {
+    loadDebugState.history = [];
+    console.info("[Serein load] logs cleared");
+  }
+
+  function dumpLoadDebugLogs() {
+    const logs = loadDebugState.history.slice();
+
+    console.log(JSON.stringify(logs, null, 2));
+    return logs;
+  }
+
+  function debugShouldLoad(shouldLoad, reason, details = {}) {
+    if (!details.verbose && !shouldLoad) {
+      return;
+    }
+
+    debugLoad(`shouldLoadEarlierEntries -> ${shouldLoad}`, {
+      reason,
+      ...details,
+    });
+  }
+
+  function debugLoad(message, details = {}) {
+    if (!loadDebugState.enabled) {
+      return;
+    }
+
+    const payload = {
+      timestamp: new Date().toISOString(),
+      message,
+      ...createLoadDebugSnapshot(),
+      ...details,
+    };
+
+    loadDebugState.history.push(payload);
+    if (loadDebugState.history.length > 300) {
+      loadDebugState.history.shift();
+    }
+
+    console.info(`[Serein load] ${message}`, payload);
+  }
+
+  function createLoadDebugSnapshot() {
+    const totalReadingEntries = getAllReadingSamples().length;
+    const visibleEntries = getVisibleEntries();
+    const firstVisibleEntry = visibleEntries[0];
+    const lastVisibleEntry = visibleEntries[visibleEntries.length - 1];
+
+    return {
+      status: loadState.status,
+      visibleStartIndex: loadState.visibleStartIndex,
+      totalReadingEntries,
+      loadedReadingEntries: totalReadingEntries - loadState.visibleStartIndex,
+      visibleDomEntries: visibleEntries.length,
+      firstVisibleEntryId: firstVisibleEntry?.dataset.entryId || null,
+      lastVisibleEntryId: lastVisibleEntry?.dataset.entryId || null,
+      scrollTop: Math.round(app.scrollTop),
+      clientHeight: Math.round(app.clientHeight),
+      scrollHeight: Math.round(app.scrollHeight),
+      triggerEntryIndexSetting: settings.triggerEntryIndex,
+      pageSize: settings.pageSize,
+    };
+  }
+
+  function readLoadDebugPreference() {
+    try {
+      const stored = window.localStorage.getItem("serein-load-debug");
+
+      return stored === null ? true : stored === "true";
+    } catch {
+      return true;
+    }
+  }
+
+  function writeLoadDebugPreference(enabled) {
+    try {
+      window.localStorage.setItem("serein-load-debug", String(enabled));
+    } catch {
+      // Ignore storage failures; console debugging still works for this session.
+    }
   }
 
   function readInteractionSettings() {
@@ -535,6 +716,12 @@
       group.dataset.open = String(nextOpen);
       summary.setAttribute("aria-expanded", String(nextOpen));
       content.hidden = !nextOpen;
+      debugLoad("group toggled", {
+        stateKey,
+        nextOpen,
+        className,
+        label,
+      });
 
       if (!nextOpen) {
         scheduleLoadCheckAfterLayoutChange();
