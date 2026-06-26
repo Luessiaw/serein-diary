@@ -98,7 +98,7 @@
    * 控制通过菜单按钮或 Ctrl+K / Cmd+K 唤起的浮动面板尺寸。面板内容超出时，
    * 会在面板内部滚动；外框尺寸不会随日期、统计、设置页面切换而变化。
    */
-  --panel-width: 26rem;
+  --panel-width: 36rem;
   --panel-height: 34rem;
 
   /*
