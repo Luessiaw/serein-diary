@@ -545,8 +545,14 @@ body {
   .diary-year > .diary-group-summary,
   .diary-month > .diary-group-summary {
     inline-size: 100%;
-    position: static;
-    z-index: auto;
+  }
+
+  .diary-year > .diary-group-summary {
+    inset-block-start: var(--sticky-year-label-top-compact);
+  }
+
+  .diary-month > .diary-group-summary {
+    inset-block-start: var(--sticky-month-label-top-compact);
   }
 
   .diary-group-summary::before {

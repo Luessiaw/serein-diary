@@ -106,6 +106,8 @@
   --sticky-group-label-top: 0;
   --sticky-group-label-z-index: 8;
   --sticky-group-label-background: var(--color-page);
+  --sticky-year-label-top-compact: 0;
+  --sticky-month-label-top-compact: 1.7rem;
   --title-gap: 0;
   --paragraph-gap: var(--space-2);
   --radius-subtle: 0.5rem;
