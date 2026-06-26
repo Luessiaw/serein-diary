@@ -24,6 +24,7 @@
   renderFeed({ focusNewEntry: true, scrollToEnd: true });
   app.addEventListener("scroll", handleScroll, { passive: true });
   registerLayoutDebugTools();
+  createLayoutDebugToggle();
 
   function renderFeed(options = {}) {
     const { focusNewEntry = false, scrollToEnd = false } = options;
@@ -596,7 +597,70 @@
   function registerLayoutDebugTools() {
     window.SereinDebugLayout = {
       inspect: inspectLayout,
+      setDebugMode: setLayoutDebugMode,
+      toggleDebugMode: toggleLayoutDebugMode,
     };
+  }
+
+  function createLayoutDebugToggle() {
+    const button = document.createElement("button");
+    const initialEnabled = readLayoutDebugPreference();
+
+    button.className = "layout-debug-toggle";
+    button.type = "button";
+    button.title = "切换布局调试边框";
+    button.setAttribute("aria-label", "切换布局调试边框");
+    setLayoutDebugMode(initialEnabled, { persist: false, button });
+    button.addEventListener("click", () => {
+      toggleLayoutDebugMode(button);
+    });
+    document.body.append(button);
+  }
+
+  function toggleLayoutDebugMode(button = document.querySelector(".layout-debug-toggle")) {
+    return setLayoutDebugMode(!isLayoutDebugModeEnabled(), { button });
+  }
+
+  function setLayoutDebugMode(enabled, options = {}) {
+    const { persist = true, button = document.querySelector(".layout-debug-toggle") } = options;
+    const nextEnabled = Boolean(enabled);
+
+    if (nextEnabled) {
+      document.documentElement.dataset.layoutDebug = "true";
+    } else {
+      delete document.documentElement.dataset.layoutDebug;
+    }
+
+    if (persist) {
+      writeLayoutDebugPreference(nextEnabled);
+    }
+
+    if (button) {
+      button.textContent = nextEnabled ? "Debug on" : "Debug";
+      button.setAttribute("aria-pressed", String(nextEnabled));
+    }
+
+    return nextEnabled;
+  }
+
+  function isLayoutDebugModeEnabled() {
+    return document.documentElement.dataset.layoutDebug === "true";
+  }
+
+  function readLayoutDebugPreference() {
+    try {
+      return window.localStorage.getItem("serein-layout-debug") === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function writeLayoutDebugPreference(enabled) {
+    try {
+      window.localStorage.setItem("serein-layout-debug", String(enabled));
+    } catch {
+      // Ignore storage failures; the in-page toggle still works for this session.
+    }
   }
 
   function inspectLayout(options = {}) {

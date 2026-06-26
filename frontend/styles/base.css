@@ -179,6 +179,33 @@ body {
   outline-offset: var(--space-1);
 }
 
+.layout-debug-toggle {
+  position: fixed;
+  inset-block-end: var(--space-3);
+  inset-inline-end: var(--space-3);
+  z-index: 20;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-page) 88%, transparent);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.08);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.layout-debug-toggle[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.layout-debug-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-1);
+}
+
 .diary-group-summary {
   /*
    * 折叠箭头图标参数。

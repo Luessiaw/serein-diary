@@ -154,3 +154,7 @@
   --feed-gap-compact: var(--space-5);
   --feed-padding-block-compact: var(--space-5);
 }
+
+:root[data-layout-debug="true"] {
+  --debug-layout-enabled: 1;
+}

@@ -184,22 +184,24 @@ Box-year
 
 ## 布局调试边框
 
-`tokens.css` 中保留了一个默认关闭的布局调试开关。需要检查年、月、日、正文
-和右侧占位列的真实边界时，只需要修改一个参数：
+页面右下角有一个 `Debug` 按钮，用于即时开关布局调试边框。开启后，年、月、
+日、正文和右侧占位列的真实边界会显示出来；状态会保存在当前浏览器的
+`localStorage` 中，刷新页面后仍会保留。
 
-```css
---debug-layout-enabled: 1;
+也可以在 F12 Console 中运行：
+
+```js
+SereinDebugLayout.toggleDebugMode()
 ```
 
-关闭时恢复为：
+或明确设置：
 
-```css
---debug-layout-enabled: 0;
+```js
+SereinDebugLayout.setDebugMode(true)
+SereinDebugLayout.setDebugMode(false)
 ```
 
-边框宽度、透明度和右侧占位列的调试高度也在 `tokens.css` 中，但通常不需要改。
-因为 CSS 不能直接在 `calc()` 中使用 `true` / `false`，所以这里使用 `0` / `1`
-作为开关值。
+边框宽度、透明度和右侧占位列的调试高度仍在 `tokens.css` 中配置，通常不需要改。
 
 颜色约定：
 
