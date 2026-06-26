@@ -12,6 +12,7 @@
     window.history.scrollRestoration = "manual";
   }
 
+  const DEFAULT_PAGE_NAME = "Serein";
   const settings = readInteractionSettings();
   let draftCreatedAt = createLocalTimestamp();
   const loadState = {
@@ -29,6 +30,7 @@
   let activeNewEntryContentControl = null;
   let sidebarCalendarCursor = null;
 
+  initializePageNameState();
   initializeEditorExperimentState();
   initializeLayoutDebugState();
   initializeLoadedWindow();
@@ -1208,6 +1210,17 @@
 
     settingsPanel.className = "sidebar-settings";
     settingsPanel.append(
+      createSidebarTextSetting({
+        id: "serein-setting-page-name",
+        label: "页面名称",
+        description: "用于浏览器标签页标题。当前暂存在本机浏览器；未来会通过后端写入 tokens.css。",
+        value: readPageNamePreference(),
+        settingName: "page-name",
+        placeholder: DEFAULT_PAGE_NAME,
+        onInput(value) {
+          setPageName(value);
+        },
+      }),
       createSidebarSelectSetting({
         id: "serein-setting-layout-debug",
         label: "布局调试",
@@ -1242,31 +1255,37 @@
     return settingsPanel;
   }
 
-  function createSidebarSelectSetting(config) {
+  function createSidebarTextSetting(config) {
     const row = document.createElement("div");
     const heading = document.createElement("div");
-    const labelWrap = document.createElement("div");
-    const label = document.createElement("label");
-    const info = document.createElement("button");
-    const tooltip = document.createElement("span");
-    const select = document.createElement("select");
-    const tooltipId = `${config.id}-info`;
+    const input = document.createElement("input");
 
     row.className = "sidebar-setting-row";
     heading.className = "sidebar-setting-heading";
-    labelWrap.className = "sidebar-setting-label-wrap";
-    label.className = "sidebar-setting-label";
-    label.htmlFor = config.id;
-    label.textContent = config.label;
-    info.className = "sidebar-setting-info";
-    info.type = "button";
-    info.textContent = "i";
-    info.setAttribute("aria-label", `${config.label}说明`);
-    info.setAttribute("aria-describedby", tooltipId);
-    tooltip.className = "sidebar-setting-tooltip";
-    tooltip.id = tooltipId;
-    tooltip.setAttribute("role", "tooltip");
-    tooltip.textContent = config.description;
+    input.className = "sidebar-setting-input";
+    input.id = config.id;
+    input.type = "text";
+    input.value = config.value;
+    input.placeholder = config.placeholder;
+    input.dataset.setting = config.settingName;
+    input.autocomplete = "off";
+    input.addEventListener("input", () => {
+      config.onInput(input.value);
+    });
+
+    heading.append(createSidebarSettingLabel(config), input);
+    row.append(heading);
+
+    return row;
+  }
+
+  function createSidebarSelectSetting(config) {
+    const row = document.createElement("div");
+    const heading = document.createElement("div");
+    const select = document.createElement("select");
+
+    row.className = "sidebar-setting-row";
+    heading.className = "sidebar-setting-heading";
     select.className = "sidebar-setting-select";
     select.id = config.id;
     select.dataset.setting = config.settingName;
@@ -1282,15 +1301,38 @@
       config.onChange(select.value);
     });
 
+    heading.append(createSidebarSettingLabel(config), select);
+    row.append(heading);
+
+    return row;
+  }
+
+  function createSidebarSettingLabel(config) {
+    const labelWrap = document.createElement("div");
+    const label = document.createElement("label");
+    const info = document.createElement("button");
+    const tooltip = document.createElement("span");
+    const tooltipId = `${config.id}-info`;
+
+    labelWrap.className = "sidebar-setting-label-wrap";
+    label.className = "sidebar-setting-label";
+    label.htmlFor = config.id;
+    label.textContent = config.label;
+    info.className = "sidebar-setting-info";
+    info.type = "button";
+    info.textContent = "i";
+    info.setAttribute("aria-label", `${config.label}说明`);
+    info.setAttribute("aria-describedby", tooltipId);
+    tooltip.className = "sidebar-setting-tooltip";
+    tooltip.id = tooltipId;
+    tooltip.setAttribute("role", "tooltip");
+    tooltip.textContent = config.description;
     info.addEventListener("click", () => {
       info.focus({ preventScroll: true });
     });
 
     labelWrap.append(label, info, tooltip);
-    heading.append(labelWrap, select);
-    row.append(heading);
-
-    return row;
+    return labelWrap;
   }
 
   function createSidebarCalendar() {
@@ -1655,6 +1697,44 @@
 
   function handleCalendarDateJump(date) {
     console.info("[Serein calendar] jump placeholder", { date });
+  }
+
+  function initializePageNameState() {
+    setPageName(readPageNamePreference(), { persist: false });
+  }
+
+  function setPageName(value, options = {}) {
+    const { persist = true } = options;
+    const nextValue = String(value || "");
+    const title = normalizePageName(nextValue);
+
+    document.title = title;
+
+    if (persist) {
+      writePageNamePreference(nextValue);
+    }
+
+    return title;
+  }
+
+  function normalizePageName(value) {
+    return String(value || "").trim() || DEFAULT_PAGE_NAME;
+  }
+
+  function readPageNamePreference() {
+    try {
+      return window.localStorage.getItem("serein-page-name") || DEFAULT_PAGE_NAME;
+    } catch {
+      return DEFAULT_PAGE_NAME;
+    }
+  }
+
+  function writePageNamePreference(value) {
+    try {
+      window.localStorage.setItem("serein-page-name", String(value || ""));
+    } catch {
+      // Ignore storage failures; the page title still updates for this session.
+    }
   }
 
   function registerEditorExperimentTools() {
