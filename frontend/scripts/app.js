@@ -1756,14 +1756,42 @@
     }
 
     const quote = value[0];
-    if ((quote === '"' || quote === "'") && value[value.length - 1] === quote) {
-      return value
-        .slice(1, -1)
-        .replace(/\\(["'\\])/gu, "$1")
-        .trim();
+    if (quote === '"' || quote === "'") {
+      const endIndex = findCssStringEnd(value, quote);
+
+      if (endIndex > 0) {
+        return value
+          .slice(1, endIndex)
+          .replace(/\\(["'\\])/gu, "$1")
+          .trim();
+      }
     }
 
     return value.trim();
+  }
+
+  function findCssStringEnd(value, quote) {
+    let escaped = false;
+
+    for (let index = 1; index < value.length; index += 1) {
+      const character = value[index];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (character === "\\") {
+        escaped = true;
+        continue;
+      }
+
+      if (character === quote) {
+        return index;
+      }
+    }
+
+    return -1;
   }
 
   function registerEditorExperimentTools() {
