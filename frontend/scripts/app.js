@@ -636,7 +636,7 @@
     }
 
     if (button) {
-      button.textContent = nextEnabled ? "Debug on" : "Debug";
+      button.textContent = nextEnabled ? "Debug mode" : "Normal mode";
       button.setAttribute("aria-pressed", String(nextEnabled));
     }
 
