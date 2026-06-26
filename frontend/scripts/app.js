@@ -25,6 +25,7 @@
     history: [],
   };
   let loadCheckAfterLayoutChangeRunning = false;
+  let pendingLoadCheckAfterLayoutChange = false;
 
   initializeLoadedWindow();
   renderFeed({ focusNewEntry: true, scrollToEnd: true });
@@ -276,6 +277,7 @@
   }
 
   function scheduleLoadCheckAfterLayoutChange() {
+    pendingLoadCheckAfterLayoutChange = true;
     debugLoad("scheduled post-layout load check");
 
     requestAnimationFrame(() => {
@@ -295,6 +297,8 @@
     try {
       let attempts = 0;
       const maxAttempts = 20;
+
+      pendingLoadCheckAfterLayoutChange = false;
 
       while (attempts < maxAttempts && shouldLoadEarlierEntries({
         source: "post-layout",
@@ -316,6 +320,9 @@
 
       if (attempts >= maxAttempts) {
         debugLoad("post-layout load loop reached safety limit", { maxAttempts });
+      } else if (loadState.status === "loading") {
+        pendingLoadCheckAfterLayoutChange = true;
+        debugLoad("post-layout load check paused until current load completes", { attempts });
       } else {
         debugLoad("post-layout load check reached stable state", { attempts });
       }
@@ -418,6 +425,7 @@
         nextVisibleStartIndex: loadState.visibleStartIndex,
         anchorBeforeFinalRender,
       });
+      runPendingLoadCheckAfterLoadSettles();
       return true;
     } catch (error) {
       /*
@@ -435,8 +443,20 @@
         errorMessage: loadState.errorMessage,
         anchorBeforeErrorRender,
       });
+      runPendingLoadCheckAfterLoadSettles();
       return false;
     }
+  }
+
+  function runPendingLoadCheckAfterLoadSettles() {
+    if (!pendingLoadCheckAfterLayoutChange || loadState.status === "loading") {
+      return;
+    }
+
+    debugLoad("resuming pending post-layout load check after load settled");
+    requestAnimationFrame(() => {
+      void loadEarlierEntriesUntilStable();
+    });
   }
 
   function waitForNextFrame() {
@@ -603,6 +623,8 @@
       scrollHeight: Math.round(app.scrollHeight),
       triggerEntryIndexSetting: settings.triggerEntryIndex,
       pageSize: settings.pageSize,
+      pendingPostLayoutCheck: pendingLoadCheckAfterLayoutChange,
+      postLayoutCheckRunning: loadCheckAfterLayoutChangeRunning,
     };
   }
 
