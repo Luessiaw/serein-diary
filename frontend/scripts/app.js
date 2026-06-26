@@ -1863,7 +1863,7 @@
       entriesByDate.get(calendarDate),
     );
     content.className = "entry-content";
-    appendMarkdownParagraphs(content, data.content);
+    appendMarkdownBlocks(content, data.content);
 
     entry.append(date, body);
     if (metadata.title) {
@@ -1935,19 +1935,233 @@
     return createdAt.slice(0, 10);
   }
 
-  function appendMarkdownParagraphs(container, markdown) {
-    markdown.split(/\n{2,}/u).forEach((paragraph) => {
-      const element = document.createElement("p");
-      const lines = paragraph.split("\n");
+  function appendMarkdownBlocks(container, markdown) {
+    const lines = String(markdown || "").replace(/\r\n?/gu, "\n").split("\n");
+    let index = 0;
 
-      lines.forEach((line, index) => {
-        if (index > 0) {
-          element.append(document.createElement("br"));
+    while (index < lines.length) {
+      const line = lines[index];
+
+      if (!line.trim()) {
+        index += 1;
+        continue;
+      }
+
+      if (/^```/u.test(line.trim())) {
+        const code = [];
+        index += 1;
+        while (index < lines.length && !/^```/u.test(lines[index].trim())) {
+          code.push(lines[index]);
+          index += 1;
         }
-        element.append(line);
-      });
-      container.append(element);
+        if (index < lines.length) {
+          index += 1;
+        }
+        appendCodeBlock(container, code.join("\n"));
+        continue;
+      }
+
+      if (/^---+\s*$/u.test(line.trim())) {
+        container.append(document.createElement("hr"));
+        index += 1;
+        continue;
+      }
+
+      const heading = line.match(/^(#{1,4})\s+(.+)$/u);
+      if (heading) {
+        const level = Math.min(heading[1].length + 2, 6);
+        const element = document.createElement(`h${level}`);
+        appendInlineMarkdown(element, heading[2].trim());
+        container.append(element);
+        index += 1;
+        continue;
+      }
+
+      if (/^>\s?/u.test(line)) {
+        const quoteLines = [];
+        while (index < lines.length && /^>\s?/u.test(lines[index])) {
+          quoteLines.push(lines[index].replace(/^>\s?/u, ""));
+          index += 1;
+        }
+        const quote = document.createElement("blockquote");
+        appendMarkdownBlocks(quote, quoteLines.join("\n"));
+        container.append(quote);
+        continue;
+      }
+
+      if (/^\s*[-*]\s+/u.test(line)) {
+        const list = document.createElement("ul");
+        while (index < lines.length && /^\s*[-*]\s+/u.test(lines[index])) {
+          appendListItem(list, lines[index].replace(/^\s*[-*]\s+/u, ""));
+          index += 1;
+        }
+        container.append(list);
+        continue;
+      }
+
+      if (/^\s*\d+[.)]\s+/u.test(line)) {
+        const list = document.createElement("ol");
+        while (index < lines.length && /^\s*\d+[.)]\s+/u.test(lines[index])) {
+          appendListItem(list, lines[index].replace(/^\s*\d+[.)]\s+/u, ""));
+          index += 1;
+        }
+        container.append(list);
+        continue;
+      }
+
+      const paragraphLines = [];
+      while (
+        index < lines.length &&
+        lines[index].trim() &&
+        !isMarkdownBlockStart(lines[index])
+      ) {
+        paragraphLines.push(lines[index]);
+        index += 1;
+      }
+      appendParagraph(container, paragraphLines);
+    }
+  }
+
+  function isMarkdownBlockStart(line) {
+    const trimmed = line.trim();
+    return (
+      /^```/u.test(trimmed) ||
+      /^---+\s*$/u.test(trimmed) ||
+      /^(#{1,4})\s+/u.test(line) ||
+      /^>\s?/u.test(line) ||
+      /^\s*[-*]\s+/u.test(line) ||
+      /^\s*\d+[.)]\s+/u.test(line)
+    );
+  }
+
+  function appendParagraph(container, lines) {
+    const paragraph = document.createElement("p");
+
+    lines.forEach((line, lineIndex) => {
+      if (lineIndex > 0) {
+        paragraph.append(document.createElement("br"));
+      }
+      appendInlineMarkdown(paragraph, line);
     });
+    container.append(paragraph);
+  }
+
+  function appendListItem(list, markdown) {
+    const item = document.createElement("li");
+    appendInlineMarkdown(item, markdown);
+    list.append(item);
+  }
+
+  function appendCodeBlock(container, code) {
+    const pre = document.createElement("pre");
+    const codeElement = document.createElement("code");
+
+    codeElement.textContent = code;
+    pre.append(codeElement);
+    container.append(pre);
+  }
+
+  function appendInlineMarkdown(container, markdown) {
+    let remaining = markdown;
+
+    while (remaining) {
+      const token = findNextInlineToken(remaining);
+
+      if (!token) {
+        container.append(remaining);
+        return;
+      }
+
+      if (token.index > 0) {
+        container.append(remaining.slice(0, token.index));
+      }
+
+      appendInlineToken(container, token);
+      remaining = remaining.slice(token.index + token.match[0].length);
+    }
+  }
+
+  function findNextInlineToken(text) {
+    const patterns = [
+      { type: "code", regex: /`([^`]+)`/u },
+      { type: "image", regex: /!\[([^\]]*)\]\(([^)]+)\)/u },
+      { type: "link", regex: /\[([^\]]+)\]\(([^)]+)\)/u },
+      { type: "strong", regex: /\*\*([^*]+)\*\*/u },
+      { type: "strong", regex: /__([^_]+)__/u },
+      { type: "delete", regex: /~~([^~]+)~~/u },
+      { type: "em", regex: /(^|[^\*])\*([^*]+)\*/u },
+      { type: "em", regex: /(^|[^_])_([^_]+)_/u },
+    ];
+
+    return patterns.reduce((closest, pattern) => {
+      const match = pattern.regex.exec(text);
+
+      if (!match) {
+        return closest;
+      }
+
+      const index = match.index + (pattern.type === "em" && match[1] ? match[1].length : 0);
+      const adjustedMatch = pattern.type === "em"
+        ? [match[0].slice(match[1].length), match[2]]
+        : match;
+
+      if (!closest || index < closest.index) {
+        return { ...pattern, index, match: adjustedMatch };
+      }
+
+      return closest;
+    }, null);
+  }
+
+  function appendInlineToken(container, token) {
+    const elementByType = {
+      code: "code",
+      strong: "strong",
+      delete: "del",
+      em: "em",
+    };
+
+    if (token.type === "link") {
+      appendMarkdownLink(container, token.match[1], token.match[2]);
+      return;
+    }
+
+    if (token.type === "image") {
+      appendMarkdownImagePlaceholder(container, token.match[1], token.match[2]);
+      return;
+    }
+
+    const element = document.createElement(elementByType[token.type] || "span");
+    if (token.type === "code") {
+      element.textContent = token.match[1];
+    } else {
+      appendInlineMarkdown(element, token.match[1]);
+    }
+    container.append(element);
+  }
+
+  function appendMarkdownLink(container, text, href) {
+    const link = document.createElement("a");
+
+    link.textContent = text;
+    if (isSafeMarkdownUrl(href)) {
+      link.href = href;
+      link.rel = "noreferrer";
+    }
+    container.append(link);
+  }
+
+  function appendMarkdownImagePlaceholder(container, alt, src) {
+    const placeholder = document.createElement("span");
+
+    placeholder.className = "markdown-media-placeholder";
+    placeholder.textContent = alt ? `图片：${alt}` : "图片";
+    placeholder.title = src;
+    container.append(placeholder);
+  }
+
+  function isSafeMarkdownUrl(url) {
+    return /^(https?:|mailto:|#|media:)/iu.test(String(url || "").trim());
   }
 
   function registerLayoutDebugTools() {

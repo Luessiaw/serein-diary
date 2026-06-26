@@ -66,8 +66,9 @@ SereinEditorExperiment.dumpMarkdown()
 - 字体、字号、颜色等强表现样式。这类内容若直接进入正文，会削弱 `content.md` 的
   可迁移性；若需要支持，建议先映射为受控 Markdown/自定义字段，而不是保存任意
   HTML/CSS。
-- 保存后的 Markdown 渲染。当前静态阅读区仍主要按段落展示文本，尚未接入完整
-  Markdown renderer。
+- 完整 Markdown 规范覆盖。当前静态阅读区已有轻量 Markdown 渲染，用于验证标题、
+  列表、引用、代码块、链接、图片占位和常见行内样式；正式接入前仍需决定是否
+  引入完整 Markdown renderer、扩展白名单和媒体解析策略。
 
 ## 验收重点
 
