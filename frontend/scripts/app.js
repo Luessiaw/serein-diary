@@ -19,6 +19,7 @@
     status: "idle",
     errorMessage: "",
   };
+  const groupOpenState = new Map();
 
   initializeLoadedWindow();
   renderFeed({ focusNewEntry: true, scrollToEnd: true });
@@ -38,10 +39,14 @@
     feed.append(createLoadControl());
 
     groupItemsByDate(feedItems).forEach((yearGroup) => {
-      const year = createGroup("diary-year", yearGroup.year);
+      const year = createGroup("diary-year", yearGroup.year, `year:${yearGroup.year}`);
 
       yearGroup.months.forEach((monthGroup) => {
-        const month = createGroup("diary-month", monthGroup.month);
+        const month = createGroup(
+          "diary-month",
+          monthGroup.month,
+          `month:${yearGroup.year}-${monthGroup.month}`,
+        );
 
         monthGroup.items.forEach((item) => {
           if (item.type === "new") {
@@ -457,25 +462,29 @@
     ].join("-") + `T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}${sign}${pad(offsetHours)}:${pad(offsetRemainder)}`;
   }
 
-  function createGroup(className, label) {
+  function createGroup(className, label, stateKey) {
     const group = document.createElement("section");
     const summary = document.createElement("button");
     const content = document.createElement("div");
     const contentId = `group-${className}-${label}-${createMockUuid()}`;
+    const isOpen = groupOpenState.get(stateKey) !== false;
 
     group.className = className;
-    group.dataset.open = "true";
+    group.dataset.open = String(isOpen);
+    group.dataset.groupKey = stateKey;
     summary.className = "diary-group-summary";
     summary.type = "button";
     summary.textContent = label;
-    summary.setAttribute("aria-expanded", "true");
+    summary.setAttribute("aria-expanded", String(isOpen));
     summary.setAttribute("aria-controls", contentId);
     content.className = "diary-group-content";
     content.id = contentId;
+    content.hidden = !isOpen;
     summary.addEventListener("click", () => {
       const isOpen = group.dataset.open !== "false";
       const nextOpen = !isOpen;
 
+      groupOpenState.set(stateKey, nextOpen);
       group.dataset.open = String(nextOpen);
       summary.setAttribute("aria-expanded", String(nextOpen));
       content.hidden = !nextOpen;
