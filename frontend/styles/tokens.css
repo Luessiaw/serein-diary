@@ -78,7 +78,7 @@
   --date-control-width: 3rem;
   --year-month-inline-gap: var(--space-3);
   --month-date-inline-gap: var(--space-3);
-  --date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
+  --date-content-gap: clamp(0.75rem, 2vw, 1rem);
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);
@@ -97,7 +97,7 @@
   --year-block-gap: var(--year-gap);
   --month-block-gap: var(--year-month-block-gap);
   --entry-block-gap: var(--month-date-block-gap);
-  --group-summary-padding-block: var(--space-1);
+  --group-summary-padding-block: 0;
   --group-summary-chevron-gap: var(--space-1);
   --year-control-padding-block-start: 0;
   --month-control-padding-block-start: 0;
