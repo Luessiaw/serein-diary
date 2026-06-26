@@ -30,14 +30,14 @@
   let sidebarCalendarCursor = null;
 
   initializeEditorExperimentState();
+  initializeLayoutDebugState();
   initializeLoadedWindow();
   renderFeed({ focusNewEntry: true, scrollToEnd: true });
   app.addEventListener("scroll", handleScroll, { passive: true });
   registerLoadDebugTools();
   registerLayoutDebugTools();
+  registerEditorExperimentTools();
   createSidebarShell();
-  createEditorExperimentToggle();
-  createLayoutDebugToggle();
 
   function renderFeed(options = {}) {
     const { focusNewEntry = false, scrollToEnd = false } = options;
@@ -1082,6 +1082,9 @@
 
       if (page.id === "calendar") {
         panel.append(createSidebarCalendar());
+      } else if (page.id === "settings") {
+        panel.append(panelTitle);
+        panel.append(createSidebarSettingsPanel());
       } else {
         panel.append(panelTitle);
         panel.append(placeholder);
@@ -1199,6 +1202,80 @@
     document.querySelectorAll(".app-sidebar-panel").forEach((panel) => {
       panel.hidden = panel.dataset.sidebarPage !== pageId;
     });
+  }
+
+  function createSidebarSettingsPanel() {
+    const settingsPanel = document.createElement("div");
+
+    settingsPanel.className = "sidebar-settings";
+    settingsPanel.append(
+      createSidebarSelectSetting({
+        id: "serein-setting-layout-debug",
+        label: "布局调试",
+        description: "显示年、月、日、正文和占位列的边框，用于检查排版。",
+        value: isLayoutDebugModeEnabled() ? "on" : "off",
+        options: [
+          { value: "off", label: "关闭" },
+          { value: "on", label: "开启" },
+        ],
+        settingName: "layout-debug",
+        onChange(value) {
+          setLayoutDebugMode(value === "on");
+        },
+      }),
+      createSidebarSelectSetting({
+        id: "serein-setting-editor-mode",
+        label: "编辑器模式",
+        description: "切换新建日记正文区域的输入控件，用于比较原生文本框和 Tiptap demo。",
+        value: isTiptapExperimentEnabled() ? "tiptap" : "textarea",
+        options: [
+          { value: "textarea", label: "Textarea" },
+          { value: "tiptap", label: "Tiptap demo" },
+        ],
+        settingName: "editor-mode",
+        onChange(value) {
+          setTiptapExperimentEnabled(value === "tiptap");
+          renderFeed({ focusNewEntry: true, scrollToEnd: true });
+        },
+      }),
+    );
+
+    return settingsPanel;
+  }
+
+  function createSidebarSelectSetting(config) {
+    const row = document.createElement("div");
+    const heading = document.createElement("div");
+    const label = document.createElement("label");
+    const select = document.createElement("select");
+    const description = document.createElement("p");
+
+    row.className = "sidebar-setting-row";
+    heading.className = "sidebar-setting-heading";
+    label.className = "sidebar-setting-label";
+    label.htmlFor = config.id;
+    label.textContent = config.label;
+    select.className = "sidebar-setting-select";
+    select.id = config.id;
+    select.dataset.setting = config.settingName;
+    config.options.forEach((optionConfig) => {
+      const option = document.createElement("option");
+
+      option.value = optionConfig.value;
+      option.textContent = optionConfig.label;
+      select.append(option);
+    });
+    select.value = config.value;
+    select.addEventListener("change", () => {
+      config.onChange(select.value);
+    });
+
+    description.className = "sidebar-setting-description";
+    description.textContent = config.description;
+    heading.append(label, select);
+    row.append(heading, description);
+
+    return row;
   }
 
   function createSidebarCalendar() {
@@ -1565,22 +1642,6 @@
     console.info("[Serein calendar] jump placeholder", { date });
   }
 
-  function createEditorExperimentToggle() {
-    const button = document.createElement("button");
-
-    registerEditorExperimentTools();
-    button.className = "editor-experiment-toggle";
-    button.type = "button";
-    button.title = "切换新建区编辑器实验";
-    button.setAttribute("aria-label", "切换新建区编辑器实验");
-    setTiptapExperimentEnabled(readEditorExperimentPreference(), { persist: false, button });
-    button.addEventListener("click", () => {
-      setTiptapExperimentEnabled(!isTiptapExperimentEnabled(), { button });
-      renderFeed({ focusNewEntry: true, scrollToEnd: true });
-    });
-    document.body.append(button);
-  }
-
   function registerEditorExperimentTools() {
     window.SereinEditorExperiment = {
       dumpMarkdown: dumpCurrentEditorMarkdown,
@@ -1607,7 +1668,10 @@
   }
 
   function setTiptapExperimentEnabled(enabled, options = {}) {
-    const { persist = true, button = document.querySelector(".editor-experiment-toggle") } = options;
+    const {
+      persist = true,
+      select = document.querySelector('[data-setting="editor-mode"]'),
+    } = options;
     const nextEnabled = Boolean(enabled);
 
     if (nextEnabled) {
@@ -1620,9 +1684,8 @@
       writeEditorExperimentPreference(nextEnabled);
     }
 
-    if (button) {
-      button.textContent = nextEnabled ? "Tiptap demo" : "Textarea";
-      button.setAttribute("aria-pressed", String(nextEnabled));
+    if (select) {
+      select.value = nextEnabled ? "tiptap" : "textarea";
     }
 
     return nextEnabled;
@@ -1880,27 +1943,19 @@
     };
   }
 
-  function createLayoutDebugToggle() {
-    const button = document.createElement("button");
-    const initialEnabled = readLayoutDebugPreference();
-
-    button.className = "layout-debug-toggle";
-    button.type = "button";
-    button.title = "切换布局调试边框";
-    button.setAttribute("aria-label", "切换布局调试边框");
-    setLayoutDebugMode(initialEnabled, { persist: false, button });
-    button.addEventListener("click", () => {
-      toggleLayoutDebugMode(button);
-    });
-    document.body.append(button);
+  function toggleLayoutDebugMode() {
+    return setLayoutDebugMode(!isLayoutDebugModeEnabled());
   }
 
-  function toggleLayoutDebugMode(button = document.querySelector(".layout-debug-toggle")) {
-    return setLayoutDebugMode(!isLayoutDebugModeEnabled(), { button });
+  function initializeLayoutDebugState() {
+    setLayoutDebugMode(readLayoutDebugPreference(), { persist: false });
   }
 
   function setLayoutDebugMode(enabled, options = {}) {
-    const { persist = true, button = document.querySelector(".layout-debug-toggle") } = options;
+    const {
+      persist = true,
+      select = document.querySelector('[data-setting="layout-debug"]'),
+    } = options;
     const nextEnabled = Boolean(enabled);
 
     if (nextEnabled) {
@@ -1913,9 +1968,8 @@
       writeLayoutDebugPreference(nextEnabled);
     }
 
-    if (button) {
-      button.textContent = nextEnabled ? "Debug mode" : "Normal mode";
-      button.setAttribute("aria-pressed", String(nextEnabled));
+    if (select) {
+      select.value = nextEnabled ? "on" : "off";
     }
 
     return nextEnabled;
