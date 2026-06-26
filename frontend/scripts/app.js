@@ -1204,9 +1204,10 @@
   function createSidebarCalendar() {
     const calendar = document.createElement("section");
     const controls = document.createElement("div");
+    const yearRow = document.createElement("div");
+    const monthRow = document.createElement("div");
     const previousYear = document.createElement("button");
     const previousMonth = document.createElement("button");
-    const label = document.createElement("div");
     const yearLabel = document.createElement("button");
     const monthLabel = document.createElement("button");
     const nextMonth = document.createElement("button");
@@ -1217,7 +1218,8 @@
 
     calendar.className = "sidebar-calendar";
     controls.className = "sidebar-calendar-controls";
-    label.className = "sidebar-calendar-label";
+    yearRow.className = "sidebar-calendar-row sidebar-calendar-year-row";
+    monthRow.className = "sidebar-calendar-row sidebar-calendar-month-row";
     yearLabel.className = "sidebar-calendar-label-button sidebar-calendar-year-label";
     monthLabel.className = "sidebar-calendar-label-button sidebar-calendar-month-label";
     picker.className = "sidebar-calendar-picker";
@@ -1249,9 +1251,16 @@
 
     calendar.dataset.year = String(cursor.year);
     calendar.dataset.month = String(cursor.month);
-    label.append(yearLabel, monthLabel);
-    controls.append(previousYear, previousMonth, label, nextMonth, nextYear);
+    yearRow.append(previousYear, yearLabel, nextYear);
+    monthRow.append(previousMonth, monthLabel, nextMonth);
+    controls.append(yearRow, monthRow);
     calendar.append(controls, picker, grid);
+    calendar.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+    document.addEventListener("pointerdown", () => {
+      closeSidebarCalendarPicker(calendar);
+    });
     renderSidebarCalendar(calendar);
 
     return calendar;
@@ -1415,6 +1424,8 @@
     picker.replaceChildren();
     picker.hidden = false;
     picker.dataset.mode = mode;
+    picker.classList.toggle("is-year-picker", mode === "year");
+    picker.classList.toggle("is-month-picker", mode === "month");
 
     if (mode === "year") {
       const years = getSelectableCalendarYears();

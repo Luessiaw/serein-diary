@@ -379,22 +379,21 @@ body[data-sidebar-open="true"] .app-sidebar {
 
 .sidebar-calendar {
   display: grid;
+  position: relative;
   gap: var(--space-3);
   margin-block-start: var(--space-3);
 }
 
 .sidebar-calendar-controls {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--space-1);
+  gap: 0.15rem;
 }
 
-.sidebar-calendar-label {
+.sidebar-calendar-row {
   display: grid;
-  gap: 0.1rem;
-  margin: 0;
-  justify-items: center;
+  grid-template-columns: 1.7rem minmax(0, 1fr) 1.7rem;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .sidebar-calendar-label-button {
@@ -431,14 +430,26 @@ body[data-sidebar-open="true"] .app-sidebar {
 
 .sidebar-calendar-picker {
   display: grid;
+  position: absolute;
+  inset-block-start: calc(100% - 1rem);
+  inset-inline: var(--space-2);
+  z-index: 2;
   gap: 0.15rem;
   max-block-size: 9rem;
-  margin-block: calc(-1 * var(--space-1)) var(--space-1);
   padding: var(--space-1);
   border: 1px solid color-mix(in srgb, var(--color-line) 70%, transparent);
   border-radius: var(--radius-subtle);
   background: color-mix(in srgb, var(--color-page) 96%, transparent);
+  box-shadow: 0 0.85rem 2rem rgb(0 0 0 / 0.12);
   overflow-y: auto;
+}
+
+.sidebar-calendar-picker.is-year-picker {
+  inset-block-start: 4.6rem;
+}
+
+.sidebar-calendar-picker.is-month-picker {
+  inset-block-start: 6.75rem;
 }
 
 .sidebar-calendar-picker[hidden] {
