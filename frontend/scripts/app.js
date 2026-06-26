@@ -1083,7 +1083,6 @@
       if (page.id === "calendar") {
         panel.append(createSidebarCalendar());
       } else if (page.id === "settings") {
-        panel.append(panelTitle);
         panel.append(createSidebarSettingsPanel());
       } else {
         panel.append(panelTitle);
@@ -1246,15 +1245,28 @@
   function createSidebarSelectSetting(config) {
     const row = document.createElement("div");
     const heading = document.createElement("div");
+    const labelWrap = document.createElement("div");
     const label = document.createElement("label");
+    const info = document.createElement("button");
+    const tooltip = document.createElement("span");
     const select = document.createElement("select");
-    const description = document.createElement("p");
+    const tooltipId = `${config.id}-info`;
 
     row.className = "sidebar-setting-row";
     heading.className = "sidebar-setting-heading";
+    labelWrap.className = "sidebar-setting-label-wrap";
     label.className = "sidebar-setting-label";
     label.htmlFor = config.id;
     label.textContent = config.label;
+    info.className = "sidebar-setting-info";
+    info.type = "button";
+    info.textContent = "i";
+    info.setAttribute("aria-label", `${config.label}说明`);
+    info.setAttribute("aria-describedby", tooltipId);
+    tooltip.className = "sidebar-setting-tooltip";
+    tooltip.id = tooltipId;
+    tooltip.setAttribute("role", "tooltip");
+    tooltip.textContent = config.description;
     select.className = "sidebar-setting-select";
     select.id = config.id;
     select.dataset.setting = config.settingName;
@@ -1270,10 +1282,13 @@
       config.onChange(select.value);
     });
 
-    description.className = "sidebar-setting-description";
-    description.textContent = config.description;
-    heading.append(label, select);
-    row.append(heading, description);
+    info.addEventListener("click", () => {
+      info.focus({ preventScroll: true });
+    });
+
+    labelWrap.append(label, info, tooltip);
+    heading.append(labelWrap, select);
+    row.append(heading);
 
     return row;
   }
