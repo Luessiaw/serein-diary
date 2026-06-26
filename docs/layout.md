@@ -9,6 +9,10 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 页面入口只有一个滚动容器：
 
 ```html
+<button class="sidebar-menu-button">...</button>
+<div class="sidebar-backdrop"></div>
+<aside class="app-sidebar">...</aside>
+
 <main id="app" class="diary-scroll-region">
   <section class="diary-feed">
     <div class="load-control">...</div>
@@ -48,6 +52,8 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
 
 几点需要记住：
 
+- 侧边栏相关节点直接挂在 `<body>` 下，是浮动界面层，不放入 `.diary-scroll-region`，
+  因此不会参与日记流宽度、时间轴列宽或滚动加载计算。
 - 年份、月份使用普通 `<section>`、`<button>` 和内容 `<div>` 组成；折叠状态由
   `data-open`、`aria-expanded` 和 `hidden` 控制。这样布局由普通 grid 元素承担，
   避免 `<details>` / `<summary>` 的特殊渲染模型影响列定位。

@@ -34,6 +34,7 @@
   app.addEventListener("scroll", handleScroll, { passive: true });
   registerLoadDebugTools();
   registerLayoutDebugTools();
+  createSidebarShell();
   createEditorExperimentToggle();
   createLayoutDebugToggle();
 
@@ -1007,6 +1008,100 @@
     } catch {
       // Ignore storage failures; console debugging still works for this session.
     }
+  }
+
+  function createSidebarShell() {
+    const button = document.createElement("button");
+    const backdrop = document.createElement("div");
+    const sidebar = document.createElement("aside");
+    const header = document.createElement("div");
+    const title = document.createElement("h2");
+    const close = document.createElement("button");
+    const placeholder = document.createElement("p");
+    const sidebarId = "serein-sidebar";
+
+    button.className = "sidebar-menu-button";
+    button.type = "button";
+    button.title = "打开侧边栏";
+    button.setAttribute("aria-label", "打开侧边栏");
+    button.setAttribute("aria-controls", sidebarId);
+    button.setAttribute("aria-expanded", "false");
+    button.innerHTML = "<span></span><span></span><span></span>";
+
+    backdrop.className = "sidebar-backdrop";
+    backdrop.hidden = true;
+
+    sidebar.className = "app-sidebar";
+    sidebar.id = sidebarId;
+    sidebar.hidden = true;
+    sidebar.setAttribute("aria-label", "信息与设置侧边栏");
+    sidebar.setAttribute("aria-modal", "true");
+    sidebar.setAttribute("role", "dialog");
+
+    header.className = "app-sidebar-header";
+    title.className = "app-sidebar-title";
+    title.textContent = "Serein";
+    close.className = "app-sidebar-close";
+    close.type = "button";
+    close.textContent = "×";
+    close.title = "关闭侧边栏";
+    close.setAttribute("aria-label", "关闭侧边栏");
+    placeholder.className = "app-sidebar-placeholder";
+    placeholder.textContent = "侧边栏框架已就绪。信息、设置和导航内容将在后续阶段加入。";
+
+    header.append(title, close);
+    sidebar.append(header, placeholder);
+    document.body.append(button, backdrop, sidebar);
+
+    button.addEventListener("click", () => {
+      setSidebarOpen(true, { button, backdrop, sidebar });
+    });
+    close.addEventListener("click", () => {
+      setSidebarOpen(false, { button, backdrop, sidebar });
+      button.focus({ preventScroll: true });
+    });
+    backdrop.addEventListener("click", () => {
+      setSidebarOpen(false, { button, backdrop, sidebar });
+      button.focus({ preventScroll: true });
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !isSidebarOpen()) {
+        return;
+      }
+
+      setSidebarOpen(false, { button, backdrop, sidebar });
+      button.focus({ preventScroll: true });
+    });
+  }
+
+  function setSidebarOpen(open, elements = {}) {
+    const button = elements.button || document.querySelector(".sidebar-menu-button");
+    const backdrop = elements.backdrop || document.querySelector(".sidebar-backdrop");
+    const sidebar = elements.sidebar || document.querySelector(".app-sidebar");
+    const nextOpen = Boolean(open);
+
+    document.body.dataset.sidebarOpen = String(nextOpen);
+
+    if (button) {
+      button.setAttribute("aria-expanded", String(nextOpen));
+      button.title = nextOpen ? "关闭侧边栏" : "打开侧边栏";
+      button.setAttribute("aria-label", nextOpen ? "关闭侧边栏" : "打开侧边栏");
+    }
+
+    if (backdrop) {
+      backdrop.hidden = !nextOpen;
+    }
+
+    if (sidebar) {
+      sidebar.hidden = !nextOpen;
+      if (nextOpen) {
+        sidebar.querySelector(".app-sidebar-close")?.focus({ preventScroll: true });
+      }
+    }
+  }
+
+  function isSidebarOpen() {
+    return document.body.dataset.sidebarOpen === "true";
   }
 
   function createEditorExperimentToggle() {

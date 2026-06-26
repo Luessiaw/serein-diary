@@ -179,6 +179,113 @@ body {
   outline-offset: var(--space-1);
 }
 
+.sidebar-menu-button {
+  position: fixed;
+  inset-block-start: var(--space-3);
+  inset-inline-start: var(--space-3);
+  z-index: 32;
+  display: grid;
+  gap: 0.22rem;
+  align-content: center;
+  inline-size: 2.1rem;
+  block-size: 2.1rem;
+  border: 1px solid color-mix(in srgb, var(--color-line) 70%, transparent);
+  border-radius: 999px;
+  padding: 0;
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-page) 84%, transparent);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.06);
+  cursor: pointer;
+}
+
+.sidebar-menu-button span {
+  display: block;
+  inline-size: 0.82rem;
+  block-size: 1px;
+  justify-self: center;
+  background: currentColor;
+}
+
+.sidebar-menu-button[aria-expanded="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  background: rgb(0 0 0 / 0.08);
+  backdrop-filter: blur(1px);
+}
+
+.sidebar-backdrop[hidden] {
+  display: none;
+}
+
+.app-sidebar {
+  position: fixed;
+  inset-block: var(--space-3);
+  inset-inline-start: var(--space-3);
+  z-index: 30;
+  inline-size: min(22rem, calc(100vw - 2 * var(--space-3)));
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-line) 78%, transparent);
+  border-radius: calc(var(--radius-subtle) * 2);
+  color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-page) 94%, transparent);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 0.14);
+  backdrop-filter: blur(12px);
+  overflow: auto;
+}
+
+.app-sidebar[hidden] {
+  display: none;
+}
+
+.app-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+
+.app-sidebar-title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.app-sidebar-close {
+  inline-size: 1.8rem;
+  block-size: 1.8rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.app-sidebar-placeholder {
+  margin: 0;
+  color: var(--color-muted);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.sidebar-menu-button:focus-visible,
+.app-sidebar-close:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-1);
+}
+
 .layout-debug-toggle {
   position: fixed;
   inset-block-end: var(--space-3);
