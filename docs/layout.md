@@ -165,7 +165,8 @@ Box-year
 - `--sticky-group-label-z-index`：吸附标签的层级。
 - `--sticky-group-label-background`：吸附标签背景色，用于避免滚动内容透出。
 - `--sticky-year-label-top-compact`：窄屏下年份标签吸附到顶部时的偏移。
-- `--sticky-month-label-top-compact`：窄屏下月份标签吸附到顶部时的偏移，默认低于年份标签以避免重叠。
+- `--sticky-year-label-height-compact`：窄屏下年份吸附区高度，用于决定月份标签的吸附触发线。
+- `--sticky-month-label-top-compact`：窄屏下月份标签吸附到顶部时的偏移，默认等于年份顶部偏移加年份吸附区高度。
 - `--title-gap`：标题与日期/正文之间的距离。
 - `--paragraph-gap`：正文段落之间的距离。
 
@@ -175,7 +176,8 @@ Box-year
 做细微补偿，并确认年、月、日字号和 line-height 接近。
 
 桌面端年/月标签使用 `position: sticky` 吸附在滚动容器顶部；窄屏布局中也启用
-sticky，但年份和月份使用不同顶部偏移以避免堆叠。
+sticky。月份标签的 sticky 触发线默认位于“页面顶端 + 年份吸附区高度”，避免
+月份与年份重叠。
 
 ## 字号与行高
 

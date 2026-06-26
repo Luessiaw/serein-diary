@@ -107,7 +107,14 @@
   --sticky-group-label-z-index: 8;
   --sticky-group-label-background: var(--color-page);
   --sticky-year-label-top-compact: 0;
-  --sticky-month-label-top-compact: 1.3rem;
+  --sticky-year-label-height-compact: calc(
+    var(--font-size-year)
+    + 2 * var(--group-summary-padding-block)
+  );
+  --sticky-month-label-top-compact: calc(
+    var(--sticky-year-label-top-compact)
+    + var(--sticky-year-label-height-compact)
+  );
   --title-gap: 0;
   --paragraph-gap: var(--space-2);
   --radius-subtle: 0.5rem;
