@@ -91,7 +91,7 @@ P3 的最小后端边界见 [`backend-boundary.md`](backend-boundary.md)。P3 �
 `DIARY_DATA_DIR` 始终位于仓库外：
 
 ```text
-entries/<year>/<date>-<uuid>/
+entries/YYYYMMDDHHmm-<uuid>/
 ├── metadata.json
 ├── content.md
 ├── comments.json
@@ -101,8 +101,9 @@ entries/<year>/<date>-<uuid>/
 
 - `content.md` 是 UTF-8 语义 Markdown，也是可移植的正文事实源；其中不包含 CSS、
   HTML、主题数据或编辑器会话数据。
-- `metadata.json` 包含稳定 ID、服务端 `created_at` 和可扩展的结构化元数据。目录中的
-  年份和日期均由 `created_at` 的 RFC 3339 本地日期部分派生，不另行保存。
+- `metadata.json` 包含稳定 ID、服务端 `created_at` 和可扩展的结构化元数据。目录名
+  前缀 `YYYYMMDDHHmm` 由 `created_at` 在其自身偏移量下派生；目录名用于可读排序，
+  权威时间事实源仍是 `created_at`。
 - `comments.json` 独立于正文，保存评论文本、时间戳与可选的引文锚点。
 - `media-manifest.json` 将稳定媒体 ID 映射至条目目录内的相对文件；正文不直接引用
   原始媒体文件名。
@@ -113,9 +114,10 @@ entries/<year>/<date>-<uuid>/
 
 `metadata.json` 含有 `schema_version`、UUID `id`、服务端 `created_at`，以及可选
 标题、地点和带类型的自定义字段。`created_at` 使用含偏移量的 RFC 3339；其本地日期
-部分用于目录命名和界面分组。条目保存后内容与 metadata 均不可修改。拒绝未知顶层
-写入字段；自定义字段由根目录 `field-definitions.json` 管理，从而避免字段标签变更
-时重写历史条目。
+与时间到分钟用于目录命名，年月日用于界面分组。条目保存后内容与 metadata 均不可
+修改。拒绝未知顶层写入字段；不保留独立 `date`、`updated_at` 或 `revision` 字段。
+自定义字段由根目录 `field-definitions.json` 管理，从而避免字段标签变更时重写历史
+条目。具体 v1 契约见 [`data-contract-v1.md`](data-contract-v1.md)。
 
 ### 正文与媒体 v1
 
