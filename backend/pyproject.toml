@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "FastAPI backend for Serein."
 requires-python = ">=3.11"
 dependencies = [
-  "fastapi>=0.115,<1.0",
+  "fastapi>=0.115,<0.116",
   "itsdangerous>=2.2,<3.0",
   "pydantic>=2.8,<3.0",
   "uvicorn[standard]>=0.30,<1.0",
@@ -19,4 +19,3 @@ test = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-
