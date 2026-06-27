@@ -24,6 +24,8 @@ Current coverage:
   ordering, and path safety checks.
 - `test_storage_write.py`: P4 immutable entry creation and soft-delete marker
   behavior.
+- `test_entries_api.py`: P4 minimal authenticated entries API for browser/curl
+  storage verification.
 
 These tests do not read or write real diary entries. Storage tests use temporary
 directories and generated fixtures.

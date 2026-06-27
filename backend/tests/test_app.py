@@ -38,6 +38,8 @@ class AppAssemblyTests(TestCase):
         self.assertIn("/api/v1/auth/logout", route_paths)
         self.assertIn("/api/v1/auth/session", route_paths)
         self.assertIn("/api/v1/protected", route_paths)
+        self.assertIn("/api/v1/entries", route_paths)
+        self.assertIn("/api/v1/entries/{entry_id}", route_paths)
 
     def import_create_app(self):
         with TemporaryDirectory() as data_dir:

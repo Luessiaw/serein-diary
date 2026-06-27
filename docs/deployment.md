@@ -43,6 +43,8 @@ DIARY_HOST_DATA_DIR=/home/you/storage/data/diary
 ```
 
 P3 阶段 API 只提供健康检查、锁屏认证和受保护接口骨架，不读取或写入真实日记。
+P4-T04A 起，项目额外提供最小 entries API 供存储层调试；手动验证方式见
+[`p4-entries-api-test.md`](p4-entries-api-test.md)。
 
 可用下面的命令查看服务状态或停止示例部署：
 

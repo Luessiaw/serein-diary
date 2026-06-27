@@ -216,9 +216,13 @@ def find_entry_by_id(data_dir: Path, entry_id: UUID) -> DiaryEntry:
     entries_dir = Path(data_dir) / "entries"
     if not entries_dir.exists():
         raise EntryValidationError("entry not found")
+    if entries_dir.is_symlink() or not entries_dir.is_dir():
+        raise EntryValidationError("entries must be a directory inside DIARY_DATA_DIR")
 
     matches = []
     for entry_dir in entries_dir.iterdir():
+        if entry_dir.is_symlink():
+            raise EntryValidationError("entry directories must not be symlinks")
         if entry_dir.is_dir() and entry_dir.name.endswith(f"-{entry_id}"):
             matches.append(entry_dir)
 
