@@ -22,6 +22,8 @@ Current coverage:
   comments, and media manifest validation.
 - `test_storage_scan.py`: P4 flat `entries/` scanning, summary extraction,
   ordering, and path safety checks.
+- `test_storage_write.py`: P4 immutable entry creation and soft-delete marker
+  behavior.
 
 These tests do not read or write real diary entries. Storage tests use temporary
 directories and generated fixtures.
