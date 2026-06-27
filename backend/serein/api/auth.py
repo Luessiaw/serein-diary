@@ -14,6 +14,7 @@ from serein.security import (
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+NO_STORE_HEADER = "no-store"
 
 
 class LoginRequest(BaseModel):
@@ -39,6 +40,7 @@ class AuthenticatedSession(BaseModel):
 def login(payload: LoginRequest, request: Request, response: Response) -> SessionResponse:
     """Validate the lock-screen password and set a signed session cookie."""
 
+    mark_auth_response_uncacheable(response)
     settings = _get_settings(request)
     if not verify_lock_password(payload.password, settings):
         raise HTTPException(
@@ -60,6 +62,7 @@ def login(payload: LoginRequest, request: Request, response: Response) -> Sessio
 def logout(response: Response) -> SessionResponse:
     """Clear the signed session cookie."""
 
+    mark_auth_response_uncacheable(response)
     response.delete_cookie(
         key=SESSION_COOKIE_NAME,
         httponly=True,
@@ -69,9 +72,10 @@ def logout(response: Response) -> SessionResponse:
 
 
 @router.get("/session", response_model=SessionResponse)
-def get_session(request: Request) -> SessionResponse:
+def get_session(request: Request, response: Response) -> SessionResponse:
     """Return whether the current request has a valid lock-screen session."""
 
+    mark_auth_response_uncacheable(response)
     session = read_current_session(request)
     if session is None:
         return SessionResponse(authenticated=False)
@@ -105,3 +109,9 @@ def read_current_session(request: Request) -> AuthenticatedSession | None:
 
 def _get_settings(request: Request) -> Settings:
     return request.app.state.settings
+
+
+def mark_auth_response_uncacheable(response: Response) -> None:
+    """Prevent browsers or proxies from reusing stale authentication state."""
+
+    response.headers["Cache-Control"] = NO_STORE_HEADER

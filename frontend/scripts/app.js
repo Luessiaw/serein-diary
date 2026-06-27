@@ -181,6 +181,7 @@
 
   async function requestJson(url, options = {}) {
     const response = await window.fetch(url, {
+      cache: "no-store",
       credentials: "same-origin",
       ...options,
     });
