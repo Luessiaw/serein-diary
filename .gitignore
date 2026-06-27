@@ -7,3 +7,4 @@ data/
 prompts/
 AGENTS.md
 tasks.csv
+.venv/
