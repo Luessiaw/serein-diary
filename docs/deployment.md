@@ -22,16 +22,17 @@ Compose 会自动读取同目录下的 `.env`。如果没有 `.env`，配置仍�
 `http://127.0.0.1:8088/api/v1/health` 可验证 API 代理。`api` 服务只在
 Compose 内部网络中暴露，不直接绑定宿主机端口。
 
-前端默认通过同源 `/api/v1` 访问后端，并在启动时请求
+前端默认通过相对路径 `api/v1` 访问后端，并在启动时请求
 `GET /api/v1/auth/session`。如果部署到子路径，可修改
 `frontend/index.html` 中的：
 
 ```html
-<meta name="serein-api-base" content="/api/v1">
+<meta name="serein-api-base" content="api/v1">
 ```
 
-例如挂载到 `/diary/` 且后端代理为 `/diary/api/v1` 时，可改为
-`content="/diary/api/v1"`。
+相对路径的好处是：部署在站点根目录时会请求 `/api/v1/...`；部署在 `/diary/`
+时会请求 `/diary/api/v1/...`。如果你的反向代理使用了完全不同的 API 路径，也可
+将它改成绝对路径，例如 `content="/api/v1"`。
 
 Compose 会把 `.env` 中的 `DIARY_HOST_DATA_DIR` 挂载为容器内的 `/data`，并让
 API 使用 `DIARY_DATA_DIR=/data`。快速本机测试可以使用默认的 `./data`；真实
