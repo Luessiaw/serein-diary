@@ -18,6 +18,8 @@ Current coverage:
 - `test_health.py`: safe health response without leaking paths or secrets.
 - `test_auth.py`: login, logout, session cookie, and auth dependency behavior.
 - `test_protected.py`: minimal protected route response shape.
+- `test_entry_contract.py`: P4 v1 entry directory, metadata, content,
+  comments, and media manifest validation.
 
-These tests do not read or write real diary entries. P4 will add storage and
-index tests using temporary directories.
+These tests do not read or write real diary entries. Storage tests use temporary
+directories and generated fixtures.
