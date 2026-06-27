@@ -1,17 +1,26 @@
-# Diary
+# Serein
 
-Self-hosted personal diary application. This repository is independent from the
-parent server-operations repository.
+Serein 是一款自托管的个人日记应用，名称取自雨后清澈宁静的空气。本仓库独立
+于父级服务器运维仓库。
 
-## Boundaries
+## 视觉原则
 
-- Application code, Compose deployment files, migrations, and public docs live
-  here.
-- Personal diary data is external: set `DIARY_DATA_DIR` to its host directory.
-- The application must not depend on Portal routes, `PORTAL_*` variables, or
-  files from the parent repository.
+- **简约：** 隐藏与当前写作无关的常驻界面，让写作保持在中心。
+- **流畅：** 加载与保存不应打断思路或视觉流动。
+- **模块化：** 日记数据、布局、前端模块和后端服务保持分离，使数据可迁移、
+  界面可调整。
 
-## Status
+## 边界
 
-Scaffold only. The existing Portal Diary implementation is a migration source,
-not a runtime dependency.
+- 应用代码、Compose 部署文件、迁移工具和公开文档均位于本仓库。
+- 个人日记数据位于仓库外部：通过 `DIARY_DATA_DIR` 指向其宿主目录。
+- 应用不得依赖 Portal 路由、`PORTAL_*` 变量或父仓库中的文件。
+
+## 外观
+
+视觉参数集中在 `frontend/styles/tokens.css`。参阅[主题定制](docs/theme-customization.md)，
+可在不使用构建工具、也不将呈现与日记数据耦合的前提下调整或分享主题。
+
+## 当前状态
+
+当前为静态前端原型。既有 Portal Diary 实现仅作为迁移来源，不是运行时依赖。

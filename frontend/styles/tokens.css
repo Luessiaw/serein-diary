@@ -1,0 +1,192 @@
+/*
+ * Serein 视觉 token
+ *
+ * 这是调整应用整体视觉的唯一、易读入口。组件应使用这些语义变量，而不应
+ * 直接硬编码颜色、字体或间距。若要制作可分发的自定义主题，请先阅读
+ * docs/theme-customization.md。
+ */
+
+:root {
+  /*
+   * 应用身份
+   *
+   * `--page-name` 是浏览器标签页标题的默认事实源。当前设置页只会在本机浏览器
+   * 临时覆盖它；未来接入后端后，可由后端修改这一项来持久化站点标题。
+   * 字符串值需要保留引号，并且这一行末尾必须保留分号。
+   */
+  --page-name: "日记";
+
+  /*
+   * 字体
+   *
+   * 默认仅使用本地/系统字体栈：自托管可离线使用，也不会让阅读数据接触
+   * 第三方字体服务。`--font-title` 预留给未来有标题的界面；当前日记正文
+   * 使用 `--font-reading`，小型界面标签使用 `--font-ui`。
+   */
+  --font-title: "Times New Roman", "Noto Serif SC", "Songti SC", SimSun, serif;
+  --font-reading: "Times New Roman", KaiTi, "Noto Serif SC", serif;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  /*
+   * 字号与阅读节奏
+   *
+   * `clamp()` 会让正文在较宽屏幕上略微增大，同时确保手机上的字号舒适。
+   * 若目标是更安静、适合长文阅读的效果，应优先调整行高，再考虑增大字号。
+   */
+  --font-size-title: clamp(1.2rem, 1rem + 1vw, 1.5rem);
+  --font-size-reading: clamp(1rem, 0.96rem + 0.15vw, 1.125rem);
+  --font-year: var(--font-ui);
+  --font-month: var(--font-ui);
+  --font-date: var(--font-ui);
+  --font-size-year: 1.2rem;
+  --font-size-month: 1.2rem;
+  --font-size-date: 1.2rem;
+  --font-size-entry-time: 0.6rem;
+  --line-height-reading: 1.5;
+  --letter-spacing-date: 0.08em;
+
+  /*
+   * 色彩角色
+   *
+   * 按用途而不是按色相命名。未来的暗色或高对比度主题因此只需覆盖这一组，
+   * 无须修改组件 CSS。
+   */
+  --color-page: #fcfcfa;
+  --color-ink: #26322d;
+  --color-muted: #65736a;
+  --color-line: #dce5de;
+  --color-accent: #277253;
+  --color-danger: #a54844;
+  --color-year: var(--color-ink);
+  --color-month: var(--color-muted);
+  --color-date: var(--color-muted);
+
+  /*
+   * 间距刻度
+   *
+   * 这是全站共用的基础步进。优先选用已有刻度，而不是新增一次性的像素值，
+   * 这样调整后页面仍能保持一致的节奏。
+   */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: 4rem;
+
+  /*
+   * 阅读布局
+   *
+   * `--reading-width` 控制正文列宽度。主体宽度由正文宽度和左侧时间轴区域
+   * 自动计算：main-width = reading-width + 2 * left-width；右侧隐形占位
+   * 宽度等于 left-width，用于让正文列位于主体中央。
+   */
+  --reading-width: 35rem;
+  --year-control-width: 4.5rem;
+  --month-control-width: 3rem;
+  --date-control-width: 3rem;
+  --year-month-inline-gap: var(--space-3);
+  --month-date-inline-gap: var(--space-3);
+  --date-content-gap: clamp(0.75rem, 2vw, 1rem);
+  --page-gutter: clamp(1rem, 4vw, 3rem);
+  --feed-gap: var(--space-3);
+  --feed-padding-block: var(--space-6);
+
+  /*
+   * 中央面板
+   *
+   * 控制通过菜单按钮或 Ctrl+K / Cmd+K 唤起的浮动面板尺寸。面板内容超出时，
+   * 会在面板内部滚动；外框尺寸不会随日期、统计、设置页面切换而变化。
+   */
+  --panel-width: 36rem;
+  --panel-height: 34rem;
+
+  /*
+   * 纵向布局
+   *
+   * 这三项分别对应嵌套结构中的三层容器：
+   * 年份组之间、同一年内月份组之间、同一月份内日记条目之间。下面保留的
+   * `--year-gap`、`--year-month-block-gap`、`--month-date-block-gap` 是早期
+   * 名称，作为兼容别名存在；新样式优先使用更直观的 block-gap 名称。
+   */
+  --year-gap: var(--feed-gap);
+  --year-month-block-gap: var(--space-4);
+  --month-date-block-gap: var(--space-4);
+  --year-block-gap: var(--year-gap);
+  --month-block-gap: var(--year-month-block-gap);
+  --entry-block-gap: var(--month-date-block-gap);
+  --group-summary-padding-block: 0;
+  --group-summary-chevron-gap: var(--space-1);
+  --year-control-padding-block-start: 0;
+  --month-control-padding-block-start: 0;
+  --date-control-padding-block-start: 0;
+  --entry-body-padding-block-start: var(--group-summary-padding-block);
+  --sticky-group-label-top: 0;
+  --sticky-group-label-z-index: 8;
+  --sticky-group-label-background: var(--color-page);
+  --sticky-year-label-top-compact: 0;
+  --sticky-year-label-height-compact: calc(
+    var(--font-size-year)
+    + 2 * var(--group-summary-padding-block)
+  );
+  --sticky-month-label-top-compact: calc(
+    var(--sticky-year-label-top-compact)
+    + var(--sticky-year-label-height-compact)
+  );
+  --title-gap: 0;
+  --paragraph-gap: var(--space-2);
+  --radius-subtle: 0.5rem;
+
+  /*
+   * 布局调试
+   *
+   * 只需要改第一项：`0` 表示关闭，`1` 表示开启。CSS 不能直接在 `calc()`
+   * 中使用 true/false，因此这里使用数值开关。下面三项是开启后的具体样式，
+   * 通常不需要改。
+   */
+  --debug-layout-enabled: 0;
+  --debug-layout-outline-width-when-enabled: 2px;
+  --debug-layout-opacity-when-enabled: 0.7;
+  --debug-layout-placeholder-min-height-when-enabled: 1.5rem;
+  --debug-layout-outline-width: calc(var(--debug-layout-enabled) * var(--debug-layout-outline-width-when-enabled));
+  --debug-layout-opacity: calc(var(--debug-layout-enabled) * var(--debug-layout-opacity-when-enabled));
+  --debug-layout-placeholder-min-height: calc(
+    var(--debug-layout-enabled)
+    * var(--debug-layout-placeholder-min-height-when-enabled)
+  );
+
+  /*
+   * 滚动加载与新建区
+   *
+   * 这些变量用于当前静态原型的分页模拟。前三个数值会被 JavaScript 读取：
+   * 初始加载最近多少篇、每次向上加载多少篇，以及滚动到已加载列表顶部第
+   * 几篇附近时触发下一次加载。`--load-layout-fill-tolerance` 控制折叠年/月后
+   * 页面高度不足时的补拉容差：当 scrollHeight - clientHeight 小于等于此值时，
+   * 才继续自动补拉更早内容。未来接入后端后，这组参数仍可作为前端体验调校入口。
+   */
+  --load-initial-count: 4;
+  --load-page-size: 2;
+  --load-trigger-entry-index: 1;
+  --load-simulated-delay-ms: 1000;
+  --load-layout-fill-tolerance: 0;
+  --load-control-gap: var(--space-2);
+  --load-control-padding-block: var(--space-2);
+  --spinner-size: 0.9rem;
+  --new-entry-min-height: 55vh;
+  --new-entry-bottom-space: 28vh;
+
+  /*
+   * 窄屏布局
+   *
+   * 标准 CSS 暂不能直接在 @media 条件中使用自定义属性。修改断点时，须将
+   * base.css 中的字面量 42rem 与 `--breakpoint-compact` 同步修改。
+   */
+  --breakpoint-compact: 42rem;
+  --breakpoint-wide: 72rem;
+  --feed-gap-compact: var(--space-5);
+  --feed-padding-block-compact: var(--space-5);
+}
+
+:root[data-layout-debug="true"] {
+  --debug-layout-enabled: 1;
+}

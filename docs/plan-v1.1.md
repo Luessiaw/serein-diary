@@ -1,89 +1,94 @@
-# Diary v1.1 Architecture Plan
+# Serein v1.1 架构方案
 
-## Goal
+## 目标
 
-Diary is a standalone, self-hosted personal writing application. It provides a
-minimal continuous diary feed for desktop and mobile browsers: read entries as
-one long document, create an entry at the end, edit it in place, comment on an
-entry or selected quotation, and navigate older entries without tying the
-application to an existing portal.
+Serein 是一款独立、自托管的个人写作应用。它为桌面和移动浏览器提供极简的连续
+日记流：将条目视作一篇长文阅读，在当前时间位置新建并封存条目、为整篇或所选引文添加评论，
+并浏览更早的内容；应用不依赖既有 Portal。
 
-The current Portal implementation is only a migration source. Portal may later
-link to Diary, but it is never a runtime dependency.
+当前 Portal 实现仅作为迁移来源。Portal 未来可以链接至 Serein，但绝不是运行时
+依赖。
 
-## Development Method and Frontend Stages
+## 风格契约
 
-Development is intentionally small-step. The current first milestone is a
-frontend-only static prototype; it does not need Docker, API, authentication,
-or real diary files.
+- **简约：** 隐藏不服务于当前写作动作的常驻控件；可滚动的日记区域是主界面。
+- **流畅：** 加载、保存和过渡在需要时应可见，但不得主导阅读或写作流。
+- **模块化：** 条目数据独立于 HTML/CSS；视觉 token 集中管理；前端模块通过窄
+  接口协作。
 
-1. **Step 0 — style contract:** minimal, fluent, modular. The page has one
-   full-width, indefinitely scrollable diary area and avoids permanent panels,
-   metadata controls, Markdown previews, or noisy loading UI.
-2. **Step 1 — scroll area:** create a full-page scroll region filled with
-   bordered placeholder entry cards containing mock text. Entries form a
-   vertical list; no backend or storage is involved.
-3. **Step 2 — entry modes:** use a static list of sample entries to develop
-   three switchable modes: saved reading, inline editing, and an unsaved “new
-   entry” item at the end of the list. New mode differs only by its label and
-   lack of a persisted ID.
-4. **Later frontend stages:** replace mock data with the API adapter, introduce
-   Tiptap for active inline editing, then add comments, media, timeline/search,
-   PWA, and configuration-driven visual tuning.
+## 开发方法与前端阶段
 
-Each frontend module should have a narrow role: feed/loading, entry rendering,
-entry editing, comments, and visual tokens. Styling knobs such as font, size,
-spacing, and colors live in a frontend configuration/token module rather than
-being duplicated through components.
+开发坚持小步推进。当前首个里程碑是纯前端静态原型，不需要 Docker、API、认证或
+真实日记文件。
 
-## Runtime Architecture
+1. **Step 0 — 风格契约：** 简约、流畅、模块化。页面只有一个全宽、可无限滚动
+   的日记区域，避免常驻面板、元数据控件、Markdown 预览和喧闹的加载界面。
+2. **Step 1 — 滚动区域：** 创建充满模拟文本的全页滚动区域。条目组成纵向列表；
+   不涉及后端或存储。
+3. **Step 2 — 条目状态：** 使用静态样本列表开发两种状态：已封存阅读，以及未保存
+   “新建条目”。新建条目没有持久 `created_at`，但前端用打开页面时的临时时间将其
+   归入对应年/月分组；保存后正文和标题不可修改。阅读流按创建时间正序排列，并由
+   创建时间分为可折叠的年份和月份。静态阶段的“保存草稿”仅为后端草稿能力的占位
+   按钮，不持久化内容。滚动加载在本阶段先用 mock 数据模拟：初始只显示最近若干篇，
+   打开后滚动到新建条目，向上接近顶部时延迟加载更早内容，全部加载后显示完成状态
+   并停止继续请求。折叠年份或月份后，如果当前可见内容变短到不足以形成可滚动页面，
+   前端会继续补拉取更早内容，直到页面重新可滚动或没有更早内容；真实 API 阶段
+   必须根据服务端分页和 `has_more` 重新判断，而不能假设当前折叠组内已包含完整历史。
+4. **后续前端阶段：** 用 API 适配器替换模拟数据；为新建条目引入 Tiptap；再加入
+   评论、媒体、时间轴/搜索、PWA 和配置驱动的视觉调整。
+
+每个前端模块应有单一而窄的职责：日记流/加载、条目渲染、新建条目、评论和视觉
+token。字体、尺寸、间距和颜色等样式参数应位于前端配置/token 模块，而不在各
+组件中重复。
+
+## 运行时架构
 
 ```text
-browser
+浏览器
   │
   ▼
-Caddy web container ── static frontend
+Caddy web 容器 ── 静态前端
   │ /api/v1/*
   ▼
-FastAPI API container ── Diary service ── DIARY_DATA_DIR (host volume)
+FastAPI API 容器 ── Diary 服务 ── DIARY_DATA_DIR（宿主卷）
 ```
 
-Docker Compose is the first supported deployment. `web` serves the built
-frontend and reverse-proxies `/api/v1/*` to `api`. `api` is not directly
-published. Configuration uses `DIARY_*` variables, notably
-`DIARY_DATA_DIR`, `DIARY_TIMEZONE`, `DIARY_ADMIN_PASSWORD`, and
-`DIARY_SESSION_SECRET`.
+Docker Compose 是首个受支持的部署方式。`web` 提供构建后的前端，并将
+`/api/v1/*` 反向代理给 `api`；`api` 不直接暴露端口。配置使用 `DIARY_*` 变量，
+包括 `DIARY_DATA_DIR`、`DIARY_TIMEZONE`、`DIARY_ADMIN_PASSWORD` 和
+`DIARY_SESSION_SECRET`。
 
-The first public release is single-user: an administrator password initializes
-the local account and secure HttpOnly session cookies protect write APIs.
-Tailscale or reverse-proxy authentication can add protection but does not
-replace application authentication.
+首个公开版本为单用户：不实现账号系统，而是提供极简锁屏风格的单管理员访问保护。
+用户输入 `DIARY_ADMIN_PASSWORD` 后，后端设置安全的 HttpOnly 会话 Cookie 来保护
+写入 API。Tailscale 或反向代理认证可以增加保护，但不能替代应用自己的锁屏。
 
-## Product and API Model
+P3 的最小后端边界见 [`backend-boundary.md`](backend-boundary.md)。P3 只建立
+后端骨架、配置、健康检查、单管理员访问保护和部署代理；真实日记读写、索引、迁移、
+评论、媒体和导出均留给后续阶段。
 
-- The default feed loads the newest entries in cursor pages, then loads older
-  entries above the current text. The frontend must not duplicate a cursor
-  page.
-- Entries have server-created IDs, dates, timestamps, and revisions. Save uses
-  optimistic revision checking; a stale save returns a conflict.
-- The normal reading UI is intentionally quiet. Entries are shown continuously
-  like one long document; a new-entry affordance remains at the end. Entry
-  actions appear only on hover/focus; editing activates an inline Tiptap editor
-  with an expandable formatting toolbar.
-- Date labels are server-created. The UI may show Today/Yesterday for recent
-  entries, and includes time when several entries share a day. Loading older
-  cursor pages inserts them above current text without duplication.
-- Comments render below the entry in a distinct, compact style. A selected-text
-  comment stores a quotation and context; a no-selection comment belongs to the
-  whole entry. A no-longer-matchable quotation is shown as orphaned, never
-  silently reattached.
-- Public endpoints are namespaced below `/api/v1`: authentication, entry
-  paging/create/read/save/delete, comment CRUD, media upload/read, export, and
-  health. No Portal-specific API aliases are retained.
+## 产品与 API 模型
 
-## Data Contract
+- 日记列表 API 负责以创建时间正序提供游标分页；前端仅将更早页面插入当前内容
+  上方，并不得重复插入同一游标页或重新排序已分页的真实数据。响应必须提供
+  `has_more` 或等价结束信号，使前端在全部内容加载后显示“已加载所有日记内容”
+  并停止继续拉取。折叠或展开导致布局高度变化后，前端需要重新评估页面是否仍
+  不足以滚动；如果内容高度不足且 `has_more` 为真，应继续请求更早页面。
+- 条目的 ID 和 `created_at` 由服务端在首次保存时创建。保存成功后正文与标题封存，
+  不提供条目更新接口。
+- 正常阅读界面应保持安静。条目连续呈现如同一篇长文，新建入口按打开页面时的
+  临时时间参与年/月分组，并在保存前显示“现在”。条目操作仅在悬停或聚焦时出现；
+  已保存条目仅可评论或删除，不可编辑。
+- 年、月分组从 `created_at` 派生；条目显示“x日”，同日多篇时追加创建时间 `HH:mm`。
+  “今天/昨天”等相对日期在后续单独设计，并以用户时区为准。
+- 评论显示在条目下方，并采用区别于日记正文的紧凑样式。所选文本评论保存引文与
+  上下文；无选区评论属于整篇条目。评论仅可新增或删除；由于正文封存，引文不会因
+  后续正文编辑而失联。
+- 公开端点统一置于 `/api/v1` 下：锁屏访问保护、条目分页/创建/读取/删除、评论新增/
+  删除、媒体上传/读取、导出与健康检查；不保留 Portal 专用 API 别名。
 
-`DIARY_DATA_DIR` remains outside the repository:
+## 数据契约
+
+`DIARY_DATA_DIR` 始终位于仓库外：
 
 ```text
 entries/<year>/<date>-<uuid>/
@@ -94,61 +99,52 @@ entries/<year>/<date>-<uuid>/
 └── media/{original,preview}/
 ```
 
-- `content.md` is UTF-8 semantic Markdown and the portable body source; it
-  contains no CSS, HTML, theme data, or editor session data.
-- `metadata.json` contains the stable ID, date, timezone, server timestamps,
-  revision, and extensible structured metadata.
-- `comments.json` is independent from the body. It contains comment text,
-  timestamps, and optional quote anchors.
-- `media-manifest.json` maps stable media IDs to entry-local relative files.
-  Raw media filenames are not referenced by the body.
-- SQLite indexes, previews, rendered HTML, thumbnails, and Tiptap JSON are
-  caches/derivatives and must be rebuildable from these files.
+- `content.md` 是 UTF-8 语义 Markdown，也是可移植的正文事实源；其中不包含 CSS、
+  HTML、主题数据或编辑器会话数据。
+- `metadata.json` 包含稳定 ID、服务端 `created_at` 和可扩展的结构化元数据。目录中的
+  年份和日期均由 `created_at` 的 RFC 3339 本地日期部分派生，不另行保存。
+- `comments.json` 独立于正文，保存评论文本、时间戳与可选的引文锚点。
+- `media-manifest.json` 将稳定媒体 ID 映射至条目目录内的相对文件；正文不直接引用
+  原始媒体文件名。
+- SQLite 索引、预览、渲染 HTML、缩略图和 Tiptap JSON 都是缓存/衍生物，必须能由
+  这些文件重建。
 
-### Metadata v1
+### 元数据 v1
 
-`metadata.json` has `schema_version`, UUID `id`, `date`, `timezone`, server
-`created_at`/`updated_at`, `revision`, optional title, tags, mood, weather,
-location, time range, favorite state, and typed custom fields. Dates use
-`YYYY-MM-DD`; timestamps use RFC 3339 with offset. Unknown top-level write
-fields are rejected; custom fields are governed by a root-level
-`field-definitions.json` so label changes do not rewrite historical entries.
+`metadata.json` 含有 `schema_version`、UUID `id`、服务端 `created_at`，以及可选
+标题、地点和带类型的自定义字段。`created_at` 使用含偏移量的 RFC 3339；其本地日期
+部分用于目录命名和界面分组。条目保存后内容与 metadata 均不可修改。拒绝未知顶层
+写入字段；自定义字段由根目录 `field-definitions.json` 管理，从而避免字段标签变更
+时重写历史条目。
 
-### Content and media v1
+### 正文与媒体 v1
 
-`content.md` uses UTF-8/LF semantic Markdown. Images use
-`![alt](media:<uuid>)`. Video and audio use a versioned `diary-media` fenced
-block with `id`, `kind`, and optional caption. The renderer resolves a media ID
-through `media-manifest.json`; it never treats a Markdown URL as a local
-filesystem path. Text-only export degrades media to a readable ID reference.
+`content.md` 使用 UTF-8/LF 语义 Markdown。图片使用 `![alt](media:<uuid>)`。视频
+和音频使用带版本的 `diary-media` 围栏块，含 `id`、`kind` 与可选说明文字。渲染器
+通过 `media-manifest.json` 解析媒体 ID，绝不将 Markdown URL 作为本地文件系统路径。
+纯文本导出会将媒体降级为可读的 ID 引用。
 
-### Comments v1
+### 评论 v1
 
-`comments.json` contains a schema version and an array of comments. A comment
-has UUID, Markdown body, timestamps, and either no anchor (entry comment) or a
-quote anchor. A quote anchor records selected text and context. If later body
-edits prevent a safe match, its state becomes `orphaned`; it must never attach
-to similar but different text. Comments render under their entry, in a compact
-style distinct from diary prose.
+`comments.json` 包含 schema 版本和评论数组。每条评论含 UUID、Markdown 正文、
+`created_at`，以及“无锚点（整篇评论）”或“引文锚点”之一。评论只可新增或删除，
+不可编辑；引文锚点记录选中文本和上下文。评论显示于其条目下方，使用区别于日记
+散文的紧凑样式。
 
-## Delivery Sequence
+## 交付顺序
 
-1. Complete static Step 0--2 frontend prototypes and browser checks.
-2. Create backend/frontend packages, versioned configuration, authentication,
-   and Compose build images.
-3. Port and harden filesystem storage; implement the full `/api/v1` contract,
-   SQLite rebuildable index, migration dry-run, and API tests.
-4. Connect the continuous-feed Tiptap UI, comments, mobile interaction, PWA,
-   and media workflow.
-5. Provide exporter, backup/restore verification, release documentation, and
-   a Portal link-only integration option.
+1. 完成静态 Step 0--2 前端原型和浏览器检查。
+2. 创建后端/前端包、版本化配置、单管理员访问保护和 Compose 构建镜像。
+3. 迁移并加固文件系统存储；实现完整 `/api/v1` 契约、可重建 SQLite 索引、迁移
+   dry-run 与 API 测试。
+4. 接入连续日记流、新建条目 Tiptap UI、评论、移动端交互、PWA 和媒体工作流。
+5. 提供导出器、备份/恢复验证、发布文档及仅链接式的 Portal 集成选项。
 
-## Migration and Non-Goals
+## 迁移与非目标
 
-The importer must dry-run before copying existing entry files, preserve entry
-IDs and media references, and report entry/comment/media counts. It must never
-read Portal runtime configuration or copy personal data into the Git checkout.
+迁移器在复制既有条目文件前必须执行 dry-run，保留条目 ID 和媒体引用，并报告
+条目/评论/媒体数量。它绝不可读取 Portal 运行时配置，也不可将个人数据复制进
+Git 工作区。
 
-The first public release excludes multi-user collaboration, public sharing
-links, server-side video transcoding, and AI access to diary content. AI may be
-added later only with an explicit selected-entry scope and user confirmation.
+首个公开版本不包含多用户协作、公开分享链接、服务端视频转码或 AI 访问日记内容。
+AI 如在未来加入，只能在用户确认后访问明确选定的条目范围。
