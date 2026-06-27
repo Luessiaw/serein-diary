@@ -187,19 +187,26 @@ class EntryContractTests(TestCase):
                 read_entry(entry_dir)
 
 
-def create_entry_fixture(root: Path, name: str = ENTRY_DIR_NAME) -> Path:
+def create_entry_fixture(
+    root: Path,
+    name: str = ENTRY_DIR_NAME,
+    entry_id: str = ENTRY_ID,
+    created_at: str = CREATED_AT,
+    title: str | None = "雨",
+    content: str = "今天下了一场很轻的雨。\n",
+) -> Path:
     entry_dir = root / name
     entry_dir.mkdir(parents=True)
-    write_json(
-        entry_dir / "metadata.json",
-        {
-            "schema_version": 1,
-            "id": ENTRY_ID,
-            "created_at": CREATED_AT,
-            "title": "雨",
-        },
-    )
-    (entry_dir / "content.md").write_text("今天下了一场很轻的雨。\n", encoding="utf-8")
+    metadata = {
+        "schema_version": 1,
+        "id": entry_id,
+        "created_at": created_at,
+    }
+    if title is not None:
+        metadata["title"] = title
+
+    write_json(entry_dir / "metadata.json", metadata)
+    (entry_dir / "content.md").write_text(content, encoding="utf-8")
     write_json(entry_dir / "comments.json", {"schema_version": 1, "comments": []})
     write_json(entry_dir / "media-manifest.json", {"schema_version": 1, "media": []})
     return entry_dir

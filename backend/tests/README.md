@@ -20,6 +20,8 @@ Current coverage:
 - `test_protected.py`: minimal protected route response shape.
 - `test_entry_contract.py`: P4 v1 entry directory, metadata, content,
   comments, and media manifest validation.
+- `test_storage_scan.py`: P4 flat `entries/` scanning, summary extraction,
+  ordering, and path safety checks.
 
 These tests do not read or write real diary entries. Storage tests use temporary
 directories and generated fixtures.
