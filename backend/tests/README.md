@@ -26,6 +26,8 @@ Current coverage:
   behavior.
 - `test_entries_api.py`: P4 minimal authenticated entries API for browser/curl
   storage verification.
+- `test_storage_index.py`: P4 rebuildable SQLite index creation, ordering,
+  date counts, and deleted-entry filtering.
 
 These tests do not read or write real diary entries. Storage tests use temporary
 directories and generated fixtures.
