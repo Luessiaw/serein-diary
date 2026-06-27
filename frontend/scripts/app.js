@@ -13,7 +13,12 @@
   }
 
   const FALLBACK_PAGE_NAME = "Serein";
+  const API_BASE = readApiBase();
   const settings = readInteractionSettings();
+  const authState = {
+    authenticated: false,
+    initialized: false,
+  };
   let draftCreatedAt = createLocalTimestamp();
   const loadState = {
     visibleStartIndex: 0,
@@ -30,16 +35,186 @@
   let activeNewEntryContentControl = null;
   let sidebarCalendarCursor = null;
 
-  initializePageNameState();
-  initializeEditorExperimentState();
-  initializeLayoutDebugState();
-  initializeLoadedWindow();
-  renderFeed({ focusNewEntry: true, scrollToEnd: true });
-  app.addEventListener("scroll", handleScroll, { passive: true });
-  registerLoadDebugTools();
-  registerLayoutDebugTools();
-  registerEditorExperimentTools();
-  createSidebarShell();
+  void bootApplication();
+
+  async function bootApplication() {
+    initializePageNameState();
+    renderLockScreen({ state: "checking" });
+
+    try {
+      const session = await requestJson(`${API_BASE}/auth/session`);
+
+      if (session.authenticated) {
+        startDiaryApplication();
+        return;
+      }
+
+      renderLockScreen();
+    } catch (error) {
+      renderLockScreen({
+        state: "error",
+        message: createAuthErrorMessage(error),
+      });
+    }
+  }
+
+  function startDiaryApplication() {
+    if (authState.initialized) {
+      renderFeed({ focusNewEntry: true, scrollToEnd: true });
+      return;
+    }
+
+    authState.authenticated = true;
+    authState.initialized = true;
+    initializeEditorExperimentState();
+    initializeLayoutDebugState();
+    initializeLoadedWindow();
+    renderFeed({ focusNewEntry: true, scrollToEnd: true });
+    app.addEventListener("scroll", handleScroll, { passive: true });
+    registerLoadDebugTools();
+    registerLayoutDebugTools();
+    registerEditorExperimentTools();
+    createSidebarShell();
+  }
+
+  function renderLockScreen(options = {}) {
+    const { state = "idle", message = "" } = options;
+    const shell = document.createElement("section");
+    const card = document.createElement("form");
+    const title = document.createElement("h1");
+    const description = document.createElement("p");
+    const password = document.createElement("input");
+    const actions = document.createElement("div");
+    const submit = document.createElement("button");
+    const retry = document.createElement("button");
+    const status = document.createElement("p");
+    const isChecking = state === "checking";
+    const isError = state === "error";
+
+    shell.className = "lock-screen";
+    shell.setAttribute("aria-label", "Serein lock screen");
+    card.className = "lock-card";
+    title.className = "lock-title";
+    title.textContent = normalizePageName(readPageNamePreference());
+    description.className = "lock-description";
+    description.textContent = "输入日记锁屏密码。";
+    password.className = "lock-password";
+    password.type = "password";
+    password.name = "password";
+    password.placeholder = "密码";
+    password.autocomplete = "current-password";
+    password.setAttribute("aria-label", "锁屏密码");
+    password.disabled = isChecking;
+    actions.className = "lock-actions";
+    submit.className = "lock-submit";
+    submit.type = "submit";
+    submit.textContent = isChecking ? "检查中…" : "进入";
+    submit.disabled = isChecking;
+    retry.className = "lock-retry";
+    retry.type = "button";
+    retry.textContent = "重试连接";
+    retry.hidden = !isError;
+    status.className = "lock-status";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.textContent = isChecking ? "正在确认会话状态……" : message;
+
+    card.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void submitLockPassword(card, password, submit, status);
+    });
+    retry.addEventListener("click", () => {
+      void bootApplication();
+    });
+
+    actions.append(submit, retry);
+    card.append(title, description, password, actions, status);
+    shell.append(card);
+    app.replaceChildren(shell);
+
+    if (!isChecking) {
+      requestAnimationFrame(() => {
+        password.focus({ preventScroll: true });
+      });
+    }
+  }
+
+  async function submitLockPassword(card, password, submit, status) {
+    const value = password.value;
+
+    if (!value) {
+      status.textContent = "请输入密码。";
+      password.focus({ preventScroll: true });
+      return;
+    }
+
+    card.dataset.loading = "true";
+    password.disabled = true;
+    submit.disabled = true;
+    submit.textContent = "验证中…";
+    status.textContent = "正在验证……";
+
+    try {
+      const session = await requestJson(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password: value }),
+      });
+
+      if (!session.authenticated) {
+        throw new Error("登录未完成。");
+      }
+
+      startDiaryApplication();
+    } catch (error) {
+      card.dataset.loading = "false";
+      password.disabled = false;
+      submit.disabled = false;
+      submit.textContent = "进入";
+      status.textContent = createAuthErrorMessage(error);
+      password.select();
+      password.focus({ preventScroll: true });
+    }
+  }
+
+  async function requestJson(url, options = {}) {
+    const response = await window.fetch(url, {
+      credentials: "same-origin",
+      ...options,
+    });
+
+    let body = null;
+    try {
+      body = await response.json();
+    } catch {
+      // Empty or non-JSON responses are handled below.
+    }
+
+    if (!response.ok) {
+      const error = new Error(body?.detail || `请求失败：${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+
+    return body || {};
+  }
+
+  function createAuthErrorMessage(error) {
+    if (error?.status === 401) {
+      return "密码不正确。";
+    }
+
+    return "无法连接 Serein 后端，请确认 API 服务和反向代理已启动。";
+  }
+
+  function readApiBase() {
+    const meta = document.querySelector('meta[name="serein-api-base"]');
+    const value = meta?.content?.trim() || "/api/v1";
+
+    return value.replace(/\/$/u, "");
+  }
 
   function renderFeed(options = {}) {
     const { focusNewEntry = false, scrollToEnd = false } = options;

@@ -28,6 +28,95 @@ body {
   scroll-behavior: smooth;
 }
 
+.lock-screen {
+  display: grid;
+  place-items: center;
+  min-block-size: 100%;
+  padding: var(--space-4);
+}
+
+.lock-card {
+  display: grid;
+  gap: var(--lock-card-gap);
+  inline-size: min(100%, var(--lock-card-width));
+  padding: var(--lock-card-padding);
+  border: 1px solid color-mix(in srgb, var(--color-line) 76%, transparent);
+  border-radius: calc(var(--radius-subtle) * 2);
+  color: var(--color-ink);
+  background: var(--lock-card-background);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 0.08);
+}
+
+.lock-title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.lock-description,
+.lock-status {
+  margin: 0;
+  color: var(--color-muted);
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.lock-password {
+  inline-size: 100%;
+  border: 0;
+  border-block-end: 1px solid var(--color-line);
+  padding: var(--space-2) 0;
+  color: var(--color-ink);
+  background: transparent;
+  font-family: var(--font-reading);
+  font-size: var(--font-size-reading);
+  line-height: var(--line-height-reading);
+}
+
+.lock-password:focus-visible {
+  outline: 0;
+  border-block-end-color: var(--color-accent);
+}
+
+.lock-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lock-submit,
+.lock-retry {
+  border: 1px solid color-mix(in srgb, var(--color-line) 82%, transparent);
+  border-radius: 999px;
+  padding: 0.34rem var(--space-3);
+  color: var(--color-ink);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  line-height: 1.2;
+}
+
+.lock-submit {
+  color: var(--color-accent);
+}
+
+.lock-submit:disabled,
+.lock-retry:disabled,
+.lock-password:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.lock-submit:focus-visible,
+.lock-retry:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-1);
+}
+
 .diary-feed {
   display: grid;
   gap: var(--year-block-gap);
