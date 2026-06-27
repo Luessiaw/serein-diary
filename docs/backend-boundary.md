@@ -64,11 +64,12 @@ backend/
 
 P3 需要识别这些环境变量：
 
-- `DIARY_DATA_DIR`：仓库外的数据目录。P3 只校验路径存在、是目录、进程可访问；
-  不创建真实条目，不写 entries。
+- `DIARY_DATA_DIR`：仓库外的数据目录。P3 只校验它是已存在的绝对目录，且进程可
+  读、可写、可进入；不创建真实条目，不写 entries。
 - `DIARY_TIMEZONE`：应用时区，例如 `Asia/Shanghai`。
-- `DIARY_ADMIN_PASSWORD`：单管理员锁屏密码。不得写入日志。
-- `DIARY_SESSION_SECRET`：会话签名密钥。不得写入日志；应要求足够长度。
+- `DIARY_ADMIN_PASSWORD`：单管理员锁屏密码。不得写入日志；默认占位值会被拒绝。
+- `DIARY_SESSION_SECRET`：会话签名密钥。不得写入日志；至少 32 字符，默认占位值会
+  被拒绝。
 
 可选配置可后续加入，例如 Cookie 名称、Cookie secure 策略、CORS、日志级别等。
 如果 P3 需要添加，也应保持默认安全、文档清晰。
