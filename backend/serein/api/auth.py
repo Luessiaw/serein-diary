@@ -1,11 +1,78 @@
-"""Lock-screen access protection routes.
+"""Lock-screen access protection routes."""
 
-P3-T02 only reserves the route module. The actual login, logout, and session
-handlers are implemented in P3-T05.
-"""
+from fastapi import APIRouter, HTTPException, Request, Response, status
+from pydantic import BaseModel, Field
 
-from fastapi import APIRouter
+from serein.config import Settings
+from serein.security import (
+    SESSION_COOKIE_MAX_AGE_SECONDS,
+    SESSION_COOKIE_NAME,
+    create_session_token,
+    read_session_token,
+    verify_lock_password,
+)
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+
+class LoginRequest(BaseModel):
+    """Lock-screen login request."""
+
+    password: str = Field(min_length=1)
+
+
+class SessionResponse(BaseModel):
+    """Minimal session state."""
+
+    authenticated: bool
+    subject: str | None = None
+
+
+@router.post("/login", response_model=SessionResponse)
+def login(payload: LoginRequest, request: Request, response: Response) -> SessionResponse:
+    """Validate the lock-screen password and set a signed session cookie."""
+
+    settings = _get_settings(request)
+    if not verify_lock_password(payload.password, settings):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid password.",
+        )
+
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=create_session_token(settings),
+        max_age=SESSION_COOKIE_MAX_AGE_SECONDS,
+        httponly=True,
+        samesite="lax",
+    )
+    return SessionResponse(authenticated=True, subject="single-admin")
+
+
+@router.post("/logout", response_model=SessionResponse)
+def logout(response: Response) -> SessionResponse:
+    """Clear the signed session cookie."""
+
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        httponly=True,
+        samesite="lax",
+    )
+    return SessionResponse(authenticated=False)
+
+
+@router.get("/session", response_model=SessionResponse)
+def get_session(request: Request) -> SessionResponse:
+    """Return whether the current request has a valid lock-screen session."""
+
+    settings = _get_settings(request)
+    session = read_session_token(request.cookies.get(SESSION_COOKIE_NAME), settings)
+    if session is None:
+        return SessionResponse(authenticated=False)
+
+    return SessionResponse(authenticated=True, subject=session.subject)
+
+
+def _get_settings(request: Request) -> Settings:
+    return request.app.state.settings
