@@ -32,6 +32,13 @@ DIARY_HOST_DATA_DIR=/home/you/storage/data/diary
 
 P3 阶段 API 只提供健康检查、锁屏认证和受保护接口骨架，不读取或写入真实日记。
 
+可用下面的命令查看服务状态或停止示例部署：
+
+```bash
+docker compose ps
+docker compose down
+```
+
 ## 方式二：任意静态服务器
 
 `frontend/` 是原生 HTML、CSS 与 JavaScript。无需 Docker，即可通过已有的

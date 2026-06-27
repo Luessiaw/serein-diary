@@ -23,4 +23,36 @@ Serein 是一款自托管的个人日记应用，名称取自雨后清澈宁静�
 
 ## 当前状态
 
-当前为静态前端原型。既有 Portal Diary 实现仅作为迁移来源，不是运行时依赖。
+当前已完成 P3 的独立应用基础：
+
+- `frontend/` 提供静态连续日记流原型、设置卡片、日历占位和 Tiptap/Markdown
+  前端实验。
+- `backend/` 提供 FastAPI 外壳、`DIARY_*` 配置校验、健康检查、极简锁屏认证和
+  一个受保护 API 骨架。
+- `compose.yaml` 与 `deploy/Caddyfile` 提供可选的 Docker Compose + Caddy 示例：
+  `web` 发布静态前端，`api` 在内部网络运行，`/api/v1/*` 经 `web` 反向代理。
+
+P3 仍不读取或写入真实日记。条目存储、可重建索引、迁移 dry-run 和正式写作 API
+属于 P4/P5。
+
+## 后端快速检查
+
+安装后端依赖后，可运行：
+
+```bash
+backend/.venv/bin/python -m unittest discover -s backend/tests
+```
+
+也可以复制 `.env.example` 为 `.env`，修改管理员密码、session secret 和数据目录后
+使用 Compose 示例：
+
+```bash
+docker compose up -d --build
+```
+
+然后检查：
+
+```text
+http://127.0.0.1:8088
+http://127.0.0.1:8088/api/v1/health
+```

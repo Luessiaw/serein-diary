@@ -50,11 +50,14 @@ backend/
 │   └── api/
 │       ├── __init__.py
 │       ├── health.py        # /api/v1/health
-│       └── auth.py          # /api/v1/auth/*
+│       ├── auth.py          # /api/v1/auth/*
+│       └── protected.py     # /api/v1/protected
 └── tests/
+    ├── test_app.py
     ├── test_health.py
     ├── test_config.py
-    └── test_auth.py
+    ├── test_auth.py
+    └── test_protected.py
 ```
 
 后续条目、评论、媒体和存储模块可以继续放在 `serein/api/`、`serein/services/`
