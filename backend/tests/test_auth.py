@@ -9,7 +9,13 @@ from unittest import TestCase
 
 from fastapi import HTTPException, Response
 
-from serein.api.auth import LoginRequest, get_session, login, logout
+from serein.api.auth import (
+    LoginRequest,
+    get_session,
+    login,
+    logout,
+    require_authenticated_session,
+)
 from serein.config import Settings
 from serein.security import SESSION_COOKIE_NAME
 
@@ -77,3 +83,26 @@ class AuthEndpointTests(TestCase):
         self.assertEqual(response.model_dump(), {"authenticated": False, "subject": None})
         self.assertIn(SESSION_COOKIE_NAME, raw_response.headers["set-cookie"])
         self.assertIn("Max-Age=0", raw_response.headers["set-cookie"])
+
+    def test_protected_dependency_rejects_missing_cookie(self) -> None:
+        with self.assertRaises(HTTPException) as context:
+            require_authenticated_session(self.make_request())
+
+        self.assertEqual(context.exception.status_code, 401)
+        self.assertEqual(context.exception.detail, "Authentication required.")
+
+    def test_protected_dependency_accepts_valid_cookie(self) -> None:
+        raw_response = Response()
+        login(
+            LoginRequest(password="a private lock-screen password"),
+            self.make_request(),
+            raw_response,
+        )
+        cookie = SimpleCookie()
+        cookie.load(raw_response.headers["set-cookie"])
+
+        session = require_authenticated_session(
+            self.make_request({SESSION_COOKIE_NAME: cookie[SESSION_COOKIE_NAME].value})
+        )
+
+        self.assertEqual(session.model_dump(), {"subject": "single-admin"})

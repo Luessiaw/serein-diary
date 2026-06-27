@@ -29,6 +29,12 @@ class SessionResponse(BaseModel):
     subject: str | None = None
 
 
+class AuthenticatedSession(BaseModel):
+    """Current authenticated single-admin session."""
+
+    subject: str
+
+
 @router.post("/login", response_model=SessionResponse)
 def login(payload: LoginRequest, request: Request, response: Response) -> SessionResponse:
     """Validate the lock-screen password and set a signed session cookie."""
@@ -66,12 +72,35 @@ def logout(response: Response) -> SessionResponse:
 def get_session(request: Request) -> SessionResponse:
     """Return whether the current request has a valid lock-screen session."""
 
-    settings = _get_settings(request)
-    session = read_session_token(request.cookies.get(SESSION_COOKIE_NAME), settings)
+    session = read_current_session(request)
     if session is None:
         return SessionResponse(authenticated=False)
 
     return SessionResponse(authenticated=True, subject=session.subject)
+
+
+def require_authenticated_session(request: Request) -> AuthenticatedSession:
+    """Require a valid lock-screen session for protected API routes."""
+
+    session = read_current_session(request)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required.",
+        )
+
+    return AuthenticatedSession(subject=session.subject)
+
+
+def read_current_session(request: Request) -> AuthenticatedSession | None:
+    """Read the current request cookie and return a minimal authenticated session."""
+
+    settings = _get_settings(request)
+    session = read_session_token(request.cookies.get(SESSION_COOKIE_NAME), settings)
+    if session is None:
+        return None
+
+    return AuthenticatedSession(subject=session.subject)
 
 
 def _get_settings(request: Request) -> Settings:
