@@ -53,9 +53,9 @@ body {
   font-size: var(--font-size-title);
   font-weight: 500;
   line-height: 1.25;
+  text-align: center;
 }
 
-.lock-description,
 .lock-status {
   margin: 0;
   color: var(--color-muted);
@@ -64,10 +64,16 @@ body {
   line-height: 1.55;
 }
 
+.lock-password-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-block-end: 1px solid var(--color-line);
+}
+
 .lock-password {
   inline-size: 100%;
   border: 0;
-  border-block-end: 1px solid var(--color-line);
   padding: var(--space-2) 0;
   color: var(--color-ink);
   background: transparent;
@@ -78,12 +84,59 @@ body {
 
 .lock-password:focus-visible {
   outline: 0;
+}
+
+.lock-password-wrap:focus-within {
   border-block-end-color: var(--color-accent);
+}
+
+.lock-password::placeholder {
+  color: var(--color-muted);
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  opacity: 1;
+}
+
+.lock-password-toggle {
+  display: grid;
+  place-items: center;
+  inline-size: 1.8rem;
+  block-size: 1.8rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.lock-password-toggle svg {
+  inline-size: 1.08rem;
+  block-size: 1.08rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.lock-password-toggle .eye-pupil {
+  fill: currentColor;
+  stroke: none;
+}
+
+.lock-password-toggle .eye-slash {
+  opacity: 0;
+}
+
+.lock-password-toggle[aria-pressed="true"] .eye-slash {
+  opacity: 1;
 }
 
 .lock-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 
@@ -106,13 +159,15 @@ body {
 
 .lock-submit:disabled,
 .lock-retry:disabled,
-.lock-password:disabled {
+.lock-password:disabled,
+.lock-password-toggle:disabled {
   cursor: wait;
   opacity: 0.58;
 }
 
 .lock-submit:focus-visible,
-.lock-retry:focus-visible {
+.lock-retry:focus-visible,
+.lock-password-toggle:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: var(--space-1);
 }

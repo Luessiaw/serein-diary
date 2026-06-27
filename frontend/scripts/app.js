@@ -82,8 +82,9 @@
     const shell = document.createElement("section");
     const card = document.createElement("form");
     const title = document.createElement("h1");
-    const description = document.createElement("p");
+    const passwordWrap = document.createElement("div");
     const password = document.createElement("input");
+    const togglePassword = document.createElement("button");
     const actions = document.createElement("div");
     const submit = document.createElement("button");
     const retry = document.createElement("button");
@@ -96,19 +97,25 @@
     card.className = "lock-card";
     title.className = "lock-title";
     title.textContent = normalizePageName(readPageNamePreference());
-    description.className = "lock-description";
-    description.textContent = "输入日记锁屏密码。";
+    passwordWrap.className = "lock-password-wrap";
     password.className = "lock-password";
     password.type = "password";
     password.name = "password";
-    password.placeholder = "密码";
+    password.placeholder = "输入日记锁屏密码。";
     password.autocomplete = "current-password";
     password.setAttribute("aria-label", "锁屏密码");
     password.disabled = isChecking;
+    togglePassword.className = "lock-password-toggle";
+    togglePassword.type = "button";
+    togglePassword.title = "显示密码";
+    togglePassword.setAttribute("aria-label", "显示密码");
+    togglePassword.setAttribute("aria-pressed", "false");
+    togglePassword.disabled = isChecking;
+    togglePassword.innerHTML = createEyeIconSvg();
     actions.className = "lock-actions";
     submit.className = "lock-submit";
     submit.type = "submit";
-    submit.textContent = isChecking ? "检查中…" : "进入";
+    submit.textContent = isChecking ? "检查中…" : "登录";
     submit.disabled = isChecking;
     retry.className = "lock-retry";
     retry.type = "button";
@@ -119,6 +126,15 @@
     status.setAttribute("aria-live", "polite");
     status.textContent = isChecking ? "正在确认会话状态……" : message;
 
+    togglePassword.addEventListener("click", () => {
+      const nextVisible = password.type === "password";
+
+      password.type = nextVisible ? "text" : "password";
+      togglePassword.title = nextVisible ? "隐藏密码" : "显示密码";
+      togglePassword.setAttribute("aria-label", nextVisible ? "隐藏密码" : "显示密码");
+      togglePassword.setAttribute("aria-pressed", String(nextVisible));
+      password.focus({ preventScroll: true });
+    });
     card.addEventListener("submit", (event) => {
       event.preventDefault();
       void submitLockPassword(card, password, submit, status);
@@ -127,8 +143,9 @@
       void bootApplication();
     });
 
-    actions.append(submit, retry);
-    card.append(title, description, password, actions, status);
+    passwordWrap.append(password, togglePassword);
+    actions.append(retry, submit);
+    card.append(title, passwordWrap, actions, status);
     shell.append(card);
     app.replaceChildren(shell);
 
@@ -172,7 +189,7 @@
       card.dataset.loading = "false";
       password.disabled = false;
       submit.disabled = false;
-      submit.textContent = "进入";
+      submit.textContent = "登录";
       status.textContent = createAuthErrorMessage(error);
       password.select();
       password.focus({ preventScroll: true });
@@ -215,6 +232,16 @@
     const value = meta?.content?.trim() || "/api/v1";
 
     return value.replace(/\/$/u, "");
+  }
+
+  function createEyeIconSvg() {
+    return [
+      '<svg viewBox="0 0 24 24" aria-hidden="true">',
+      '<path class="eye-outline" d="M3.8 12s2.9-5.1 8.2-5.1 8.2 5.1 8.2 5.1-2.9 5.1-8.2 5.1S3.8 12 3.8 12Z"></path>',
+      '<circle class="eye-pupil" cx="12" cy="12" r="2.35"></circle>',
+      '<path class="eye-slash" d="M5.2 18.8 18.8 5.2"></path>',
+      "</svg>",
+    ].join("");
   }
 
   function renderFeed(options = {}) {
