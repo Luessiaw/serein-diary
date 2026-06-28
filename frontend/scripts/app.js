@@ -1603,6 +1603,7 @@
   }
 
   function setSidebarPage(pageId) {
+    debugCalendar("setSidebarPage", { pageId });
     document.querySelectorAll(".app-sidebar-tab").forEach((tab) => {
       tab.setAttribute("aria-selected", String(tab.dataset.sidebarPage === pageId));
     });
@@ -1615,7 +1616,10 @@
       const calendar = document.querySelector(".sidebar-calendar");
 
       if (calendar) {
+        debugCalendar("calendar page activated; ensuring dates");
         void ensureSidebarCalendarDates(calendar);
+      } else {
+        debugCalendar("calendar page activated but calendar node is missing");
       }
     }
   }
@@ -1754,6 +1758,10 @@
     const status = document.createElement("p");
     const cursor = getSidebarCalendarCursor();
 
+    debugCalendar("createSidebarCalendar", {
+      initialCursor: cursor,
+      dateState: createCalendarDateStateSnapshot(),
+    });
     calendar.className = "sidebar-calendar";
     controls.className = "sidebar-calendar-controls";
     yearRow.className = "sidebar-calendar-row sidebar-calendar-year-row";
@@ -1804,6 +1812,7 @@
       closeSidebarCalendarPicker(calendar);
     });
     renderSidebarCalendar(calendar);
+    debugCalendar("initial render complete; ensuring dates");
     void ensureSidebarCalendarDates(calendar);
 
     return calendar;
@@ -1845,6 +1854,11 @@
       nextCursor.year === Number(calendar.dataset.year)
       && nextCursor.month === Number(calendar.dataset.month)
     ) {
+      debugCalendar("move ignored because cursor did not change", {
+        yearDelta,
+        monthDelta,
+        nextCursor,
+      });
       return;
     }
 
@@ -1853,6 +1867,11 @@
     calendar.dataset.year = String(sidebarCalendarCursor.year);
     calendar.dataset.month = String(sidebarCalendarCursor.month);
     closeSidebarCalendarPicker(calendar);
+    debugCalendar("moveSidebarCalendar", {
+      yearDelta,
+      monthDelta,
+      nextCursor,
+    });
     renderSidebarCalendar(calendar);
   }
 
@@ -1874,9 +1893,22 @@
     const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
 
     if (!yearLabel || !monthLabel || !grid) {
+      debugCalendar("render skipped because required calendar nodes are missing", {
+        hasYearLabel: Boolean(yearLabel),
+        hasMonthLabel: Boolean(monthLabel),
+        hasGrid: Boolean(grid),
+      });
       return;
     }
 
+    debugCalendar("renderSidebarCalendar", {
+      year,
+      month,
+      dateState: createCalendarDateStateSnapshot(),
+      markedDatesInMonth: [...diaryDates].filter((date) => (
+        date.startsWith(`${year}-${String(month).padStart(2, "0")}-`)
+      )),
+    });
     yearLabel.textContent = `${year} 年`;
     monthLabel.textContent = `${String(month).padStart(2, "0")} 月`;
     if (previousYear) {
@@ -1940,16 +1972,32 @@
       return sidebarCalendarDateState.dates;
     }
 
+    debugCalendar("using fallback calendar dates before backend dates are ready", {
+      dateState: createCalendarDateStateSnapshot(),
+    });
     return getMockDiaryDates();
   }
 
   async function ensureSidebarCalendarDates(calendar, options = {}) {
     const { force = false } = options;
 
+    debugCalendar("ensureSidebarCalendarDates called", {
+      force,
+      dateState: createCalendarDateStateSnapshot(),
+      hasCalendar: Boolean(calendar),
+      cursor: calendar ? {
+        year: calendar.dataset.year,
+        month: calendar.dataset.month,
+        autoCursor: calendar.dataset.autoCursor,
+      } : null,
+    });
     if (!force && (
       sidebarCalendarDateState.status === "loading"
       || sidebarCalendarDateState.status === "ready"
     )) {
+      debugCalendar("ensure skipped because dates are already loading or ready", {
+        dateState: createCalendarDateStateSnapshot(),
+      });
       renderSidebarCalendar(calendar);
       return;
     }
@@ -1957,11 +2005,20 @@
     sidebarCalendarDateState.status = "loading";
     sidebarCalendarDateState.errorMessage = "";
     renderSidebarCalendar(calendar);
+    debugCalendar("requesting entry dates", {
+      adapterSource: dataAdapter.source,
+    });
 
     try {
       const result = await dataAdapter.getEntryDates();
       const dates = normalizeSidebarCalendarDates(result);
 
+      debugCalendar("entry dates loaded", {
+        rawCount: Array.isArray(result?.dates) ? result.dates.length : null,
+        normalizedCount: dates.length,
+        first: dates[0] || null,
+        last: dates.at(-1) || null,
+      });
       sidebarCalendarDateState.status = "ready";
       sidebarCalendarDateState.dates = dates;
       sidebarCalendarDateState.errorMessage = "";
@@ -1978,6 +2035,11 @@
       sidebarCalendarDateState.status = "error";
       sidebarCalendarDateState.errorMessage = createDataErrorMessage(error);
       renderSidebarCalendar(calendar);
+      debugCalendar("entry dates failed", {
+        errorMessage: sidebarCalendarDateState.errorMessage,
+        status: error?.status || null,
+        code: error?.code || null,
+      });
       console.warn("[Serein calendar] Failed to load entry dates.", error);
     }
   }
@@ -2066,6 +2128,13 @@
     if (mode === "year") {
       const years = getSelectableCalendarYears();
 
+      debugCalendar("render year picker", {
+        selectedYear: year,
+        yearCount: years.length,
+        firstYear: years[0] || null,
+        lastYear: years.at(-1) || null,
+        dateState: createCalendarDateStateSnapshot(),
+      });
       years.forEach((selectableYear) => {
         const option = createSidebarCalendarPickerOption(
           `${selectableYear} 年`,
@@ -2140,6 +2209,20 @@
     }
 
     return years;
+  }
+
+  function createCalendarDateStateSnapshot() {
+    return {
+      status: sidebarCalendarDateState.status,
+      count: sidebarCalendarDateState.dates.length,
+      first: sidebarCalendarDateState.dates[0] || null,
+      last: sidebarCalendarDateState.dates.at(-1) || null,
+      errorMessage: sidebarCalendarDateState.errorMessage || "",
+    };
+  }
+
+  function debugCalendar(message, details = {}) {
+    console.info(`[Serein calendar] ${message}`, details);
   }
 
   function normalizeCalendarCursor(cursor) {
