@@ -245,7 +245,7 @@ DELETE /api/v1/entries/{entry_id}
 
 - 执行软删除：写入 `metadata.deleted_at`。
 - 不删除 `content.md`、评论或媒体文件。
-- 成功后返回删除后的 `EntryDetail` 或 `{ "deleted": true }`；P5-T03 开始前选定一种。
+- 成功后返回删除后的 `EntryDetail`，其中 `deleted` 为 `true`。
 - 写入后必须刷新索引。
 
 ### 日期统计

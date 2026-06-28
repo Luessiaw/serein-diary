@@ -25,8 +25,8 @@ Current coverage:
   ordering, and path safety checks.
 - `test_storage_write.py`: P4 immutable entry creation and soft-delete marker
   behavior.
-- `test_entries_api.py`: P4 minimal authenticated entries API for browser/curl
-  storage verification.
+- `test_entries_api.py`: P5 formal authenticated entries API pagination,
+  creation, detail reads, soft deletion, and stable error responses.
 - `test_storage_index.py`: P4 rebuildable SQLite index creation, ordering,
   date counts, and deleted-entry filtering.
 - `test_migration_dry_run.py`: P4 read-only migration dry-run reports for

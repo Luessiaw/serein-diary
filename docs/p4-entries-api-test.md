@@ -1,5 +1,9 @@
 # P4 最小 entries API 手动验证
 
+> P5-T03 已将 `/api/v1/entries` 升级为正式分页 API。新的手动验证请优先阅读
+> [`p5-entries-api-test.md`](p5-entries-api-test.md)。本文仅保留 P4 阶段的历史
+> 验证背景。
+
 P4-T04A 提供一组临时但真实的受保护 API，用于在进入 SQLite 索引前验证文件系统
 存储层已经可用。它不是最终的连续流 API，也不包含评论、媒体上传、搜索或分页游标。
 
@@ -74,4 +78,3 @@ http://luessiaw-server/diary/api/v1/entries
 
 浏览器地址栏只能方便验证 `GET`；创建和删除建议用 `curl` 或浏览器开发者工具的
 `fetch()`。
-

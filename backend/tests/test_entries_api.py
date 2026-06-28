@@ -1,4 +1,4 @@
-"""Tests for the minimal entries API used to verify P4 storage."""
+"""Tests for the formal P5 entries API."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest import TestCase
+from uuid import UUID
 
-from fastapi import HTTPException
-from fastapi import Response
+from fastapi import HTTPException, Response
 
 from serein.api.auth import NO_STORE_HEADER
 from serein.api.auth import AuthenticatedSession, require_authenticated_session
@@ -20,6 +20,8 @@ from serein.api.entries import (
     list_entries,
 )
 from serein.config import Settings
+
+from test_entry_contract import create_entry_fixture
 
 
 class EntriesApiTests(TestCase):
@@ -59,7 +61,9 @@ class EntriesApiTests(TestCase):
             session = self.make_session()
 
             list_response = Response()
-            self.assertEqual(list_entries(list_response, request, session), [])
+            empty_page = list_entries(list_response, request, session=session)
+            self.assertEqual(empty_page.items, [])
+            self.assertEqual(empty_page.page.has_more, False)
             self.assertEqual(list_response.headers["cache-control"], NO_STORE_HEADER)
 
             create_response = Response()
@@ -72,15 +76,20 @@ class EntriesApiTests(TestCase):
             self.assertEqual(create_response.headers["cache-control"], NO_STORE_HEADER)
             self.assertEqual(created.title, "测试")
             self.assertEqual(created.content, "这是一条 API 测试日记。\n")
+            self.assertEqual(created.content_excerpt, "这是一条 API 测试日记。")
             self.assertEqual(created.comment_count, 0)
             self.assertEqual(created.media_count, 0)
+            self.assertEqual(created.comments, [])
+            self.assertEqual(created.media, [])
             self.assertFalse(created.deleted)
-            self.assertTrue((root / created.path).is_dir())
+            self.assertTrue(created.cursor)
 
-            summaries = list_entries(Response(), request, session)
-            self.assertEqual(len(summaries), 1)
-            self.assertEqual(summaries[0].id, created.id)
-            self.assertEqual(summaries[0].content_excerpt, "这是一条 API 测试日记。")
+            page = list_entries(Response(), request, session=session)
+            self.assertEqual(len(page.items), 1)
+            self.assertEqual(page.items[0].id, created.id)
+            self.assertEqual(page.items[0].content_excerpt, "这是一条 API 测试日记。")
+            self.assertFalse(page.page.has_more)
+            self.assertIsNone(page.page.next_before)
 
             get_response = Response()
             detail = get_entry(created.id, get_response, request, session)
@@ -95,7 +104,64 @@ class EntriesApiTests(TestCase):
             self.assertEqual(deleted.content, created.content)
             self.assertTrue(get_entry(created.id, Response(), request, session).deleted)
 
-    def test_create_rejects_blank_content(self) -> None:
+            visible_page = list_entries(Response(), request, session=session)
+            self.assertEqual(visible_page.items, [])
+            all_page = list_entries(
+                Response(),
+                request,
+                include_deleted=True,
+                session=session,
+            )
+            self.assertEqual(len(all_page.items), 1)
+            self.assertTrue(all_page.items[0].deleted)
+
+    def test_list_entries_uses_formal_cursor_pagination(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            request = self.make_request(root)
+            first_id = "11111111-1111-4111-8111-111111111111"
+            second_id = "22222222-2222-4222-8222-222222222222"
+            third_id = "33333333-3333-4333-8333-333333333333"
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606230910-{first_id}",
+                entry_id=first_id,
+                created_at="2026-06-23T09:10:00+08:00",
+            )
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606230920-{second_id}",
+                entry_id=second_id,
+                created_at="2026-06-23T09:20:00+08:00",
+            )
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606230930-{third_id}",
+                entry_id=third_id,
+                created_at="2026-06-23T09:30:00+08:00",
+            )
+
+            first_page = list_entries(
+                Response(),
+                request,
+                limit=2,
+                session=self.make_session(),
+            )
+            second_page = list_entries(
+                Response(),
+                request,
+                limit=2,
+                before=first_page.page.next_before,
+                session=self.make_session(),
+            )
+
+        self.assertEqual([str(item.id) for item in first_page.items], [second_id, third_id])
+        self.assertTrue(first_page.page.has_more)
+        self.assertIsNotNone(first_page.page.next_before)
+        self.assertEqual([str(item.id) for item in second_page.items], [first_id])
+        self.assertFalse(second_page.page.has_more)
+
+    def test_create_rejects_blank_content_with_stable_error(self) -> None:
         with TemporaryDirectory() as data_dir:
             with self.assertRaises(HTTPException) as context:
                 create_entry_endpoint(
@@ -106,18 +172,38 @@ class EntriesApiTests(TestCase):
                 )
 
         self.assertEqual(context.exception.status_code, 400)
-        self.assertIn("content.md must not be blank", context.exception.detail)
+        self.assertEqual(context.exception.detail["error"]["code"], "invalid_request")
+        self.assertEqual(
+            context.exception.detail["error"]["message"],
+            "content must not be blank",
+        )
 
-    def test_get_missing_entry_returns_404(self) -> None:
+    def test_invalid_cursor_returns_stable_error(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            request = self.make_request(Path(data_dir))
+
+            with self.assertRaises(HTTPException) as context:
+                list_entries(
+                    Response(),
+                    request,
+                    before="not-a-cursor",
+                    session=self.make_session(),
+                )
+
+        self.assertEqual(context.exception.status_code, 400)
+        self.assertEqual(context.exception.detail["error"]["code"], "invalid_cursor")
+
+    def test_get_missing_entry_returns_stable_404(self) -> None:
         with TemporaryDirectory() as data_dir:
             request = self.make_request(Path(data_dir))
 
             with self.assertRaises(HTTPException) as context:
                 get_entry(
-                    "77777777-7777-4777-8777-777777777777",
+                    UUID("77777777-7777-4777-8777-777777777777"),
                     Response(),
                     request,
                     self.make_session(),
                 )
 
         self.assertEqual(context.exception.status_code, 404)
+        self.assertEqual(context.exception.detail["error"]["code"], "entry_not_found")

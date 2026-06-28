@@ -1,13 +1,13 @@
-"""Minimal authenticated entries API for P4 storage verification."""
+"""Formal authenticated entries API for P5 diary features."""
 
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
+from typing import Annotated
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 
 from serein.api.auth import (
@@ -16,33 +16,55 @@ from serein.api.auth import (
     require_authenticated_session,
 )
 from serein.config import Settings
-from serein.storage.entry import DiaryEntry, EntryValidationError
-from serein.storage.repository import (
-    EntrySummary,
-    create_entry,
-    create_content_excerpt,
-    find_entry_by_id,
-    mark_entry_deleted,
-    scan_entry_summaries,
+from serein.services.entries import (
+    DEFAULT_PAGE_LIMIT,
+    MAX_PAGE_LIMIT,
+    EntryDetailItem,
+    EntryPage,
+    EntryService,
+    EntryServiceError,
+    EntrySummaryItem,
 )
+from serein.storage.repository import create_content_excerpt
 
 
 router = APIRouter(prefix="/entries", tags=["entries"])
 
 
+class ApiErrorBody(BaseModel):
+    """Stable API error body."""
+
+    code: str
+    message: str
+
+
+class ApiErrorResponse(BaseModel):
+    """Stable API error wrapper."""
+
+    error: ApiErrorBody
+
+
 class EntryCreateRequest(BaseModel):
-    """Minimal request for creating an immutable diary entry."""
+    """Request for creating an immutable diary entry."""
 
     title: str | None = None
     content: str = Field(min_length=1)
 
 
+class PageInfoResponse(BaseModel):
+    """Pagination metadata for the continuous diary stream."""
+
+    limit: int
+    has_more: bool
+    next_before: str | None
+
+
 class EntrySummaryResponse(BaseModel):
-    """Entry summary returned by the minimal verification API."""
+    """Entry summary returned by the formal entries API."""
 
     id: UUID
     created_at: datetime
-    path: str
+    cursor: str
     title: str | None
     content_excerpt: str
     comment_count: int
@@ -50,29 +72,62 @@ class EntrySummaryResponse(BaseModel):
     deleted: bool
 
 
+class CommentResponse(BaseModel):
+    """Comment shape exposed by entry details."""
+
+    id: UUID
+    created_at: datetime
+    content: str
+    anchor: dict | None
+
+
+class MediaItemResponse(BaseModel):
+    """Media item shape exposed by entry details."""
+
+    id: UUID
+    kind: str
+    url: str
+    alt: str | None
+    created_at: datetime | None
+
+
 class EntryDetailResponse(EntrySummaryResponse):
-    """Entry detail returned by the minimal verification API."""
+    """Entry detail returned by the formal entries API."""
 
     content: str
-    comments: dict
-    media_manifest: dict
+    comments: list[CommentResponse]
+    media: list[MediaItemResponse]
 
 
-@router.get("", response_model=list[EntrySummaryResponse])
+class EntryListResponse(BaseModel):
+    """Paginated entry list response."""
+
+    items: list[EntrySummaryResponse]
+    page: PageInfoResponse
+
+
+@router.get("", response_model=EntryListResponse)
 def list_entries(
     response: Response,
     request: Request,
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_LIMIT)] = DEFAULT_PAGE_LIMIT,
+    before: str | None = None,
+    include_deleted: bool = False,
     session: AuthenticatedSession = Depends(require_authenticated_session),
-) -> list[EntrySummaryResponse]:
-    """Return filesystem-backed entry summaries."""
+) -> EntryListResponse:
+    """Return a formal paginated entry list."""
 
     _ = session
     mark_auth_response_uncacheable(response)
-    settings = get_settings(request)
     try:
-        return [entry_summary_to_response(summary) for summary in scan_entry_summaries(settings.data_dir)]
-    except EntryValidationError as error:
-        raise storage_http_error(error) from error
+        page = get_entry_service(request).list_entries(
+            limit=limit,
+            before=before,
+            include_deleted=include_deleted,
+        )
+        return entry_page_to_response(page)
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
 
 
 @router.post("", response_model=EntryDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -82,21 +137,20 @@ def create_entry_endpoint(
     response: Response,
     session: AuthenticatedSession = Depends(require_authenticated_session),
 ) -> EntryDetailResponse:
-    """Create a real immutable v1 entry using the filesystem storage layer."""
+    """Create a real immutable v1 entry."""
 
     _ = session
     mark_auth_response_uncacheable(response)
-    settings = get_settings(request)
+    content = normalize_create_content(payload.content)
     try:
-        entry = create_entry(
-            settings.data_dir,
+        detail = get_entry_service(request).create_entry(
             title=payload.title,
-            content=payload.content,
-            created_at=datetime.now(ZoneInfo(settings.timezone)),
+            content=content,
+            created_at=datetime.now(ZoneInfo(get_settings(request).timezone)),
         )
-        return entry_detail_to_response(entry, settings.data_dir)
-    except EntryValidationError as error:
-        raise storage_http_error(error) from error
+        return entry_detail_to_response(detail)
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
 
 
 @router.get("/{entry_id}", response_model=EntryDetailResponse)
@@ -106,18 +160,14 @@ def get_entry(
     request: Request,
     session: AuthenticatedSession = Depends(require_authenticated_session),
 ) -> EntryDetailResponse:
-    """Read one entry's content and fact-file summaries."""
+    """Read one entry's content and summaries from fact files."""
 
     _ = session
     mark_auth_response_uncacheable(response)
-    settings = get_settings(request)
     try:
-        return entry_detail_to_response(
-            find_entry_by_id(settings.data_dir, entry_id),
-            settings.data_dir,
-        )
-    except EntryValidationError as error:
-        raise storage_http_error(error) from error
+        return entry_detail_to_response(get_entry_service(request).get_entry(entry_id))
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
 
 
 @router.delete("/{entry_id}", response_model=EntryDetailResponse)
@@ -131,56 +181,104 @@ def delete_entry(
 
     _ = session
     mark_auth_response_uncacheable(response)
-    settings = get_settings(request)
     try:
-        deleted = mark_entry_deleted(
-            settings.data_dir,
+        deleted = get_entry_service(request).delete_entry(
             entry_id,
-            deleted_at=datetime.now(ZoneInfo(settings.timezone)),
+            deleted_at=datetime.now(ZoneInfo(get_settings(request).timezone)),
         )
         response.status_code = status.HTTP_200_OK
-        return entry_detail_to_response(deleted, settings.data_dir)
-    except EntryValidationError as error:
-        raise storage_http_error(error) from error
+        return entry_detail_to_response(deleted)
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
 
 
-def entry_summary_to_response(summary: EntrySummary) -> EntrySummaryResponse:
-    return EntrySummaryResponse(
-        id=summary.id,
-        created_at=summary.created_at,
-        path=summary.path.as_posix(),
-        title=summary.title,
-        content_excerpt=summary.content_excerpt,
-        comment_count=summary.comment_count,
-        media_count=summary.media_count,
-        deleted=summary.deleted,
+def entry_page_to_response(page: EntryPage) -> EntryListResponse:
+    return EntryListResponse(
+        items=[entry_summary_to_response(item) for item in page.items],
+        page=PageInfoResponse(
+            limit=page.limit,
+            has_more=page.has_more,
+            next_before=page.next_before,
+        ),
     )
 
 
-def entry_detail_to_response(entry: DiaryEntry, data_dir: Path) -> EntryDetailResponse:
-    summary = entry_summary_to_response(EntrySummary(
+def entry_summary_to_response(item: EntrySummaryItem) -> EntrySummaryResponse:
+    return EntrySummaryResponse(
+        id=item.id,
+        created_at=item.created_at,
+        cursor=item.cursor,
+        title=item.title,
+        content_excerpt=item.content_excerpt,
+        comment_count=item.comment_count,
+        media_count=item.media_count,
+        deleted=item.deleted,
+    )
+
+
+def entry_detail_to_response(detail: EntryDetailItem) -> EntryDetailResponse:
+    entry = detail.entry
+    return EntryDetailResponse(
         id=entry.metadata.id,
         created_at=entry.metadata.created_at,
-        path=entry.path.relative_to(data_dir),
+        cursor=detail.cursor,
         title=entry.metadata.title,
         content_excerpt=create_content_excerpt(entry.content),
         comment_count=len(entry.comments.comments),
         media_count=len(entry.media_manifest.media),
         deleted=entry.metadata.deleted_at is not None,
-    ))
-    return EntryDetailResponse(
-        **summary.model_dump(),
         content=entry.content,
-        comments=entry.comments.model_dump(mode="json"),
-        media_manifest=entry.media_manifest.model_dump(mode="json"),
+        comments=[
+            CommentResponse(
+                id=comment.id,
+                created_at=comment.created_at,
+                content=comment.content,
+                anchor=comment.anchor.model_dump(mode="json") if comment.anchor else None,
+            )
+            for comment in entry.comments.comments
+        ],
+        media=[
+            MediaItemResponse(
+                id=item.id,
+                kind=item.kind,
+                url=f"/api/v1/entries/{entry.metadata.id}/media/{item.id}",
+                alt=item.alt,
+                created_at=item.created_at,
+            )
+            for item in entry.media_manifest.media
+        ],
     )
+
+
+def normalize_create_content(content: str) -> str:
+    """Reject blank submitted content before reaching storage."""
+
+    if not content.strip():
+        raise service_http_error(
+            EntryServiceError("invalid_request", "content must not be blank")
+        )
+    return content
+
+
+def get_entry_service(request: Request) -> EntryService:
+    return EntryService(get_settings(request).data_dir)
 
 
 def get_settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
-def storage_http_error(error: EntryValidationError) -> HTTPException:
-    detail = str(error)
-    status_code = status.HTTP_404_NOT_FOUND if "not found" in detail else status.HTTP_400_BAD_REQUEST
-    return HTTPException(status_code=status_code, detail=detail)
+def service_http_error(error: EntryServiceError) -> HTTPException:
+    status_code_by_error = {
+        "invalid_request": status.HTTP_400_BAD_REQUEST,
+        "invalid_cursor": status.HTTP_400_BAD_REQUEST,
+        "storage_contract_error": status.HTTP_400_BAD_REQUEST,
+        "entry_not_found": status.HTTP_404_NOT_FOUND,
+        "entry_deleted": status.HTTP_409_CONFLICT,
+    }
+    return HTTPException(
+        status_code=status_code_by_error.get(error.code, status.HTTP_500_INTERNAL_SERVER_ERROR),
+        detail=ApiErrorResponse(
+            error=ApiErrorBody(code=error.code, message=error.message)
+        ).model_dump(),
+    )
