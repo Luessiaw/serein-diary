@@ -1,8 +1,9 @@
 # Backend tests
 
-The backend test suite intentionally stays small and data-free during P3. It
-verifies the application shell, configuration checks, public health endpoint,
-lock-screen auth helpers, and the minimal protected API skeleton.
+The backend test suite intentionally stays data-free. It verifies the
+application shell, configuration checks, public health endpoint, lock-screen
+auth helpers, P4 storage contract, rebuildable index, migration dry-run, and
+the minimal protected entries API.
 
 Run from the repository root:
 
@@ -33,3 +34,6 @@ Current coverage:
 
 These tests do not read or write real diary entries. Storage tests use temporary
 directories and generated fixtures.
+
+For the P4-to-P5 service boundary, see
+[`docs/p4-storage-handoff.md`](../../docs/p4-storage-handoff.md).
