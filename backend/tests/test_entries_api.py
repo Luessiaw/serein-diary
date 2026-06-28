@@ -18,6 +18,7 @@ from serein.api.entries import (
     create_entry_endpoint,
     delete_entry,
     get_entry,
+    get_entry_window,
     list_entry_dates,
     list_entries,
 )
@@ -214,6 +215,60 @@ class EntriesApiTests(TestCase):
             [(item.date.isoformat(), item.count) for item in dates_with_deleted.dates],
             [("2026-06-23", 2), ("2026-07-01", 1)],
         )
+
+    def test_get_entry_window_returns_calendar_jump_slice(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            request = self.make_request(root)
+            ids = []
+            for index, day in enumerate(range(1, 7), start=1):
+                entry_id = f"{index:08d}-{index:04d}-4{index:03d}-8{index:03d}-{index:012d}"
+                ids.append(entry_id)
+                create_entry_fixture(
+                    root / "entries",
+                    name=f"202606{day:02d}0900-{entry_id}",
+                    entry_id=entry_id,
+                    created_at=f"2026-06-{day:02d}T09:00:00+08:00",
+                )
+
+            response = Response()
+            window = get_entry_window(
+                response,
+                request,
+                target_date=date.fromisoformat("2026-06-03"),
+                before_count=1,
+                after_count=2,
+                session=self.make_session(),
+            )
+
+        self.assertEqual(response.headers["cache-control"], NO_STORE_HEADER)
+        self.assertEqual([str(item.id) for item in window.items], ids[1:5])
+        self.assertEqual(window.window.target_date.isoformat(), "2026-06-03")
+        self.assertEqual(window.window.before_count, 1)
+        self.assertEqual(window.window.after_count, 2)
+        self.assertEqual(window.window.target_count, 1)
+        self.assertTrue(window.window.has_earlier)
+        self.assertTrue(window.window.has_later)
+        self.assertTrue(window.window.earlier_before)
+        self.assertTrue(window.window.later_after)
+
+    def test_get_entry_window_returns_empty_stable_response(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            request = self.make_request(Path(data_dir))
+
+            window = get_entry_window(
+                Response(),
+                request,
+                target_date=date.fromisoformat("2026-06-03"),
+                session=self.make_session(),
+            )
+
+        self.assertEqual(window.items, [])
+        self.assertEqual(window.window.target_count, 0)
+        self.assertFalse(window.window.has_earlier)
+        self.assertFalse(window.window.has_later)
+        self.assertIsNone(window.window.earlier_before)
+        self.assertIsNone(window.window.later_after)
 
     def test_list_entry_dates_rejects_inverted_range(self) -> None:
         with TemporaryDirectory() as data_dir:

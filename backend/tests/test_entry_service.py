@@ -188,6 +188,83 @@ class EntryServiceTests(TestCase):
 
         self.assertEqual(error.exception.code, "invalid_request")
 
+    def test_get_entry_window_returns_target_day_and_surrounding_entries(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            created_ids = create_ordered_entries(root, count=6)
+            service = EntryService(root)
+
+            window = service.get_entry_window(
+                target_date=date.fromisoformat("2026-06-23"),
+                before_count=2,
+                after_count=1,
+            )
+
+        self.assertEqual([str(item.id) for item in window.items], created_ids)
+        self.assertEqual(window.target_count, 6)
+        self.assertFalse(window.has_earlier)
+        self.assertFalse(window.has_later)
+        self.assertIsNone(window.earlier_before)
+        self.assertIsNone(window.later_after)
+
+    def test_get_entry_window_bounds_context_around_middle_date(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            ids = []
+            for index, day in enumerate(range(1, 8), start=1):
+                entry_id = f"{index:08d}-{index:04d}-4{index:03d}-8{index:03d}-{index:012d}"
+                ids.append(entry_id)
+                create_entry_fixture(
+                    root / "entries",
+                    name=f"202606{day:02d}0900-{entry_id}",
+                    entry_id=entry_id,
+                    created_at=f"2026-06-{day:02d}T09:00:00+08:00",
+                )
+            service = EntryService(root)
+
+            window = service.get_entry_window(
+                target_date=date.fromisoformat("2026-06-04"),
+                before_count=2,
+                after_count=1,
+            )
+
+        self.assertEqual([str(item.id) for item in window.items], ids[1:5])
+        self.assertEqual(window.target_count, 1)
+        self.assertTrue(window.has_earlier)
+        self.assertTrue(window.has_later)
+        self.assertEqual(decode_entry_cursor(window.earlier_before).entry_id, UUID(ids[1]))
+        self.assertEqual(decode_entry_cursor(window.later_after).entry_id, UUID(ids[4]))
+
+    def test_get_entry_window_returns_empty_for_date_without_entries(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            create_ordered_entries(root, count=2)
+            service = EntryService(root)
+
+            window = service.get_entry_window(
+                target_date=date.fromisoformat("2026-07-01"),
+                before_count=2,
+                after_count=2,
+            )
+
+        self.assertEqual(window.items, ())
+        self.assertEqual(window.target_count, 0)
+        self.assertFalse(window.has_earlier)
+        self.assertFalse(window.has_later)
+
+    def test_get_entry_window_rejects_negative_counts(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            service = EntryService(Path(data_dir))
+
+            with self.assertRaises(EntryServiceError) as error:
+                service.get_entry_window(
+                    target_date=date.fromisoformat("2026-06-23"),
+                    before_count=-1,
+                    after_count=0,
+                )
+
+        self.assertEqual(error.exception.code, "invalid_request")
+
     def test_missing_entry_raises_service_error(self) -> None:
         with TemporaryDirectory() as data_dir:
             service = EntryService(Path(data_dir))

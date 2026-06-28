@@ -203,6 +203,42 @@ GET /api/v1/entries?limit=30&before=<cursor>&include_deleted=false
 - `next_before` 是下一次加载更早内容时要传回的游标；通常等于当前响应最早条目的游标。
 - 默认过滤软删除条目。
 
+### 日期窗口
+
+用于日历点击跳转，不要求前端从当前窗口一路分页到目标日期。
+
+```text
+GET /api/v1/entries/window?date=2026-06-23&before_count=12&after_count=12&include_deleted=false
+```
+
+响应：
+
+```json
+{
+  "items": [],
+  "window": {
+    "target_date": "2026-06-23",
+    "before_count": 12,
+    "after_count": 12,
+    "target_count": 0,
+    "has_earlier": false,
+    "has_later": false,
+    "earlier_before": null,
+    "later_after": null
+  }
+}
+```
+
+约定：
+
+- `date` 是目标本地日期，由 `created_at` 的本地日期派生。
+- 返回目标日期当天所有条目、之前最多 `before_count` 篇、之后最多 `after_count` 篇。
+- `items` 始终按 `created_at` 正序返回。
+- `has_earlier` / `earlier_before` 用于继续向上加载更早内容。
+- `has_later` / `later_after` 用于后续实现向下加载更晚内容。
+- 目标日期没有条目时返回空窗口，不报错。
+- 默认过滤软删除条目。
+
 ### 条目详情
 
 ```text
@@ -336,6 +372,7 @@ adapter.getSession()
 adapter.login(password)
 adapter.logout()
 adapter.listEntries({ limit, before, includeDeleted })
+adapter.getEntryWindow({ date, beforeCount, afterCount, includeDeleted })
 adapter.getEntry(entryId)
 adapter.createEntry({ title, content })
 adapter.deleteEntry(entryId)

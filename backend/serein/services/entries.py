@@ -75,6 +75,21 @@ class EntryPage:
 
 
 @dataclass(frozen=True)
+class EntryWindow:
+    """A bounded entry slice around one local diary date."""
+
+    target_date: date
+    items: tuple[EntrySummaryItem, ...]
+    before_count: int
+    after_count: int
+    target_count: int
+    has_earlier: bool
+    has_later: bool
+    earlier_before: str | None
+    later_after: str | None
+
+
+@dataclass(frozen=True)
 class EntryDateCount:
     """Number of visible entries on one local diary date."""
 
@@ -221,6 +236,62 @@ class EntryService:
             if is_date_in_range(item.date, from_date=from_date, to_date=to_date)
         )
 
+    def get_entry_window(
+        self,
+        *,
+        target_date: date,
+        before_count: int,
+        after_count: int,
+        include_deleted: bool = False,
+    ) -> EntryWindow:
+        """Return entries on a date plus bounded context before and after it."""
+
+        normalized_before_count = normalize_window_count(before_count, "before_count")
+        normalized_after_count = normalize_window_count(after_count, "after_count")
+        try:
+            summaries = self._read_indexed_entries(include_deleted=include_deleted)
+        except EntryValidationError as error:
+            raise map_storage_error(error) from error
+
+        target_indices = [
+            index
+            for index, summary in enumerate(summaries)
+            if summary.created_at.date() == target_date
+        ]
+        if not target_indices:
+            return EntryWindow(
+                target_date=target_date,
+                items=(),
+                before_count=normalized_before_count,
+                after_count=normalized_after_count,
+                target_count=0,
+                has_earlier=False,
+                has_later=False,
+                earlier_before=None,
+                later_after=None,
+            )
+
+        first_target_index = target_indices[0]
+        last_target_index = target_indices[-1]
+        start_index = max(0, first_target_index - normalized_before_count)
+        end_index = min(len(summaries), last_target_index + normalized_after_count + 1)
+        selected = summaries[start_index:end_index]
+        items = tuple(summary_to_item(summary) for summary in selected)
+        has_earlier = start_index > 0
+        has_later = end_index < len(summaries)
+
+        return EntryWindow(
+            target_date=target_date,
+            items=items,
+            before_count=normalized_before_count,
+            after_count=normalized_after_count,
+            target_count=len(target_indices),
+            has_earlier=has_earlier,
+            has_later=has_later,
+            earlier_before=items[0].cursor if has_earlier and items else None,
+            later_after=items[-1].cursor if has_later and items else None,
+        )
+
     def refresh_index(self) -> Path:
         """Rebuild the derived SQLite index from fact files."""
 
@@ -253,6 +324,14 @@ def normalize_limit(limit: int) -> int:
     if limit < 1:
         raise EntryServiceError("invalid_request", "limit must be at least 1")
     return min(limit, MAX_PAGE_LIMIT)
+
+
+def normalize_window_count(value: int, field_name: str) -> int:
+    """Validate and clamp one date-window side count."""
+
+    if value < 0:
+        raise EntryServiceError("invalid_request", f"{field_name} must be at least 0")
+    return min(value, MAX_PAGE_LIMIT)
 
 
 def summary_to_item(summary: EntrySummary) -> EntrySummaryItem:

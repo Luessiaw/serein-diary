@@ -25,6 +25,7 @@ from serein.services.entries import (
     EntryService,
     EntryServiceError,
     EntrySummaryItem,
+    EntryWindow,
 )
 from serein.storage.repository import create_content_excerpt
 
@@ -120,6 +121,26 @@ class EntryDatesResponse(BaseModel):
     dates: list[EntryDateCountResponse]
 
 
+class EntryWindowInfoResponse(BaseModel):
+    """Date-window metadata for calendar jump navigation."""
+
+    target_date: date
+    before_count: int
+    after_count: int
+    target_count: int
+    has_earlier: bool
+    has_later: bool
+    earlier_before: str | None
+    later_after: str | None
+
+
+class EntryWindowResponse(BaseModel):
+    """Entries around one target date."""
+
+    items: list[EntrySummaryResponse]
+    window: EntryWindowInfoResponse
+
+
 @router.get("", response_model=EntryListResponse)
 def list_entries(
     response: Response,
@@ -140,6 +161,33 @@ def list_entries(
             include_deleted=include_deleted,
         )
         return entry_page_to_response(page)
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
+
+
+@router.get("/window", response_model=EntryWindowResponse)
+def get_entry_window(
+    response: Response,
+    request: Request,
+    target_date: Annotated[date, Query(alias="date")],
+    before_count: Annotated[int, Query(ge=0, le=MAX_PAGE_LIMIT)] = 12,
+    after_count: Annotated[int, Query(ge=0, le=MAX_PAGE_LIMIT)] = 12,
+    include_deleted: bool = False,
+    session: AuthenticatedSession = Depends(require_authenticated_session),
+) -> EntryWindowResponse:
+    """Return a bounded entry window around one local diary date."""
+
+    _ = session
+    mark_auth_response_uncacheable(response)
+    try:
+        return entry_window_to_response(
+            get_entry_service(request).get_entry_window(
+                target_date=target_date,
+                before_count=before_count,
+                after_count=after_count,
+                include_deleted=include_deleted,
+            )
+        )
     except EntryServiceError as error:
         raise service_http_error(error) from error
 
@@ -248,6 +296,22 @@ def entry_dates_to_response(dates: tuple[EntryDateCount, ...]) -> EntryDatesResp
             EntryDateCountResponse(date=date.fromisoformat(item.date), count=item.count)
             for item in dates
         ]
+    )
+
+
+def entry_window_to_response(window: EntryWindow) -> EntryWindowResponse:
+    return EntryWindowResponse(
+        items=[entry_summary_to_response(item) for item in window.items],
+        window=EntryWindowInfoResponse(
+            target_date=window.target_date,
+            before_count=window.before_count,
+            after_count=window.after_count,
+            target_count=window.target_count,
+            has_earlier=window.has_earlier,
+            has_later=window.has_later,
+            earlier_before=window.earlier_before,
+            later_after=window.later_after,
+        ),
     )
 
 
