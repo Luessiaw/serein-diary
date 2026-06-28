@@ -31,6 +31,8 @@ Current coverage:
   date counts, and deleted-entry filtering.
 - `test_migration_dry_run.py`: P4 read-only migration dry-run reports for
   empty sources, v1 entries, blockers, and body-safe output.
+- `test_entry_service.py`: P5 entry service pagination cursors, index refresh,
+  detail reads, creation, soft deletion, and stable service errors.
 
 These tests do not read or write real diary entries. Storage tests use temporary
 directories and generated fixtures.
