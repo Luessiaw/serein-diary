@@ -42,6 +42,11 @@
   let pendingLoadCheckAfterLayoutChange = false;
   let activeNewEntryContentControl = null;
   let sidebarCalendarCursor = null;
+  const sidebarCalendarDateState = {
+    status: "idle",
+    dates: [],
+    errorMessage: "",
+  };
 
   void bootApplication();
 
@@ -1605,6 +1610,14 @@
     document.querySelectorAll(".app-sidebar-panel").forEach((panel) => {
       panel.hidden = panel.dataset.sidebarPage !== pageId;
     });
+
+    if (pageId === "calendar") {
+      const calendar = document.querySelector(".sidebar-calendar");
+
+      if (calendar) {
+        void ensureSidebarCalendarDates(calendar);
+      }
+    }
   }
 
   function createSidebarSettingsPanel() {
@@ -1738,6 +1751,7 @@
     const nextYear = document.createElement("button");
     const picker = document.createElement("div");
     const grid = document.createElement("div");
+    const status = document.createElement("p");
     const cursor = getSidebarCalendarCursor();
 
     calendar.className = "sidebar-calendar";
@@ -1749,6 +1763,9 @@
     picker.className = "sidebar-calendar-picker";
     picker.hidden = true;
     grid.className = "sidebar-calendar-grid";
+    status.className = "sidebar-calendar-status";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
 
     yearLabel.type = "button";
     monthLabel.type = "button";
@@ -1775,10 +1792,11 @@
 
     calendar.dataset.year = String(cursor.year);
     calendar.dataset.month = String(cursor.month);
+    calendar.dataset.autoCursor = "true";
     yearRow.append(previousYear, yearLabel, nextYear);
     monthRow.append(previousMonth, monthLabel, nextMonth);
     controls.append(yearRow, monthRow);
-    calendar.append(controls, picker, grid);
+    calendar.append(controls, picker, status, grid);
     calendar.addEventListener("pointerdown", (event) => {
       event.stopPropagation();
     });
@@ -1786,6 +1804,7 @@
       closeSidebarCalendarPicker(calendar);
     });
     renderSidebarCalendar(calendar);
+    void ensureSidebarCalendarDates(calendar);
 
     return calendar;
   }
@@ -1804,7 +1823,7 @@
       return sidebarCalendarCursor;
     }
 
-    const latestDate = getMockDiaryDates().at(-1) || getCalendarDate(createLocalTimestamp());
+    const latestDate = getSidebarCalendarDates().at(-1) || getCalendarDate(createLocalTimestamp());
     const [year, month] = latestDate.split("-").map(Number);
 
     sidebarCalendarCursor = normalizeCalendarCursor({ year, month });
@@ -1830,6 +1849,7 @@
     }
 
     sidebarCalendarCursor = nextCursor;
+    calendar.dataset.autoCursor = "false";
     calendar.dataset.year = String(sidebarCalendarCursor.year);
     calendar.dataset.month = String(sidebarCalendarCursor.month);
     closeSidebarCalendarPicker(calendar);
@@ -1842,11 +1862,12 @@
     const yearLabel = calendar.querySelector(".sidebar-calendar-year-label");
     const monthLabel = calendar.querySelector(".sidebar-calendar-month-label");
     const grid = calendar.querySelector(".sidebar-calendar-grid");
+    const status = calendar.querySelector(".sidebar-calendar-status");
     const previousYear = calendar.querySelector('[aria-label="上一年"]');
     const previousMonth = calendar.querySelector('[aria-label="上一月"]');
     const nextMonth = calendar.querySelector('[aria-label="下一月"]');
     const nextYear = calendar.querySelector('[aria-label="下一年"]');
-    const diaryDates = new Set(getMockDiaryDates());
+    const diaryDates = new Set(getSidebarCalendarDates());
     const firstDay = new Date(year, month - 1, 1);
     const daysInMonth = new Date(year, month, 0).getDate();
     const leadingEmptyDays = firstDay.getDay();
@@ -1869,6 +1890,9 @@
     }
     if (nextYear) {
       nextYear.disabled = isCalendarFuture(year + 1, month);
+    }
+    if (status) {
+      renderSidebarCalendarStatus(status, calendar);
     }
     grid.replaceChildren();
     weekdays.forEach((weekday) => {
@@ -1909,6 +1933,94 @@
     return [...new Set(getAllReadingSamples().map((sample) => (
       getCalendarDate(sample.data.metadata.created_at)
     )))].sort();
+  }
+
+  function getSidebarCalendarDates() {
+    if (sidebarCalendarDateState.status === "ready") {
+      return sidebarCalendarDateState.dates;
+    }
+
+    return getMockDiaryDates();
+  }
+
+  async function ensureSidebarCalendarDates(calendar, options = {}) {
+    const { force = false } = options;
+
+    if (!force && (
+      sidebarCalendarDateState.status === "loading"
+      || sidebarCalendarDateState.status === "ready"
+    )) {
+      renderSidebarCalendar(calendar);
+      return;
+    }
+
+    sidebarCalendarDateState.status = "loading";
+    sidebarCalendarDateState.errorMessage = "";
+    renderSidebarCalendar(calendar);
+
+    try {
+      const result = await dataAdapter.getEntryDates();
+      const dates = normalizeSidebarCalendarDates(result);
+
+      sidebarCalendarDateState.status = "ready";
+      sidebarCalendarDateState.dates = dates;
+      sidebarCalendarDateState.errorMessage = "";
+      if (calendar.dataset.autoCursor !== "false") {
+        const latestDate = dates.at(-1) || getCalendarDate(createLocalTimestamp());
+        const [year, month] = latestDate.split("-").map(Number);
+
+        sidebarCalendarCursor = normalizeCalendarCursor({ year, month });
+        calendar.dataset.year = String(sidebarCalendarCursor.year);
+        calendar.dataset.month = String(sidebarCalendarCursor.month);
+      }
+      renderSidebarCalendar(calendar);
+    } catch (error) {
+      sidebarCalendarDateState.status = "error";
+      sidebarCalendarDateState.errorMessage = createDataErrorMessage(error);
+      renderSidebarCalendar(calendar);
+      console.warn("[Serein calendar] Failed to load entry dates.", error);
+    }
+  }
+
+  function normalizeSidebarCalendarDates(result) {
+    const rawDates = Array.isArray(result?.dates) ? result.dates : [];
+
+    return [...new Set(
+      rawDates
+        .map((item) => String(item?.date || "").slice(0, 10))
+        .filter((date) => /^\d{4}-\d{2}-\d{2}$/u.test(date)),
+    )].sort();
+  }
+
+  function renderSidebarCalendarStatus(status, calendar) {
+    status.className = "sidebar-calendar-status";
+
+    if (sidebarCalendarDateState.status === "loading") {
+      status.textContent = "正在读取日期……";
+      return;
+    }
+
+    if (sidebarCalendarDateState.status === "error") {
+      const retry = document.createElement("button");
+
+      status.classList.add("is-error");
+      status.textContent = `日期读取失败：${sidebarCalendarDateState.errorMessage}`;
+      retry.className = "sidebar-calendar-status-retry";
+      retry.type = "button";
+      retry.textContent = "重试";
+      retry.addEventListener("click", () => {
+        void ensureSidebarCalendarDates(calendar, { force: true });
+      });
+      status.append(" ", retry);
+      return;
+    }
+
+    if (sidebarCalendarDateState.status === "ready" && sidebarCalendarDateState.dates.length === 0) {
+      status.textContent = "暂无已保存日记日期";
+      return;
+    }
+
+    status.textContent = "";
   }
 
   function toggleSidebarCalendarPicker(calendar, mode) {
@@ -2002,6 +2114,7 @@
 
   function setSidebarCalendarCursor(calendar, cursor) {
     sidebarCalendarCursor = normalizeCalendarCursor(cursor);
+    calendar.dataset.autoCursor = "false";
     calendar.dataset.year = String(sidebarCalendarCursor.year);
     calendar.dataset.month = String(sidebarCalendarCursor.month);
     closeSidebarCalendarPicker(calendar);
@@ -2017,7 +2130,7 @@
   }
 
   function getSelectableCalendarYears() {
-    const diaryYears = getMockDiaryDates().map((date) => Number(date.slice(0, 4)));
+    const diaryYears = getSidebarCalendarDates().map((date) => Number(date.slice(0, 4)));
     const currentYear = getCalendarFutureLimit().year;
     const firstYear = Math.min(...diaryYears, currentYear);
     const years = [];

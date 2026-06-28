@@ -664,6 +664,31 @@ body[data-sidebar-open="true"] .app-sidebar {
   gap: 0.25rem;
 }
 
+.sidebar-calendar-status {
+  min-block-size: 1.2rem;
+  margin: 0;
+  color: var(--color-faint);
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.sidebar-calendar-status.is-error {
+  color: var(--color-danger);
+}
+
+.sidebar-calendar-status-retry {
+  border: 0;
+  padding: 0;
+  color: currentColor;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
 .sidebar-calendar-weekday,
 .sidebar-calendar-empty,
 .sidebar-calendar-day {
