@@ -53,6 +53,10 @@ P5 写入任何事实文件后，必须能通过重建索引恢复列表与统�
 
 ## P5 API 设计建议
 
+P5 的正式 API 与前端 adapter 契约见
+[`p5-api-frontend-contract.md`](p5-api-frontend-contract.md)。下面保留的是从
+P4 存储层过渡到 P5 服务层的设计提示。
+
 P5 可以在现有 storage 模块上新增正式服务层，而不是让路由直接拼装文件系统逻辑。
 建议边界：
 
