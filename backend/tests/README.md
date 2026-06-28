@@ -28,6 +28,8 @@ Current coverage:
   storage verification.
 - `test_storage_index.py`: P4 rebuildable SQLite index creation, ordering,
   date counts, and deleted-entry filtering.
+- `test_migration_dry_run.py`: P4 read-only migration dry-run reports for
+  empty sources, v1 entries, legacy entries, blockers, and body-safe output.
 
 These tests do not read or write real diary entries. Storage tests use temporary
 directories and generated fixtures.
