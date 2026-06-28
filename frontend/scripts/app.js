@@ -14,6 +14,8 @@
 
   const FALLBACK_PAGE_NAME = "Serein";
   const API_BASE = readApiBase();
+  const dataAdapter = window.SereinData.createDataAdapter({ apiBase: API_BASE });
+  window.SereinDataAdapter = dataAdapter;
   const settings = readInteractionSettings();
   const authState = {
     authenticated: false,
@@ -42,7 +44,7 @@
     renderLockScreen({ state: "checking" });
 
     try {
-      const session = await requestJson(`${API_BASE}/auth/session`);
+      const session = await dataAdapter.getSession();
 
       if (session.authenticated) {
         startDiaryApplication();
@@ -172,13 +174,7 @@
     status.textContent = "正在验证……";
 
     try {
-      const session = await requestJson(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ password: value }),
-      });
+      const session = await dataAdapter.login(value);
 
       if (!session.authenticated) {
         throw new Error("登录未完成。");
@@ -194,29 +190,6 @@
       password.select();
       password.focus({ preventScroll: true });
     }
-  }
-
-  async function requestJson(url, options = {}) {
-    const response = await window.fetch(url, {
-      cache: "no-store",
-      credentials: "same-origin",
-      ...options,
-    });
-
-    let body = null;
-    try {
-      body = await response.json();
-    } catch {
-      // Empty or non-JSON responses are handled below.
-    }
-
-    if (!response.ok) {
-      const error = new Error(body?.detail || `请求失败：${response.status}`);
-      error.status = response.status;
-      throw error;
-    }
-
-    return body || {};
   }
 
   function createAuthErrorMessage(error) {

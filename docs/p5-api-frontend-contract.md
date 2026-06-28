@@ -368,8 +368,8 @@ P5 保留 mock 模式用于公开展示和无后端开发。建议读取：
 - `mock`：使用 `mock-entries.js` 和本地模拟分页。
 - `backend`：使用 `/api/v1/*`。
 
-如果 meta 不存在，默认策略可以先保持当前静态体验；接入正式后端阶段再切为
-`backend`。API base 继续读取：
+当前默认值为 `backend`，以保持锁屏认证行为；公开静态展示时可显式改为 `mock`。
+API base 继续读取：
 
 ```html
 <meta name="serein-api-base" content="/api/v1">
