@@ -293,6 +293,15 @@ body {
   color: var(--color-muted);
   font-family: var(--font-ui);
   font-size: 0.82rem;
+  text-align: center;
+}
+
+.load-control.is-error {
+  color: var(--color-danger);
+}
+
+.load-control.is-complete {
+  color: var(--color-faint);
 }
 
 .load-control[hidden] {
@@ -327,10 +336,25 @@ body {
   justify-self: center;
   inline-size: min(100%, var(--reading-width));
   margin: 0;
+  padding-block: var(--space-4);
   color: var(--color-faint);
   font-family: var(--font-ui);
-  font-size: 0.82rem;
   text-align: end;
+}
+
+.empty-backend-title,
+.empty-backend-text {
+  margin: 0;
+}
+
+.empty-backend-title {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.empty-backend-text {
+  margin-block-start: var(--space-1);
+  font-size: 0.78rem;
 }
 
 .sidebar-menu-button {

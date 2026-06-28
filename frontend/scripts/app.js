@@ -228,7 +228,7 @@
     const feed = document.createElement("section");
     const loading = document.createElement("div");
 
-    feed.className = "diary-feed";
+    feed.className = "diary-feed is-loading";
     feed.setAttribute("aria-label", "Diary entries");
     loading.className = "load-control is-loading";
     loading.setAttribute("role", "status");
@@ -246,6 +246,7 @@
     const feedItems = createFeedItems(readingSamples);
 
     feed.className = "diary-feed";
+    feed.dataset.status = feedState.dataStatus;
     feed.setAttribute("aria-label", "Diary entries");
     feed.append(createLoadControl());
     if (isBackendDataSource() && feedState.dataStatus === "ready" && readingSamples.length === 0) {
@@ -285,10 +286,17 @@
   }
 
   function createEmptyBackendNotice() {
-    const notice = document.createElement("p");
+    const notice = document.createElement("section");
+    const title = document.createElement("p");
+    const text = document.createElement("p");
 
     notice.className = "empty-backend-notice";
-    notice.textContent = "开始写第一篇日记吧。";
+    notice.setAttribute("aria-label", "No saved diary entries");
+    title.className = "empty-backend-title";
+    title.textContent = "还没有已保存的日记";
+    text.className = "empty-backend-text";
+    text.textContent = "下面就是此刻。写完后，日记会出现在这条时间流里。";
+    notice.append(title, text);
     return notice;
   }
 
@@ -875,15 +883,24 @@
     message.className = "load-control-message";
 
     if (loadState.status === "loading") {
-      message.textContent = "正在拉取更早的日记……";
+      message.textContent = feedState.dataStatus === "loading"
+        ? "正在读取日记……"
+        : "正在拉取更早的日记……";
       control.append(spinner, message);
     } else if (loadState.status === "error") {
       const retry = document.createElement("button");
+      const isInitialBackendError = (
+        isBackendDataSource()
+        && feedState.dataStatus === "error"
+        && feedState.samples.length === 0
+      );
 
-      message.textContent = `拉取信息失败：${loadState.errorMessage}`;
+      message.textContent = isInitialBackendError
+        ? `无法读取日记：${loadState.errorMessage}`
+        : `拉取信息失败：${loadState.errorMessage}`;
       retry.className = "load-control-retry";
       retry.type = "button";
-      retry.textContent = "重试";
+      retry.textContent = isInitialBackendError ? "重新读取" : "重试";
       retry.addEventListener("click", () => {
         debugLoad("retry clicked");
         if (isBackendDataSource() && feedState.dataStatus === "error") {
