@@ -288,7 +288,7 @@
     const notice = document.createElement("p");
 
     notice.className = "empty-backend-notice";
-    notice.textContent = "还没有已保存的日记。下面可以开始写第一篇。";
+    notice.textContent = "开始写第一篇日记吧。";
     return notice;
   }
 
