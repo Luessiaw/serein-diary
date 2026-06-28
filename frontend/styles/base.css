@@ -323,17 +323,6 @@ body {
   outline-offset: var(--space-1);
 }
 
-.data-source-badge {
-  justify-self: center;
-  inline-size: min(100%, var(--reading-width));
-  color: var(--color-faint);
-  font-family: var(--font-ui);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  text-align: end;
-  user-select: none;
-}
-
 .empty-backend-notice {
   justify-self: center;
   inline-size: min(100%, var(--reading-width));

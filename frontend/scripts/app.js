@@ -226,7 +226,6 @@
 
   function renderFeedLoading() {
     const feed = document.createElement("section");
-    const source = createDataSourceBadge();
     const loading = document.createElement("div");
 
     feed.className = "diary-feed";
@@ -235,7 +234,7 @@
     loading.setAttribute("role", "status");
     loading.setAttribute("aria-live", "polite");
     loading.innerHTML = '<span class="load-control-spinner" aria-hidden="true"></span><span class="load-control-message">正在读取日记……</span>';
-    feed.append(source, loading);
+    feed.append(loading);
     app.replaceChildren(feed);
   }
 
@@ -248,7 +247,6 @@
 
     feed.className = "diary-feed";
     feed.setAttribute("aria-label", "Diary entries");
-    feed.append(createDataSourceBadge());
     feed.append(createLoadControl());
     if (isBackendDataSource() && feedState.dataStatus === "ready" && readingSamples.length === 0) {
       feed.append(createEmptyBackendNotice());
@@ -284,18 +282,6 @@
         window.setTimeout(scrollToNewEntry, 0);
       });
     }
-  }
-
-  function createDataSourceBadge() {
-    const badge = document.createElement("div");
-    const source = dataAdapter.source || "unknown";
-
-    badge.className = `data-source-badge is-${source}`;
-    badge.textContent = `数据源：${source}`;
-    badge.title = source === "backend"
-      ? "当前日记流从后端 API 读取"
-      : "当前日记流使用本地 mock 数据";
-    return badge;
   }
 
   function createEmptyBackendNotice() {
