@@ -70,6 +70,35 @@ curl -sS -b /tmp/serein-cookie.txt \
   http://127.0.0.1:8088/api/v1/entries/<id>
 ```
 
+## 日期统计
+
+查看有日记的日期：
+
+```bash
+curl -sS -b /tmp/serein-cookie.txt \
+  'http://127.0.0.1:8088/api/v1/entries/dates?from=2026-01-01&to=2026-12-31'
+```
+
+响应形状：
+
+```json
+{
+  "dates": [
+    {
+      "date": "2026-06-23",
+      "count": 1
+    }
+  ]
+}
+```
+
+默认不统计软删除条目。如需调试：
+
+```bash
+curl -sS -b /tmp/serein-cookie.txt \
+  'http://127.0.0.1:8088/api/v1/entries/dates?include_deleted=true'
+```
+
 ## 软删除
 
 ```bash

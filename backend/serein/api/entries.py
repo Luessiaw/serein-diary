@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -20,6 +20,7 @@ from serein.services.entries import (
     DEFAULT_PAGE_LIMIT,
     MAX_PAGE_LIMIT,
     EntryDetailItem,
+    EntryDateCount,
     EntryPage,
     EntryService,
     EntryServiceError,
@@ -106,6 +107,19 @@ class EntryListResponse(BaseModel):
     page: PageInfoResponse
 
 
+class EntryDateCountResponse(BaseModel):
+    """One local date count for the calendar UI."""
+
+    date: date
+    count: int
+
+
+class EntryDatesResponse(BaseModel):
+    """Entry date count response."""
+
+    dates: list[EntryDateCountResponse]
+
+
 @router.get("", response_model=EntryListResponse)
 def list_entries(
     response: Response,
@@ -126,6 +140,31 @@ def list_entries(
             include_deleted=include_deleted,
         )
         return entry_page_to_response(page)
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
+
+
+@router.get("/dates", response_model=EntryDatesResponse)
+def list_entry_dates(
+    response: Response,
+    request: Request,
+    from_date: Annotated[date | None, Query(alias="from")] = None,
+    to_date: Annotated[date | None, Query(alias="to")] = None,
+    include_deleted: bool = False,
+    session: AuthenticatedSession = Depends(require_authenticated_session),
+) -> EntryDatesResponse:
+    """Return local dates that contain entries for the calendar UI."""
+
+    _ = session
+    mark_auth_response_uncacheable(response)
+    try:
+        return entry_dates_to_response(
+            get_entry_service(request).list_entry_dates(
+                from_date=from_date,
+                to_date=to_date,
+                include_deleted=include_deleted,
+            )
+        )
     except EntryServiceError as error:
         raise service_http_error(error) from error
 
@@ -200,6 +239,15 @@ def entry_page_to_response(page: EntryPage) -> EntryListResponse:
             has_more=page.has_more,
             next_before=page.next_before,
         ),
+    )
+
+
+def entry_dates_to_response(dates: tuple[EntryDateCount, ...]) -> EntryDatesResponse:
+    return EntryDatesResponse(
+        dates=[
+            EntryDateCountResponse(date=date.fromisoformat(item.date), count=item.count)
+            for item in dates
+        ]
     )
 
 

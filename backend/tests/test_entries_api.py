@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -17,6 +18,7 @@ from serein.api.entries import (
     create_entry_endpoint,
     delete_entry,
     get_entry,
+    list_entry_dates,
     list_entries,
 )
 from serein.config import Settings
@@ -160,6 +162,74 @@ class EntriesApiTests(TestCase):
         self.assertIsNotNone(first_page.page.next_before)
         self.assertEqual([str(item.id) for item in second_page.items], [first_id])
         self.assertFalse(second_page.page.has_more)
+
+    def test_list_entry_dates_returns_calendar_counts(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            request = self.make_request(root)
+            first_id = "11111111-1111-4111-8111-111111111111"
+            second_id = "22222222-2222-4222-8222-222222222222"
+            third_id = "33333333-3333-4333-8333-333333333333"
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606230910-{first_id}",
+                entry_id=first_id,
+                created_at="2026-06-23T09:10:00+08:00",
+            )
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606231010-{second_id}",
+                entry_id=second_id,
+                created_at="2026-06-23T10:10:00+08:00",
+            )
+            create_entry_fixture(
+                root / "entries",
+                name=f"202607010800-{third_id}",
+                entry_id=third_id,
+                created_at="2026-07-01T08:00:00+08:00",
+            )
+            delete_entry(UUID(first_id), request, Response(), self.make_session())
+
+            response = Response()
+            dates = list_entry_dates(
+                response,
+                request,
+                from_date=date.fromisoformat("2026-06-01"),
+                to_date=date.fromisoformat("2026-06-30"),
+                session=self.make_session(),
+            )
+            dates_with_deleted = list_entry_dates(
+                Response(),
+                request,
+                include_deleted=True,
+                session=self.make_session(),
+            )
+
+        self.assertEqual(response.headers["cache-control"], NO_STORE_HEADER)
+        self.assertEqual(
+            [(item.date.isoformat(), item.count) for item in dates.dates],
+            [("2026-06-23", 1)],
+        )
+        self.assertEqual(
+            [(item.date.isoformat(), item.count) for item in dates_with_deleted.dates],
+            [("2026-06-23", 2), ("2026-07-01", 1)],
+        )
+
+    def test_list_entry_dates_rejects_inverted_range(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            request = self.make_request(Path(data_dir))
+
+            with self.assertRaises(HTTPException) as context:
+                list_entry_dates(
+                    Response(),
+                    request,
+                    from_date=date.fromisoformat("2026-07-01"),
+                    to_date=date.fromisoformat("2026-06-01"),
+                    session=self.make_session(),
+                )
+
+        self.assertEqual(context.exception.status_code, 400)
+        self.assertEqual(context.exception.detail["error"]["code"], "invalid_request")
 
     def test_create_rejects_blank_content_with_stable_error(self) -> None:
         with TemporaryDirectory() as data_dir:

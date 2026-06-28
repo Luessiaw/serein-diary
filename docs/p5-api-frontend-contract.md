@@ -251,7 +251,7 @@ DELETE /api/v1/entries/{entry_id}
 ### 日期统计
 
 ```text
-GET /api/v1/entries/dates?from=2026-01-01&to=2026-12-31
+GET /api/v1/entries/dates?from=2026-01-01&to=2026-12-31&include_deleted=false
 ```
 
 响应：
@@ -271,6 +271,7 @@ GET /api/v1/entries/dates?from=2026-01-01&to=2026-12-31
 
 - 日期按 `created_at` 的本地日期派生。
 - 默认不统计软删除条目。
+- `include_deleted=true` 时统计软删除条目，主要用于调试或管理视图。
 - `from` / `to` 可选；后端可设置最大范围以保护性能。
 - 前端日历只使用 `date` 和 `count` 判断深色日期。
 

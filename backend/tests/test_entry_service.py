@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -128,6 +128,65 @@ class EntryServiceTests(TestCase):
         self.assertEqual(visible_page.items, ())
         self.assertEqual(len(all_page.items), 1)
         self.assertTrue(all_page.items[0].deleted)
+
+    def test_list_entry_dates_counts_visible_entries_and_filters_range(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            first_id = "11111111-1111-4111-8111-111111111111"
+            second_id = "22222222-2222-4222-8222-222222222222"
+            third_id = "33333333-3333-4333-8333-333333333333"
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606230930-{first_id}",
+                entry_id=first_id,
+                created_at="2026-06-23T09:30:00+08:00",
+            )
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606231010-{second_id}",
+                entry_id=second_id,
+                created_at="2026-06-23T10:10:00+08:00",
+            )
+            create_entry_fixture(
+                root / "entries",
+                name=f"202607010800-{third_id}",
+                entry_id=third_id,
+                created_at="2026-07-01T08:00:00+08:00",
+            )
+            service = EntryService(root)
+            service.delete_entry(UUID(first_id))
+
+            visible_dates = service.list_entry_dates()
+            all_dates = service.list_entry_dates(include_deleted=True)
+            july_dates = service.list_entry_dates(
+                from_date=date.fromisoformat("2026-07-01"),
+                to_date=date.fromisoformat("2026-07-31"),
+            )
+
+        self.assertEqual(
+            [(item.date, item.count) for item in visible_dates],
+            [("2026-06-23", 1), ("2026-07-01", 1)],
+        )
+        self.assertEqual(
+            [(item.date, item.count) for item in all_dates],
+            [("2026-06-23", 2), ("2026-07-01", 1)],
+        )
+        self.assertEqual(
+            [(item.date, item.count) for item in july_dates],
+            [("2026-07-01", 1)],
+        )
+
+    def test_list_entry_dates_rejects_inverted_range(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            service = EntryService(Path(data_dir))
+
+            with self.assertRaises(EntryServiceError) as error:
+                service.list_entry_dates(
+                    from_date=date.fromisoformat("2026-07-01"),
+                    to_date=date.fromisoformat("2026-06-01"),
+                )
+
+        self.assertEqual(error.exception.code, "invalid_request")
 
     def test_missing_entry_raises_service_error(self) -> None:
         with TemporaryDirectory() as data_dir:

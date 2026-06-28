@@ -5,12 +5,14 @@ from __future__ import annotations
 import base64
 import binascii
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from uuid import UUID
 
 from serein.storage.entry import DiaryEntry, EntryValidationError
 from serein.storage.index import (
+    DateCount,
+    count_entries_by_date,
     get_index_path,
     list_indexed_entries,
     rebuild_index,
@@ -70,6 +72,14 @@ class EntryPage:
     limit: int
     has_more: bool
     next_before: str | None
+
+
+@dataclass(frozen=True)
+class EntryDateCount:
+    """Number of visible entries on one local diary date."""
+
+    date: str
+    count: int
 
 
 @dataclass(frozen=True)
@@ -185,6 +195,32 @@ class EntryService:
             cursor=encode_entry_cursor(entry.metadata.created_at, entry.metadata.id),
         )
 
+    def list_entry_dates(
+        self,
+        *,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        include_deleted: bool = False,
+    ) -> tuple[EntryDateCount, ...]:
+        """Return local diary dates that contain entries."""
+
+        if from_date is not None and to_date is not None and from_date > to_date:
+            raise EntryServiceError(
+                "invalid_request",
+                "from_date must be earlier than or equal to to_date",
+            )
+
+        try:
+            date_counts = self._read_date_counts(include_deleted=include_deleted)
+        except EntryValidationError as error:
+            raise map_storage_error(error) from error
+
+        return tuple(
+            EntryDateCount(date=item.date, count=item.count)
+            for item in date_counts
+            if is_date_in_range(item.date, from_date=from_date, to_date=to_date)
+        )
+
     def refresh_index(self) -> Path:
         """Rebuild the derived SQLite index from fact files."""
 
@@ -199,6 +235,16 @@ class EntryService:
         except Exception:
             self.refresh_index()
             return list_indexed_entries(index_path, include_deleted=include_deleted)
+
+    def _read_date_counts(self, *, include_deleted: bool) -> list[DateCount]:
+        index_path = get_index_path(self.data_dir)
+        if not index_path.exists():
+            self.refresh_index()
+        try:
+            return count_entries_by_date(index_path, include_deleted=include_deleted)
+        except Exception:
+            self.refresh_index()
+            return count_entries_by_date(index_path, include_deleted=include_deleted)
 
 
 def normalize_limit(limit: int) -> int:
@@ -254,6 +300,22 @@ def entry_sort_key(summary: EntrySummary) -> tuple[datetime, UUID]:
     """Return the stable order key used by cursors."""
 
     return summary.created_at, summary.id
+
+
+def is_date_in_range(
+    value: str,
+    *,
+    from_date: date | None,
+    to_date: date | None,
+) -> bool:
+    """Return whether an ISO date string is within the optional range."""
+
+    entry_date = date.fromisoformat(value)
+    if from_date is not None and entry_date < from_date:
+        return False
+    if to_date is not None and entry_date > to_date:
+        return False
+    return True
 
 
 def map_storage_error(error: EntryValidationError) -> EntryServiceError:

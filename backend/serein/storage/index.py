@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -37,10 +38,10 @@ def rebuild_index(data_dir: Path, index_path: Path | None = None) -> Path:
     summaries = scan_entry_summaries(data_dir)
 
     index_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(index_path) as connection:
-        create_schema(connection)
-        replace_entries(connection, summaries)
-        connection.commit()
+    with closing(sqlite3.connect(index_path)) as connection:
+        with connection:
+            create_schema(connection)
+            replace_entries(connection, summaries)
 
     return index_path
 
@@ -125,7 +126,7 @@ def list_indexed_entries(
 
     direction = "DESC" if descending else "ASC"
     where = "" if include_deleted else "WHERE deleted = 0"
-    with sqlite3.connect(index_path) as connection:
+    with closing(sqlite3.connect(index_path)) as connection:
         connection.row_factory = sqlite3.Row
         rows = connection.execute(
             f"SELECT * FROM entries {where} ORDER BY created_at {direction}, id {direction}"
@@ -142,7 +143,7 @@ def count_entries_by_date(
     """Return local-date entry counts from an existing SQLite index."""
 
     where = "" if include_deleted else "WHERE deleted = 0"
-    with sqlite3.connect(index_path) as connection:
+    with closing(sqlite3.connect(index_path)) as connection:
         rows = connection.execute(
             f"""
             SELECT local_date, COUNT(*) AS count
@@ -159,7 +160,7 @@ def count_entries_by_date(
 def get_index_schema_version(index_path: Path) -> int | None:
     """Read the schema version from an existing index."""
 
-    with sqlite3.connect(index_path) as connection:
+    with closing(sqlite3.connect(index_path)) as connection:
         row = connection.execute(
             "SELECT value FROM meta WHERE key = ?",
             ("schema_version",),

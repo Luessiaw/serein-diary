@@ -26,13 +26,14 @@ Current coverage:
 - `test_storage_write.py`: P4 immutable entry creation and soft-delete marker
   behavior.
 - `test_entries_api.py`: P5 formal authenticated entries API pagination,
-  creation, detail reads, soft deletion, and stable error responses.
+  creation, detail reads, soft deletion, date counts, and stable error
+  responses.
 - `test_storage_index.py`: P4 rebuildable SQLite index creation, ordering,
   date counts, and deleted-entry filtering.
 - `test_migration_dry_run.py`: P4 read-only migration dry-run reports for
   empty sources, v1 entries, blockers, and body-safe output.
 - `test_entry_service.py`: P5 entry service pagination cursors, index refresh,
-  detail reads, creation, soft deletion, and stable service errors.
+  detail reads, creation, soft deletion, date counts, and stable service errors.
 
 These tests do not read or write real diary entries. Storage tests use temporary
 directories and generated fixtures.
