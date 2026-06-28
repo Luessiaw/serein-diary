@@ -26,6 +26,12 @@
     visibleStartIndex: 0,
     status: "idle",
     errorMessage: "",
+    nextBefore: null,
+  };
+  const feedState = {
+    samples: [],
+    dataStatus: "idle",
+    dataErrorMessage: "",
   };
   const groupOpenState = new Map();
   const loadDebugState = {
@@ -47,7 +53,7 @@
       const session = await dataAdapter.getSession();
 
       if (session.authenticated) {
-        startDiaryApplication();
+        void startDiaryApplication();
         return;
       }
 
@@ -60,7 +66,7 @@
     }
   }
 
-  function startDiaryApplication() {
+  async function startDiaryApplication() {
     if (authState.initialized) {
       renderFeed({ focusNewEntry: true, scrollToEnd: true });
       return;
@@ -70,7 +76,8 @@
     authState.initialized = true;
     initializeEditorExperimentState();
     initializeLayoutDebugState();
-    initializeLoadedWindow();
+    renderFeedLoading();
+    await initializeLoadedWindow();
     renderFeed({ focusNewEntry: true, scrollToEnd: true });
     app.addEventListener("scroll", handleScroll, { passive: true });
     registerLoadDebugTools();
@@ -180,7 +187,7 @@
         throw new Error("登录未完成。");
       }
 
-      startDiaryApplication();
+      void startDiaryApplication();
     } catch (error) {
       card.dataset.loading = "false";
       password.disabled = false;
@@ -217,6 +224,21 @@
     ].join("");
   }
 
+  function renderFeedLoading() {
+    const feed = document.createElement("section");
+    const source = createDataSourceBadge();
+    const loading = document.createElement("div");
+
+    feed.className = "diary-feed";
+    feed.setAttribute("aria-label", "Diary entries");
+    loading.className = "load-control is-loading";
+    loading.setAttribute("role", "status");
+    loading.setAttribute("aria-live", "polite");
+    loading.innerHTML = '<span class="load-control-spinner" aria-hidden="true"></span><span class="load-control-message">正在读取日记……</span>';
+    feed.append(source, loading);
+    app.replaceChildren(feed);
+  }
+
   function renderFeed(options = {}) {
     const { focusNewEntry = false, scrollToEnd = false } = options;
     const feed = document.createElement("section");
@@ -226,7 +248,11 @@
 
     feed.className = "diary-feed";
     feed.setAttribute("aria-label", "Diary entries");
+    feed.append(createDataSourceBadge());
     feed.append(createLoadControl());
+    if (isBackendDataSource() && feedState.dataStatus === "ready" && readingSamples.length === 0) {
+      feed.append(createEmptyBackendNotice());
+    }
 
     groupItemsByDate(feedItems).forEach((yearGroup) => {
       const year = createGroup("diary-year", yearGroup.year, `year:${yearGroup.year}`);
@@ -260,11 +286,35 @@
     }
   }
 
+  function createDataSourceBadge() {
+    const badge = document.createElement("div");
+    const source = dataAdapter.source || "unknown";
+
+    badge.className = `data-source-badge is-${source}`;
+    badge.textContent = `数据源：${source}`;
+    badge.title = source === "backend"
+      ? "当前日记流从后端 API 读取"
+      : "当前日记流使用本地 mock 数据";
+    return badge;
+  }
+
+  function createEmptyBackendNotice() {
+    const notice = document.createElement("p");
+
+    notice.className = "empty-backend-notice";
+    notice.textContent = "还没有已保存的日记。下面可以开始写第一篇。";
+    return notice;
+  }
+
   function getReadingSamples() {
     return getAllReadingSamples().slice(loadState.visibleStartIndex);
   }
 
   function getAllReadingSamples() {
+    if (isBackendDataSource()) {
+      return feedState.samples;
+    }
+
     return window.SereinMockEntries
       .filter((sample) => sample.ui.mode === "reading")
       .slice()
@@ -287,11 +337,88 @@
     ].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   }
 
-  function initializeLoadedWindow() {
+  async function initializeLoadedWindow() {
+    if (isBackendDataSource()) {
+      await initializeBackendLoadedWindow();
+      return;
+    }
+
     const total = getAllReadingSamples().length;
 
     loadState.visibleStartIndex = Math.max(0, total - settings.initialCount);
     loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
+    loadState.nextBefore = null;
+    feedState.dataStatus = "ready";
+    feedState.dataErrorMessage = "";
+  }
+
+  async function initializeBackendLoadedWindow() {
+    feedState.dataStatus = "loading";
+    feedState.dataErrorMessage = "";
+    loadState.status = "loading";
+    loadState.errorMessage = "";
+    loadState.visibleStartIndex = 0;
+    loadState.nextBefore = null;
+
+    try {
+      const page = await dataAdapter.listEntries({ limit: settings.initialCount });
+      const samples = await loadEntryDetailsForSummaries(page.items || []);
+
+      feedState.samples = samples;
+      feedState.dataStatus = "ready";
+      loadState.status = page.page?.has_more ? "idle" : "complete";
+      loadState.nextBefore = page.page?.next_before || null;
+    } catch (error) {
+      feedState.samples = [];
+      feedState.dataStatus = "error";
+      feedState.dataErrorMessage = createDataErrorMessage(error);
+      loadState.status = "error";
+      loadState.errorMessage = feedState.dataErrorMessage;
+    }
+  }
+
+  async function loadEntryDetailsForSummaries(items) {
+    const details = await Promise.all(
+      items.map((item) => dataAdapter.getEntry(item.id)),
+    );
+
+    return details.map(apiEntryToSample);
+  }
+
+  function apiEntryToSample(entry) {
+    return {
+      ui: { mode: "reading" },
+      data: {
+        metadata: {
+          schema_version: 1,
+          id: entry.id,
+          created_at: entry.created_at,
+          ...(entry.title ? { title: entry.title } : {}),
+          ...(entry.deleted ? { deleted_at: entry.deleted_at || true } : {}),
+        },
+        content: entry.content || "",
+        comments: {
+          schema_version: 1,
+          comments: entry.comments || [],
+        },
+        mediaManifest: {
+          schema_version: 1,
+          media: entry.media || [],
+        },
+      },
+    };
+  }
+
+  function isBackendDataSource() {
+    return dataAdapter.source === "backend";
+  }
+
+  function createDataErrorMessage(error) {
+    if (error?.code) {
+      return `${error.code}：${error.message}`;
+    }
+
+    return error instanceof Error ? error.message : "未知错误";
   }
 
   function createNewEntryArea({ focusNewEntry }) {
@@ -371,6 +498,12 @@
       const body = contentControl.readMarkdown().trim();
       if (!body) {
         message.textContent = "请先写下一些内容。";
+        contentControl.focus();
+        return;
+      }
+
+      if (isBackendDataSource()) {
+        message.textContent = "真实保存将在下一步启用；当前只验证后端读取。";
         contentControl.focus();
         return;
       }
@@ -767,6 +900,10 @@
       retry.textContent = "重试";
       retry.addEventListener("click", () => {
         debugLoad("retry clicked");
+        if (isBackendDataSource() && feedState.dataStatus === "error") {
+          void retryBackendInitialLoad();
+          return;
+        }
         void loadEarlierEntries({ source: "retry" });
       });
       control.append(message, retry);
@@ -854,7 +991,14 @@
       return false;
     }
 
-    if (loadState.visibleStartIndex <= 0) {
+    if (isBackendDataSource()) {
+      if (!loadState.nextBefore) {
+        loadState.status = "complete";
+        debugShouldLoad(false, "backend-no-earlier-content", { source, verbose });
+        renderFeed();
+        return false;
+      }
+    } else if (loadState.visibleStartIndex <= 0) {
       loadState.status = "complete";
       debugShouldLoad(false, "no-earlier-content", { source, verbose });
       renderFeed();
@@ -902,7 +1046,14 @@
       return false;
     }
 
-    if (loadState.visibleStartIndex <= 0) {
+    if (isBackendDataSource()) {
+      if (!loadState.nextBefore) {
+        loadState.status = "complete";
+        debugShouldLoad(false, "backend-no-earlier-content", { source, verbose });
+        renderFeed();
+        return false;
+      }
+    } else if (loadState.visibleStartIndex <= 0) {
       loadState.status = "complete";
       debugShouldLoad(false, "no-earlier-content", { source, verbose });
       renderFeed();
@@ -939,6 +1090,10 @@
     loadState.errorMessage = "";
     renderFeedRestoringAnchor(anchor);
     debugLoad("loading control rendered", { source, attempt, anchor });
+
+    if (isBackendDataSource()) {
+      return loadEarlierBackendEntries({ source, attempt, anchor });
+    }
 
     try {
       await simulateLoadingDelay();
@@ -989,6 +1144,70 @@
       runPendingLoadCheckAfterLoadSettles();
       return false;
     }
+  }
+
+  async function loadEarlierBackendEntries(options = {}) {
+    const { source = "unknown", attempt = null, anchor = null } = options;
+
+    try {
+      if (!loadState.nextBefore) {
+        loadState.status = "complete";
+        renderFeedRestoringAnchor(anchor);
+        return false;
+      }
+
+      const page = await dataAdapter.listEntries({
+        limit: settings.pageSize,
+        before: loadState.nextBefore,
+      });
+      const anchorBeforeFinalRender = getScrollAnchor() || anchor;
+      const previousLoadedEntries = feedState.samples.length;
+      const earlierSamples = await loadEntryDetailsForSummaries(page.items || []);
+      const existingIds = new Set(feedState.samples.map((sample) => sample.data.metadata.id));
+      const newSamples = earlierSamples.filter((sample) => (
+        !existingIds.has(sample.data.metadata.id)
+      ));
+
+      feedState.samples = [...newSamples, ...feedState.samples]
+        .sort((left, right) => (
+          left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
+          || left.data.metadata.id.localeCompare(right.data.metadata.id)
+        ));
+      feedState.dataStatus = "ready";
+      loadState.status = page.page?.has_more ? "idle" : "complete";
+      loadState.nextBefore = page.page?.next_before || null;
+      renderFeedRestoringAnchor(anchorBeforeFinalRender);
+      debugLoad("backend earlier entries loaded", {
+        source,
+        attempt,
+        previousLoadedEntries,
+        nextLoadedEntries: feedState.samples.length,
+        loadedThisPage: newSamples.length,
+        hasMore: page.page?.has_more,
+        nextBefore: loadState.nextBefore,
+      });
+      runPendingLoadCheckAfterLoadSettles();
+      return newSamples.length > 0 || Boolean(page.page?.has_more);
+    } catch (error) {
+      const anchorBeforeErrorRender = getScrollAnchor() || anchor;
+
+      loadState.status = "error";
+      loadState.errorMessage = createDataErrorMessage(error);
+      renderFeedRestoringAnchor(anchorBeforeErrorRender);
+      debugLoad("backend earlier load failed", {
+        source,
+        attempt,
+        errorMessage: loadState.errorMessage,
+      });
+      runPendingLoadCheckAfterLoadSettles();
+      return false;
+    }
+  }
+
+  async function retryBackendInitialLoad() {
+    renderFeedLoading();
+    await initializeBackendLoadedWindow();
+    renderFeed({ focusNewEntry: true, scrollToEnd: true });
   }
 
   function runPendingLoadCheckAfterLoadSettles() {
