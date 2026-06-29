@@ -197,8 +197,9 @@
   --jump-before-count: 12;
   --jump-after-count: 12;
   --jump-target-scroll-offset: 96px;
-  --jump-transition-ms: 260ms;
-  --jump-transition-min-wait-ms: 280ms;
+  --jump-transition-ms: 160ms;
+  --jump-transition-min-wait-ms: 180ms;
+  --return-button-top-tolerance: 8px;
 
   /*
    * 窄屏布局

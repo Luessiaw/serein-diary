@@ -394,6 +394,10 @@ body {
   backdrop-filter: blur(8px);
 }
 
+.window-mode-return[hidden] {
+  display: none;
+}
+
 .window-mode-return:hover,
 .window-mode-return:focus-visible {
   color: var(--color-accent);

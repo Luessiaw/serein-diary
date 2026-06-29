@@ -302,19 +302,22 @@
 
     const layers = [feed];
 
-    if (feedState.targetDate) {
-      layers.push(createReturnToLatestButton());
-    }
+    layers.push(createReturnToLatestButton());
     if (feedState.transition !== "idle") {
       layers.push(createFeedTransitionOverlay());
     }
 
     app.replaceChildren(...layers);
+    updateReturnToLatestButtonVisibility();
 
     if (scrollToEnd) {
       requestAnimationFrame(() => {
         scrollToNewEntry();
-        window.setTimeout(scrollToNewEntry, 0);
+        updateReturnToLatestButtonVisibility();
+        window.setTimeout(() => {
+          scrollToNewEntry();
+          updateReturnToLatestButtonVisibility();
+        }, 0);
       });
     }
     if (scrollToDate) {
@@ -331,6 +334,7 @@
     button.type = "button";
     button.title = "回到此刻";
     button.setAttribute("aria-label", "回到此刻");
+    button.hidden = true;
     button.innerHTML = createDownArrowIconSvg();
     button.addEventListener("click", () => {
       void returnToLatestFeed();
@@ -1073,6 +1077,8 @@
   function handleScroll() {
     const verbose = shouldLogScrollProbe();
 
+    updateReturnToLatestButtonVisibility();
+
     if (verbose) {
       debugLoad("scroll probe", {
         reason: "throttled-scroll-state",
@@ -1089,6 +1095,33 @@
       debugLoad("scroll triggered later-load");
       void loadLaterEntries({ source: "scroll" });
     }
+  }
+
+  function updateReturnToLatestButtonVisibility() {
+    const button = app.querySelector(".window-mode-return");
+
+    if (!button) {
+      return;
+    }
+
+    button.hidden = !shouldShowReturnToLatestButton();
+  }
+
+  function shouldShowReturnToLatestButton() {
+    if (feedState.transition !== "idle") {
+      return false;
+    }
+
+    const newEntry = app.querySelector(".new-entry");
+
+    if (!newEntry) {
+      return true;
+    }
+
+    const appTop = app.getBoundingClientRect().top;
+    const newEntryTop = newEntry.getBoundingClientRect().top;
+
+    return Math.abs(newEntryTop - appTop) > settings.returnButtonTopTolerance;
   }
 
   function scheduleLoadCheckAfterLayoutChange() {
@@ -1531,6 +1564,7 @@
         }
         const overlay = app.querySelector(".feed-transition-overlay");
         overlay?.remove();
+        updateReturnToLatestButtonVisibility();
       });
     });
   }
@@ -1635,6 +1669,7 @@
     app.style.scrollBehavior = "auto";
     app.scrollTop = Math.max(0, top);
     app.style.scrollBehavior = previousBehavior;
+    requestAnimationFrame(updateReturnToLatestButtonVisibility);
   }
 
   function simulateLoadingDelay() {
@@ -2737,6 +2772,7 @@
           }
           const overlay = app.querySelector(".feed-transition-overlay");
           overlay?.remove();
+          updateReturnToLatestButtonVisibility();
         });
       });
     } catch (error) {
@@ -2944,6 +2980,7 @@
       jumpAfterCount: readNonNegativeIntegerToken(styles, "--jump-after-count", 12),
       jumpTargetOffset: readNonNegativeIntegerToken(styles, "--jump-target-scroll-offset", 96),
       jumpTransitionMinWaitMs: readNonNegativeIntegerToken(styles, "--jump-transition-min-wait-ms", 280),
+      returnButtonTopTolerance: readNonNegativeIntegerToken(styles, "--return-button-top-tolerance", 8),
     };
   }
 
