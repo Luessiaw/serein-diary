@@ -46,6 +46,7 @@
   const loadDebugState = {
     enabled: readLoadDebugPreference(),
     history: [],
+    lastScrollProbeAt: 0,
   };
   let loadCheckAfterLayoutChangeRunning = false;
   let pendingLoadCheckAfterLayoutChange = false;
@@ -1044,12 +1045,21 @@
   }
 
   function handleScroll() {
-    if (shouldLoadEarlierEntries({ source: "scroll" })) {
+    const verbose = shouldLogScrollProbe();
+
+    if (verbose) {
+      debugLoad("scroll probe", {
+        reason: "throttled-scroll-state",
+        distanceToBottom: Math.round(app.scrollHeight - app.scrollTop - app.clientHeight),
+      });
+    }
+
+    if (shouldLoadEarlierEntries({ source: "scroll", verbose })) {
       debugLoad("scroll triggered earlier-load");
       void loadEarlierEntries({ source: "scroll" });
     }
 
-    if (shouldLoadLaterEntries({ source: "scroll" })) {
+    if (shouldLoadLaterEntries({ source: "scroll", verbose })) {
       debugLoad("scroll triggered later-load");
       void loadLaterEntries({ source: "scroll" });
     }
@@ -1115,20 +1125,24 @@
     const { source = "unknown", verbose = false } = options;
 
     if (loadState.status === "loading" || loadState.status === "complete") {
-      debugShouldLoad(false, "blocked-by-status", { source, verbose });
+      debugShouldLoad(false, "blocked-by-status", { source, verbose, direction: "earlier" });
       return false;
     }
 
     if (isBackendDataSource()) {
       if (!feedState.olderCursor) {
         loadState.status = "complete";
-        debugShouldLoad(false, "backend-no-earlier-content", { source, verbose });
+        debugShouldLoad(false, "backend-no-earlier-content", {
+          source,
+          verbose,
+          direction: "earlier",
+        });
         renderFeed();
         return false;
       }
     } else if (loadState.visibleStartIndex <= 0) {
       loadState.status = "complete";
-      debugShouldLoad(false, "no-earlier-content", { source, verbose });
+      debugShouldLoad(false, "no-earlier-content", { source, verbose, direction: "earlier" });
       renderFeed();
       return false;
     }
@@ -1140,6 +1154,7 @@
       debugShouldLoad(shouldLoad, "no-visible-entries", {
         source,
         verbose,
+        direction: "earlier",
         scrollTop: app.scrollTop,
         clientHeight: app.clientHeight,
       });
@@ -1157,6 +1172,7 @@
     debugShouldLoad(shouldLoad, "trigger-entry-threshold", {
       source,
       verbose,
+      direction: "earlier",
       triggerIndex,
       triggerEntryId: triggerEntry.dataset.entryId,
       triggerOffsetTop: triggerEntry.offsetTop,
@@ -1170,20 +1186,24 @@
     const { source = "unknown", verbose = false } = options;
 
     if (loadState.status === "loading" || loadState.status === "complete") {
-      debugShouldLoad(false, "blocked-by-status", { source, verbose });
+      debugShouldLoad(false, "blocked-by-status", { source, verbose, direction: "earlier" });
       return false;
     }
 
     if (isBackendDataSource()) {
       if (!feedState.olderCursor) {
         loadState.status = "complete";
-        debugShouldLoad(false, "backend-no-earlier-content", { source, verbose });
+        debugShouldLoad(false, "backend-no-earlier-content", {
+          source,
+          verbose,
+          direction: "earlier",
+        });
         renderFeed();
         return false;
       }
     } else if (loadState.visibleStartIndex <= 0) {
       loadState.status = "complete";
-      debugShouldLoad(false, "no-earlier-content", { source, verbose });
+      debugShouldLoad(false, "no-earlier-content", { source, verbose, direction: "earlier" });
       renderFeed();
       return false;
     }
@@ -1194,6 +1214,7 @@
     debugShouldLoad(shouldLoad, "layout-fill-threshold", {
       source,
       verbose,
+      direction: "earlier",
       scrollHeight: app.scrollHeight,
       clientHeight: app.clientHeight,
       overflow,
@@ -1557,6 +1578,7 @@
     window.SereinDebugLoad = {
       clearLogs: clearLoadDebugLogs,
       dumpLogs: dumpLoadDebugLogs,
+      dumpReport: dumpLoadDebugReport,
       inspect: inspectLoadState,
       setEnabled: setLoadDebugEnabled,
       get enabled() {
@@ -1565,7 +1587,7 @@
     };
 
     debugLoad("debug tools registered", {
-      hint: "Use SereinDebugLoad.inspect(), SereinDebugLoad.dumpLogs(), or SereinDebugLoad.setEnabled(false).",
+      hint: "Use SereinDebugLoad.inspect(), SereinDebugLoad.dumpReport(), SereinDebugLoad.dumpLogs(), or SereinDebugLoad.setEnabled(false).",
     });
   }
 
@@ -1595,12 +1617,26 @@
     return logs;
   }
 
+  function dumpLoadDebugReport() {
+    const report = {
+      generatedAt: new Date().toISOString(),
+      snapshot: createLoadDebugSnapshot(),
+      recentLogs: loadDebugState.history.slice(-120),
+      note: "Safe to share: this report excludes diary bodies, passwords, cookies, and private file paths.",
+    };
+
+    console.log(JSON.stringify(report, null, 2));
+    return report;
+  }
+
   function debugShouldLoad(shouldLoad, reason, details = {}) {
     if (!details.verbose && !shouldLoad) {
       return;
     }
 
-    debugLoad(`shouldLoadEarlierEntries -> ${shouldLoad}`, {
+    const direction = details.direction === "later" ? "Later" : "Earlier";
+
+    debugLoad(`shouldLoad${direction}Entries -> ${shouldLoad}`, {
       reason,
       ...details,
     });
@@ -1631,9 +1667,24 @@
     const visibleEntries = getVisibleEntries();
     const firstVisibleEntry = visibleEntries[0];
     const lastVisibleEntry = visibleEntries[visibleEntries.length - 1];
+    const distanceToBottom = app.scrollHeight - app.scrollTop - app.clientHeight;
+    const topTriggerEntry = visibleEntries[
+      Math.min(Math.max(settings.triggerEntryIndex, 1), visibleEntries.length) - 1
+    ];
 
     return {
+      dataSource: dataAdapter.source,
+      dataStatus: feedState.dataStatus,
+      targetDate: feedState.targetDate,
+      atLatest: feedState.atLatest,
+      hasOlder: feedState.hasOlder,
+      hasNewer: feedState.hasNewer,
+      olderCursorPresent: Boolean(feedState.olderCursor),
+      newerCursorPresent: Boolean(feedState.newerCursor),
       status: loadState.status,
+      errorMessage: loadState.errorMessage,
+      laterStatus: loadState.laterStatus,
+      laterErrorMessage: loadState.laterErrorMessage,
       visibleStartIndex: loadState.visibleStartIndex,
       totalReadingEntries,
       loadedReadingEntries: totalReadingEntries - loadState.visibleStartIndex,
@@ -1643,11 +1694,32 @@
       scrollTop: Math.round(app.scrollTop),
       clientHeight: Math.round(app.clientHeight),
       scrollHeight: Math.round(app.scrollHeight),
+      distanceToBottom: Math.round(distanceToBottom),
+      isScrollable: app.scrollHeight > app.clientHeight,
       triggerEntryIndexSetting: settings.triggerEntryIndex,
+      topTriggerEntryId: topTriggerEntry?.dataset.entryId || null,
+      topTriggerOffsetTop: topTriggerEntry ? Math.round(topTriggerEntry.offsetTop) : null,
+      laterTriggerDistance: settings.laterTriggerDistance,
+      laterTriggerThreshold: Math.round(Math.max(app.clientHeight * 0.25, settings.laterTriggerDistance)),
       pageSize: settings.pageSize,
       pendingPostLayoutCheck: pendingLoadCheckAfterLayoutChange,
       postLayoutCheckRunning: loadCheckAfterLayoutChangeRunning,
     };
+  }
+
+  function shouldLogScrollProbe() {
+    if (!loadDebugState.enabled) {
+      return false;
+    }
+
+    const now = Date.now();
+
+    if (now - loadDebugState.lastScrollProbeAt < 750) {
+      return false;
+    }
+
+    loadDebugState.lastScrollProbeAt = now;
+    return true;
   }
 
   function readLoadDebugPreference() {

@@ -44,6 +44,8 @@ Serein 已从 Portal 原型迁移为独立仓库：
 - 不要在聊天中打印真实日记正文、完整条目内容、密钥、Cookie、session、私有路径细节。
 - 可以打印数量、布尔值、接口状态、错误码、排序检查结果等安全摘要。
 - 后端/前端联调时，可以加入小范围、可开关的 console debug，但不要打印正文或秘密。
+- 阅读流滚动问题可请助手加入“可复制的前端诊断日志”或“临时 debug probes”。
+  浏览器 console 中可运行 `SereinDebugLoad.dumpReport()`，复制输出 JSON 供排查。
 - `tasks.csv` 和 `AGENTS.md` 是本地协作文件，不需要 Git 跟踪。
 - 用户希望每次修改后给出一行 commit 建议，格式：
 
