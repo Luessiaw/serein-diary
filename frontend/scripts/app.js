@@ -271,9 +271,6 @@
     feed.dataset.transition = feedState.transition;
     feed.setAttribute("aria-label", "Diary entries");
     feed.append(createLoadControl());
-    if (feedState.targetDate) {
-      feed.append(createReturnToLatestButton());
-    }
     if (isBackendDataSource() && feedState.dataStatus === "ready" && readingSamples.length === 0) {
       feed.append(createEmptyBackendNotice());
     }
@@ -303,7 +300,16 @@
       feed.append(createLoadLaterControl());
     }
 
-    app.replaceChildren(feed);
+    const layers = [feed];
+
+    if (feedState.targetDate) {
+      layers.push(createReturnToLatestButton());
+    }
+    if (feedState.transition !== "idle") {
+      layers.push(createFeedTransitionOverlay());
+    }
+
+    app.replaceChildren(...layers);
 
     if (scrollToEnd) {
       requestAnimationFrame(() => {
@@ -330,6 +336,19 @@
       void returnToLatestFeed();
     });
     return button;
+  }
+
+  function createFeedTransitionOverlay() {
+    const overlay = document.createElement("div");
+    const status = document.createElement("div");
+
+    overlay.className = "feed-transition-overlay";
+    overlay.setAttribute("aria-live", "polite");
+    overlay.setAttribute("role", "status");
+    status.className = "feed-transition-status";
+    status.textContent = "加载中";
+    overlay.append(status);
+    return overlay;
   }
 
   function createDownArrowIconSvg() {
@@ -1488,9 +1507,32 @@
   }
 
   async function returnToLatestFeed() {
-    renderFeedLoading();
+    calendarJumpSequence += 1;
+    const jumpSequence = calendarJumpSequence;
+    const transitionDelay = wait(settings.jumpTransitionMinWaitMs);
+
+    feedState.transition = "leaving";
+    feedState.jumpStatus = "loading";
+    feedState.jumpErrorMessage = "";
+    renderFeed();
     await initializeLoadedWindow();
+    await transitionDelay;
+    if (jumpSequence !== calendarJumpSequence) {
+      return;
+    }
+    feedState.transition = "entering";
     renderFeed({ focusNewEntry: true, scrollToEnd: true });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        feedState.transition = "idle";
+        const feed = app.querySelector(".diary-feed");
+        if (feed) {
+          feed.dataset.transition = "idle";
+        }
+        const overlay = app.querySelector(".feed-transition-overlay");
+        overlay?.remove();
+      });
+    });
   }
 
   function mergeFeedSamples(samples) {
@@ -2693,6 +2735,8 @@
           if (feed) {
             feed.dataset.transition = "idle";
           }
+          const overlay = app.querySelector(".feed-transition-overlay");
+          overlay?.remove();
         });
       });
     } catch (error) {
