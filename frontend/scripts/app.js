@@ -486,7 +486,10 @@
 
   function apiEntryToSample(entry) {
     return {
-      ui: { mode: "reading" },
+      ui: {
+        mode: "reading",
+        cursor: entry.cursor || null,
+      },
       data: {
         metadata: {
           schema_version: 1,
@@ -1433,15 +1436,12 @@
         !existingIds.has(sample.data.metadata.id)
       ));
 
-      feedState.entries = [...newSamples, ...feedState.entries]
-        .sort((left, right) => (
-          left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
-          || left.data.metadata.id.localeCompare(right.data.metadata.id)
-        ));
+      feedState.entries = sortSamplesChronologically([...newSamples, ...feedState.entries]);
       feedState.dataStatus = "ready";
       feedState.hasOlder = Boolean(page.page?.has_older);
       loadState.status = feedState.hasOlder ? "idle" : "complete";
       feedState.olderCursor = page.page?.older_cursor || null;
+      trimFeedWindowAroundAnchor(anchorBeforeFinalRender);
       renderFeedRestoringAnchor(anchorBeforeFinalRender);
       debugLoad("backend earlier entries loaded", {
         source,
@@ -1507,6 +1507,7 @@
       feedState.atLatest = !feedState.hasNewer;
       loadState.laterStatus = feedState.hasNewer ? "idle" : "complete";
       feedState.newerCursor = page.page?.newer_cursor || null;
+      trimFeedWindowAroundAnchor(anchorBeforeFinalRender);
       renderFeedRestoringAnchor(anchorBeforeFinalRender);
       debugLoad("later entries loaded", {
         source,
@@ -1577,11 +1578,96 @@
     samples.forEach((sample) => {
       byId.set(sample.data.metadata.id, sample);
     });
-    feedState.entries = [...byId.values()].sort((left, right) => (
+    feedState.entries = sortSamplesChronologically([...byId.values()]);
+    feedState.dataStatus = "ready";
+  }
+
+  function trimFeedWindowAroundAnchor(anchor) {
+    if (!shouldTrimFeedWindow(anchor)) {
+      return false;
+    }
+
+    const anchorIndex = findFeedSampleIndexById(anchor.id);
+
+    if (anchorIndex < 0) {
+      debugLoad("window trim skipped", { reason: "anchor-not-found", anchor });
+      return false;
+    }
+
+    const previousEntries = feedState.entries;
+    const maxEntries = settings.windowTrimMaxEntries;
+    const keepBefore = settings.windowTrimKeepBefore;
+    const keepAfter = settings.windowTrimKeepAfter;
+    const startIndex = Math.max(0, anchorIndex - keepBefore);
+    const endIndex = Math.min(previousEntries.length, anchorIndex + keepAfter + 1);
+
+    if (previousEntries.length <= maxEntries || endIndex - startIndex >= previousEntries.length) {
+      return false;
+    }
+
+    const nextEntries = previousEntries.slice(startIndex, endIndex);
+    const trimmedOlder = startIndex > 0;
+    const trimmedNewer = endIndex < previousEntries.length;
+
+    feedState.entries = nextEntries;
+
+    if (trimmedOlder) {
+      const firstKeptCursor = getSampleCursor(nextEntries[0]);
+
+      feedState.hasOlder = true;
+      loadState.status = "idle";
+      if (firstKeptCursor) {
+        feedState.olderCursor = firstKeptCursor;
+      }
+    }
+
+    if (trimmedNewer) {
+      const lastKeptCursor = getSampleCursor(nextEntries.at(-1));
+
+      feedState.hasNewer = true;
+      feedState.atLatest = false;
+      loadState.laterStatus = "idle";
+      if (lastKeptCursor) {
+        feedState.newerCursor = lastKeptCursor;
+      }
+    }
+
+    debugLoad("window trimmed", {
+      anchor,
+      previousEntries: previousEntries.length,
+      nextEntries: nextEntries.length,
+      startIndex,
+      endIndex,
+      trimmedOlder,
+      trimmedNewer,
+      olderCursorPresent: Boolean(feedState.olderCursor),
+      newerCursorPresent: Boolean(feedState.newerCursor),
+    });
+    return true;
+  }
+
+  function shouldTrimFeedWindow(anchor) {
+    return Boolean(
+      isBackendDataSource()
+      && settings.windowTrimEnabled
+      && anchor?.id
+      && feedState.entries.length > settings.windowTrimMaxEntries,
+    );
+  }
+
+  function findFeedSampleIndexById(entryId) {
+    return feedState.entries.findIndex((sample) => sample.data.metadata.id === entryId);
+  }
+
+  function getSampleCursor(sample) {
+    return sample?.ui?.cursor || null;
+  }
+
+  function sortSamplesChronologically(samples) {
+    return samples.sort((left, right) => (
       left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
       || left.data.metadata.id.localeCompare(right.data.metadata.id)
     ));
-    feedState.dataStatus = "ready";
   }
 
   function runPendingLoadCheckAfterLoadSettles() {
@@ -1810,6 +1896,10 @@
       laterTriggerDistance: settings.laterTriggerDistance,
       laterTriggerThreshold: Math.round(Math.max(app.clientHeight * 0.25, settings.laterTriggerDistance)),
       pageSize: settings.pageSize,
+      windowTrimEnabled: settings.windowTrimEnabled,
+      windowTrimMaxEntries: settings.windowTrimMaxEntries,
+      windowTrimKeepBefore: settings.windowTrimKeepBefore,
+      windowTrimKeepAfter: settings.windowTrimKeepAfter,
       pendingPostLayoutCheck: pendingLoadCheckAfterLayoutChange,
       postLayoutCheckRunning: loadCheckAfterLayoutChangeRunning,
     };
@@ -2743,10 +2833,7 @@
       if (jumpSequence !== calendarJumpSequence) {
         return;
       }
-      feedState.entries = samples.sort((left, right) => (
-        left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
-        || left.data.metadata.id.localeCompare(right.data.metadata.id)
-      ));
+      feedState.entries = sortSamplesChronologically(samples);
       feedState.targetDate = targetDate;
       feedState.transition = "entering";
       feedState.jumpStatus = "ready";
@@ -2981,6 +3068,10 @@
       jumpTargetOffset: readNonNegativeIntegerToken(styles, "--jump-target-scroll-offset", 96),
       jumpTransitionMinWaitMs: readNonNegativeIntegerToken(styles, "--jump-transition-min-wait-ms", 280),
       returnButtonTopTolerance: readNonNegativeIntegerToken(styles, "--return-button-top-tolerance", 8),
+      windowTrimEnabled: readBooleanToken(styles, "--window-trim-enabled", false),
+      windowTrimMaxEntries: readIntegerToken(styles, "--window-trim-max-entries", 120),
+      windowTrimKeepBefore: readNonNegativeIntegerToken(styles, "--window-trim-keep-before", 48),
+      windowTrimKeepAfter: readNonNegativeIntegerToken(styles, "--window-trim-keep-after", 48),
     };
   }
 
@@ -2994,6 +3085,19 @@
     const value = Number.parseInt(styles.getPropertyValue(name), 10);
 
     return Number.isFinite(value) && value >= 0 ? value : fallback;
+  }
+
+  function readBooleanToken(styles, name, fallback) {
+    const value = styles.getPropertyValue(name).trim().toLowerCase();
+
+    if (["1", "true", "yes", "on"].includes(value)) {
+      return true;
+    }
+    if (["0", "false", "no", "off"].includes(value)) {
+      return false;
+    }
+
+    return fallback;
   }
 
   function createNewDraft() {

@@ -202,6 +202,18 @@
   --return-button-top-tolerance: 8px;
 
   /*
+   * 阅读窗口裁剪
+   *
+   * `--window-trim-enabled` 默认关闭：真实使用中如果长时间双向浏览导致 DOM 过长，
+   * 可改为 1。开启后，已加载条目数超过阈值时，会围绕当前视线保留前后若干条，
+   * 并用边界游标保证后续仍可继续加载被裁掉的方向。
+   */
+  --window-trim-enabled: 0;
+  --window-trim-max-entries: 120;
+  --window-trim-keep-before: 48;
+  --window-trim-keep-after: 48;
+
+  /*
    * 窄屏布局
    *
    * 标准 CSS 暂不能直接在 @media 条件中使用自定义属性。修改断点时，须将
