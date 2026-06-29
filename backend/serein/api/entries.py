@@ -59,6 +59,7 @@ class PageInfoResponse(BaseModel):
     limit: int
     has_more: bool
     next_before: str | None
+    next_after: str | None = None
 
 
 class EntrySummaryResponse(BaseModel):
@@ -147,6 +148,7 @@ def list_entries(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_LIMIT)] = DEFAULT_PAGE_LIMIT,
     before: str | None = None,
+    after: str | None = None,
     include_deleted: bool = False,
     session: AuthenticatedSession = Depends(require_authenticated_session),
 ) -> EntryListResponse:
@@ -158,6 +160,7 @@ def list_entries(
         page = get_entry_service(request).list_entries(
             limit=limit,
             before=before,
+            after=after,
             include_deleted=include_deleted,
         )
         return entry_page_to_response(page)
@@ -286,6 +289,7 @@ def entry_page_to_response(page: EntryPage) -> EntryListResponse:
             limit=page.limit,
             has_more=page.has_more,
             next_before=page.next_before,
+            next_after=page.next_after,
         ),
     )
 

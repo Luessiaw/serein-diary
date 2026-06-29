@@ -31,11 +31,14 @@ P5 的实现原则：
 ```text
 limit: 1..100，默认读取前端配置值，后端可设安全上限
 before: 可选游标，表示只返回早于该游标的条目
+after: 可选游标，表示只返回晚于该游标的条目
 include_deleted: 默认 false
 ```
 
 首屏请求不传 `before`，后端返回“最近 N 篇”，但 `items` 内部仍按正序排列。继续向上
 加载时，前端使用当前最早条目的 `cursor` 作为 `before`。
+日期窗口模式向下加载更晚内容时，前端使用当前最晚条目的 `cursor` 作为 `after`。
+`before` 与 `after` 不可同时传入。
 
 ### 游标格式
 
@@ -191,7 +194,8 @@ GET /api/v1/entries?limit=30&before=<cursor>&include_deleted=false
   "page": {
     "limit": 30,
     "has_more": false,
-    "next_before": null
+    "next_before": null,
+    "next_after": null
   }
 }
 ```
@@ -201,6 +205,8 @@ GET /api/v1/entries?limit=30&before=<cursor>&include_deleted=false
 - 首次请求返回最近 N 篇，内部正序。
 - `has_more=true` 表示仍可继续请求更早内容。
 - `next_before` 是下一次加载更早内容时要传回的游标；通常等于当前响应最早条目的游标。
+- 使用 `after` 请求更晚内容时，`next_after` 是下一次加载更晚内容时要传回的游标；
+  通常等于当前响应最晚条目的游标。
 - 默认过滤软删除条目。
 
 ### 日期窗口
@@ -371,7 +377,7 @@ adapter 对组件暴露的方法：
 adapter.getSession()
 adapter.login(password)
 adapter.logout()
-adapter.listEntries({ limit, before, includeDeleted })
+adapter.listEntries({ limit, before, after, includeDeleted })
 adapter.getEntryWindow({ date, beforeCount, afterCount, includeDeleted })
 adapter.getEntry(entryId)
 adapter.createEntry({ title, content })

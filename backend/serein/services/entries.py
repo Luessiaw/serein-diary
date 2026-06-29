@@ -72,6 +72,7 @@ class EntryPage:
     limit: int
     has_more: bool
     next_before: str | None
+    next_after: str | None = None
 
 
 @dataclass(frozen=True)
@@ -116,15 +117,39 @@ class EntryService:
         *,
         limit: int = DEFAULT_PAGE_LIMIT,
         before: str | None = None,
+        after: str | None = None,
         include_deleted: bool = False,
     ) -> EntryPage:
         """Return a created_at-ascending page for the diary stream."""
 
         normalized_limit = normalize_limit(limit)
+        if before is not None and after is not None:
+            raise EntryServiceError(
+                "invalid_request",
+                "before and after cannot be used together",
+            )
         try:
             summaries = self._read_indexed_entries(include_deleted=include_deleted)
         except EntryValidationError as error:
             raise map_storage_error(error) from error
+        if after is not None:
+            cursor = decode_entry_cursor(after)
+            page_source = [
+                summary
+                for summary in summaries
+                if entry_sort_key(summary) > (cursor.created_at, cursor.entry_id)
+            ]
+            selected = page_source[:normalized_limit]
+            has_more = len(page_source) > normalized_limit
+            items = tuple(summary_to_item(summary) for summary in selected)
+            return EntryPage(
+                items=items,
+                limit=normalized_limit,
+                has_more=has_more,
+                next_before=None,
+                next_after=items[-1].cursor if has_more and items else None,
+            )
+
         if before is None:
             page_source = summaries
         else:
@@ -145,6 +170,7 @@ class EntryService:
             limit=normalized_limit,
             has_more=has_more,
             next_before=next_before,
+            next_after=None,
         )
 
     def get_entry(self, entry_id: UUID) -> EntryDetailItem:

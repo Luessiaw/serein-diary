@@ -180,11 +180,23 @@
   --load-trigger-entry-index: 1;
   --load-simulated-delay-ms: 1000;
   --load-layout-fill-tolerance: 0;
+  --load-later-trigger-distance: 160px;
   --load-control-gap: var(--space-2);
   --load-control-padding-block: var(--space-2);
   --spinner-size: 0.9rem;
   --new-entry-min-height: 55vh;
   --new-entry-bottom-space: 28vh;
+
+  /*
+   * 日历跳转窗口
+   *
+   * 点击日历日期后，前端会请求目标日期前后的一段日记窗口，而不是从当前
+   * 位置一路分页过去。前三项会被 JavaScript 读取：目标日前后各加载多少篇，
+   * 以及跳转后目标日距离滚动区顶部的偏移。
+   */
+  --jump-before-count: 12;
+  --jump-after-count: 12;
+  --jump-target-scroll-offset: 96px;
 
   /*
    * 窄屏布局

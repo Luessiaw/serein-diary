@@ -61,6 +61,20 @@ class EntryServiceTests(TestCase):
         self.assertFalse(final_page.has_more)
         self.assertIsNone(final_page.next_before)
 
+    def test_lists_later_entries_with_after_cursor(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            created_ids = create_ordered_entries(root, count=5)
+            service = EntryService(root)
+
+            early_page = service.list_entries(limit=2, before=service.list_entries(limit=2).next_before)
+            later_page = service.list_entries(limit=2, after=early_page.items[-1].cursor)
+
+        self.assertEqual([str(item.id) for item in early_page.items], created_ids[1:3])
+        self.assertEqual([str(item.id) for item in later_page.items], created_ids[3:5])
+        self.assertFalse(later_page.has_more)
+        self.assertIsNone(later_page.next_after)
+
     def test_invalid_cursor_and_limit_raise_stable_errors(self) -> None:
         with TemporaryDirectory() as data_dir:
             service = EntryService(Path(data_dir))
@@ -69,9 +83,12 @@ class EntryServiceTests(TestCase):
                 service.list_entries(before="not-a-cursor")
             with self.assertRaises(EntryServiceError) as limit_error:
                 service.list_entries(limit=0)
+            with self.assertRaises(EntryServiceError) as direction_error:
+                service.list_entries(before="abc", after="def")
 
         self.assertEqual(cursor_error.exception.code, "invalid_cursor")
         self.assertEqual(limit_error.exception.code, "invalid_request")
+        self.assertEqual(direction_error.exception.code, "invalid_request")
 
     def test_get_entry_returns_detail_and_cursor(self) -> None:
         with TemporaryDirectory() as data_dir:

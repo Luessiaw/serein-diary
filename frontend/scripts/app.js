@@ -27,11 +27,18 @@
     status: "idle",
     errorMessage: "",
     nextBefore: null,
+    laterStatus: "complete",
+    laterErrorMessage: "",
+    nextAfter: null,
   };
   const feedState = {
+    mode: "latest",
     samples: [],
     dataStatus: "idle",
     dataErrorMessage: "",
+    targetDate: null,
+    jumpStatus: "idle",
+    jumpErrorMessage: "",
   };
   const groupOpenState = new Map();
   const loadDebugState = {
@@ -244,7 +251,11 @@
   }
 
   function renderFeed(options = {}) {
-    const { focusNewEntry = false, scrollToEnd = false } = options;
+    const {
+      focusNewEntry = false,
+      scrollToEnd = false,
+      scrollToDate = null,
+    } = options;
     const feed = document.createElement("section");
     const readingSamples = getReadingSamples();
     const entriesPerDate = countEntriesPerDate(readingSamples);
@@ -254,6 +265,9 @@
     feed.dataset.status = feedState.dataStatus;
     feed.setAttribute("aria-label", "Diary entries");
     feed.append(createLoadControl());
+    if (feedState.mode === "window") {
+      feed.append(createWindowModeNotice());
+    }
     if (isBackendDataSource() && feedState.dataStatus === "ready" && readingSamples.length === 0) {
       feed.append(createEmptyBackendNotice());
     }
@@ -279,6 +293,9 @@
       });
       feed.append(year.details);
     });
+    if (feedState.mode === "window") {
+      feed.append(createLoadLaterControl());
+    }
 
     app.replaceChildren(feed);
 
@@ -288,6 +305,30 @@
         window.setTimeout(scrollToNewEntry, 0);
       });
     }
+    if (scrollToDate) {
+      requestAnimationFrame(() => {
+        scrollToDateEntry(scrollToDate);
+      });
+    }
+  }
+
+  function createWindowModeNotice() {
+    const notice = document.createElement("div");
+    const text = document.createElement("span");
+    const button = document.createElement("button");
+
+    notice.className = "window-mode-notice";
+    text.textContent = feedState.jumpStatus === "loading"
+      ? "正在跳转到所选日期……"
+      : `正在查看 ${feedState.targetDate || "所选日期"} 附近的日记`;
+    button.className = "window-mode-return";
+    button.type = "button";
+    button.textContent = "回到此刻";
+    button.addEventListener("click", () => {
+      void returnToLatestFeed();
+    });
+    notice.append(text, button);
+    return notice;
   }
 
   function createEmptyBackendNotice() {
@@ -323,17 +364,20 @@
   }
 
   function createFeedItems(readingSamples) {
-    return [
-      ...readingSamples.map((sample) => ({
-        type: "entry",
-        createdAt: sample.data.metadata.created_at,
-        sample,
-      })),
-      {
+    const items = readingSamples.map((sample) => ({
+      type: "entry",
+      createdAt: sample.data.metadata.created_at,
+      sample,
+    }));
+
+    if (feedState.mode === "latest") {
+      items.push({
         type: "new",
         createdAt: draftCreatedAt,
-      },
-    ].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+      });
+    }
+
+    return items.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   }
 
   async function initializeLoadedWindow() {
@@ -347,6 +391,13 @@
     loadState.visibleStartIndex = Math.max(0, total - settings.initialCount);
     loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
     loadState.nextBefore = null;
+    loadState.laterStatus = "complete";
+    loadState.laterErrorMessage = "";
+    loadState.nextAfter = null;
+    feedState.mode = "latest";
+    feedState.targetDate = null;
+    feedState.jumpStatus = "idle";
+    feedState.jumpErrorMessage = "";
     feedState.dataStatus = "ready";
     feedState.dataErrorMessage = "";
   }
@@ -358,6 +409,13 @@
     loadState.errorMessage = "";
     loadState.visibleStartIndex = 0;
     loadState.nextBefore = null;
+    loadState.laterStatus = "complete";
+    loadState.laterErrorMessage = "";
+    loadState.nextAfter = null;
+    feedState.mode = "latest";
+    feedState.targetDate = null;
+    feedState.jumpStatus = "idle";
+    feedState.jumpErrorMessage = "";
 
     try {
       const page = await dataAdapter.listEntries({ limit: settings.initialCount });
@@ -899,8 +957,15 @@
         && feedState.dataStatus === "error"
         && feedState.samples.length === 0
       );
+      const isWindowJumpError = (
+        feedState.mode === "window"
+        && feedState.jumpStatus === "error"
+        && Boolean(feedState.targetDate)
+      );
 
-      message.textContent = isInitialBackendError
+      message.textContent = isWindowJumpError
+        ? `无法跳转日期：${loadState.errorMessage}`
+        : isInitialBackendError
         ? `无法读取日记：${loadState.errorMessage}`
         : `拉取信息失败：${loadState.errorMessage}`;
       retry.className = "load-control-retry";
@@ -908,6 +973,10 @@
       retry.textContent = isInitialBackendError ? "重新读取" : "重试";
       retry.addEventListener("click", () => {
         debugLoad("retry clicked");
+        if (isWindowJumpError) {
+          void jumpToCalendarDate(feedState.targetDate);
+          return;
+        }
         if (isBackendDataSource() && feedState.dataStatus === "error") {
           void retryBackendInitialLoad();
           return;
@@ -926,13 +995,53 @@
     return control;
   }
 
-  function handleScroll() {
-    if (!shouldLoadEarlierEntries({ source: "scroll" })) {
-      return;
+  function createLoadLaterControl() {
+    const control = document.createElement("div");
+    const spinner = document.createElement("span");
+    const message = document.createElement("span");
+
+    control.className = `load-control load-later-control is-${loadState.laterStatus}`;
+    control.setAttribute("role", "status");
+    control.setAttribute("aria-live", "polite");
+    spinner.className = "load-control-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    message.className = "load-control-message";
+
+    if (loadState.laterStatus === "loading") {
+      message.textContent = "正在拉取更晚的日记……";
+      control.append(spinner, message);
+    } else if (loadState.laterStatus === "error") {
+      const retry = document.createElement("button");
+
+      message.textContent = `拉取信息失败：${loadState.laterErrorMessage}`;
+      retry.className = "load-control-retry";
+      retry.type = "button";
+      retry.textContent = "重试";
+      retry.addEventListener("click", () => {
+        void loadLaterEntries({ source: "retry" });
+      });
+      control.append(message, retry);
+    } else if (loadState.laterStatus === "complete") {
+      message.textContent = "已加载此窗口之后的日记内容";
+      control.append(message);
+    } else {
+      control.hidden = true;
+      control.append(message);
     }
 
-    debugLoad("scroll triggered earlier-load");
-    void loadEarlierEntries({ source: "scroll" });
+    return control;
+  }
+
+  function handleScroll() {
+    if (shouldLoadEarlierEntries({ source: "scroll" })) {
+      debugLoad("scroll triggered earlier-load");
+      void loadEarlierEntries({ source: "scroll" });
+    }
+
+    if (shouldLoadLaterEntries({ source: "scroll" })) {
+      debugLoad("scroll triggered later-load");
+      void loadLaterEntries({ source: "scroll" });
+    }
   }
 
   function scheduleLoadCheckAfterLayoutChange() {
@@ -1082,6 +1191,43 @@
     return shouldLoad;
   }
 
+  function shouldLoadLaterEntries(options = {}) {
+    const { source = "unknown", verbose = false } = options;
+
+    if (feedState.mode !== "window") {
+      debugShouldLoad(false, "not-window-mode", { source, verbose, direction: "later" });
+      return false;
+    }
+    if (loadState.laterStatus === "loading" || loadState.laterStatus === "complete") {
+      debugShouldLoad(false, "later-blocked-by-status", {
+        source,
+        verbose,
+        direction: "later",
+        laterStatus: loadState.laterStatus,
+      });
+      return false;
+    }
+    if (!loadState.nextAfter) {
+      loadState.laterStatus = "complete";
+      debugShouldLoad(false, "no-later-content", { source, verbose, direction: "later" });
+      renderFeed();
+      return false;
+    }
+
+    const distanceToBottom = app.scrollHeight - app.scrollTop - app.clientHeight;
+    const threshold = Math.max(app.clientHeight * 0.25, settings.laterTriggerDistance);
+    const shouldLoad = distanceToBottom <= threshold;
+
+    debugShouldLoad(shouldLoad, "later-bottom-threshold", {
+      source,
+      verbose,
+      direction: "later",
+      distanceToBottom: Math.round(distanceToBottom),
+      threshold: Math.round(threshold),
+    });
+    return shouldLoad;
+  }
+
   async function loadEarlierEntries(options = {}) {
     const { source = "unknown", attempt = null } = options;
 
@@ -1212,10 +1358,92 @@
     }
   }
 
+  async function loadLaterEntries(options = {}) {
+    const { source = "unknown", attempt = null } = options;
+
+    if (feedState.mode !== "window") {
+      return false;
+    }
+    if (loadState.laterStatus === "loading" || loadState.laterStatus === "complete") {
+      debugLoad("loadLaterEntries blocked", { source, attempt });
+      return false;
+    }
+
+    const anchor = getScrollAnchor();
+
+    loadState.laterStatus = "loading";
+    loadState.laterErrorMessage = "";
+    renderFeedRestoringAnchor(anchor);
+
+    try {
+      if (!loadState.nextAfter) {
+        loadState.laterStatus = "complete";
+        renderFeedRestoringAnchor(anchor);
+        return false;
+      }
+
+      const page = await dataAdapter.listEntries({
+        limit: settings.pageSize,
+        after: loadState.nextAfter,
+      });
+      const anchorBeforeFinalRender = getScrollAnchor() || anchor;
+      const laterSamples = await loadEntryDetailsForSummaries(page.items || []);
+      const previousLoadedEntries = feedState.samples.length;
+
+      mergeFeedSamples(laterSamples);
+      loadState.laterStatus = page.page?.has_more ? "idle" : "complete";
+      loadState.nextAfter = page.page?.next_after || null;
+      renderFeedRestoringAnchor(anchorBeforeFinalRender);
+      debugLoad("later entries loaded", {
+        source,
+        attempt,
+        previousLoadedEntries,
+        nextLoadedEntries: feedState.samples.length,
+        loadedThisPage: laterSamples.length,
+        hasMore: page.page?.has_more,
+        nextAfter: loadState.nextAfter,
+      });
+      return laterSamples.length > 0 || Boolean(page.page?.has_more);
+    } catch (error) {
+      const anchorBeforeErrorRender = getScrollAnchor() || anchor;
+
+      loadState.laterStatus = "error";
+      loadState.laterErrorMessage = createDataErrorMessage(error);
+      renderFeedRestoringAnchor(anchorBeforeErrorRender);
+      debugLoad("later load failed", {
+        source,
+        attempt,
+        errorMessage: loadState.laterErrorMessage,
+      });
+      return false;
+    }
+  }
+
   async function retryBackendInitialLoad() {
     renderFeedLoading();
     await initializeBackendLoadedWindow();
     renderFeed({ focusNewEntry: true, scrollToEnd: true });
+  }
+
+  async function returnToLatestFeed() {
+    renderFeedLoading();
+    await initializeLoadedWindow();
+    renderFeed({ focusNewEntry: true, scrollToEnd: true });
+  }
+
+  function mergeFeedSamples(samples) {
+    const byId = new Map(
+      feedState.samples.map((sample) => [sample.data.metadata.id, sample]),
+    );
+
+    samples.forEach((sample) => {
+      byId.set(sample.data.metadata.id, sample);
+    });
+    feedState.samples = [...byId.values()].sort((left, right) => (
+      left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
+      || left.data.metadata.id.localeCompare(right.data.metadata.id)
+    ));
+    feedState.dataStatus = "ready";
   }
 
   function runPendingLoadCheckAfterLoadSettles() {
@@ -1285,6 +1513,16 @@
     }
 
     setScrollTopInstant(newEntry.offsetTop);
+  }
+
+  function scrollToDateEntry(date) {
+    const target = app.querySelector(`[data-entry-date="${date}"]`);
+
+    if (!target) {
+      return;
+    }
+
+    setScrollTopInstant(Math.max(0, target.offsetTop - settings.jumpTargetOffset));
   }
 
   function setScrollTopInstant(top) {
@@ -1905,9 +2143,9 @@
       year,
       month,
       dateState: createCalendarDateStateSnapshot(),
-      markedDatesInMonth: [...diaryDates].filter((date) => (
+      markedCountInMonth: [...diaryDates].filter((date) => (
         date.startsWith(`${year}-${String(month).padStart(2, "0")}-`)
-      )),
+      )).length,
     });
     yearLabel.textContent = `${year} 年`;
     monthLabel.textContent = `${String(month).padStart(2, "0")} 月`;
@@ -2016,8 +2254,6 @@
       debugCalendar("entry dates loaded", {
         rawCount: Array.isArray(result?.dates) ? result.dates.length : null,
         normalizedCount: dates.length,
-        first: dates[0] || null,
-        last: dates.at(-1) || null,
       });
       sidebarCalendarDateState.status = "ready";
       sidebarCalendarDateState.dates = dates;
@@ -2215,8 +2451,6 @@
     return {
       status: sidebarCalendarDateState.status,
       count: sidebarCalendarDateState.dates.length,
-      first: sidebarCalendarDateState.dates[0] || null,
-      last: sidebarCalendarDateState.dates.at(-1) || null,
       errorMessage: sidebarCalendarDateState.errorMessage || "",
     };
   }
@@ -2282,7 +2516,75 @@
   }
 
   function handleCalendarDateJump(date) {
-    console.info("[Serein calendar] jump placeholder", { date });
+    void jumpToCalendarDate(date);
+  }
+
+  async function jumpToCalendarDate(date) {
+    const targetDate = String(date || "").slice(0, 10);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/u.test(targetDate)) {
+      return;
+    }
+
+    feedState.mode = "window";
+    feedState.targetDate = targetDate;
+    feedState.jumpStatus = "loading";
+    feedState.jumpErrorMessage = "";
+    feedState.dataStatus = "loading";
+    feedState.dataErrorMessage = "";
+    loadState.status = "loading";
+    loadState.errorMessage = "";
+    loadState.laterStatus = "complete";
+    loadState.laterErrorMessage = "";
+    loadState.nextBefore = null;
+    loadState.nextAfter = null;
+    setSidebarOpen(false);
+    renderFeed();
+
+    try {
+      const windowResult = await dataAdapter.getEntryWindow({
+        date: targetDate,
+        beforeCount: settings.jumpBeforeCount,
+        afterCount: settings.jumpAfterCount,
+      });
+      const samples = await loadEntryDetailsForSummaries(windowResult.items || []);
+      const windowInfo = windowResult.window || {};
+
+      feedState.samples = samples.sort((left, right) => (
+        left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
+        || left.data.metadata.id.localeCompare(right.data.metadata.id)
+      ));
+      feedState.mode = "window";
+      feedState.targetDate = targetDate;
+      feedState.jumpStatus = "ready";
+      feedState.jumpErrorMessage = "";
+      feedState.dataStatus = "ready";
+      loadState.visibleStartIndex = 0;
+      loadState.status = windowInfo.has_earlier ? "idle" : "complete";
+      loadState.errorMessage = "";
+      loadState.nextBefore = windowInfo.earlier_before || null;
+      loadState.laterStatus = windowInfo.has_later ? "idle" : "complete";
+      loadState.laterErrorMessage = "";
+      loadState.nextAfter = windowInfo.later_after || null;
+      renderFeed({ scrollToDate: targetDate });
+    } catch (error) {
+      feedState.mode = "window";
+      feedState.targetDate = targetDate;
+      feedState.jumpStatus = "error";
+      feedState.jumpErrorMessage = createDataErrorMessage(error);
+      feedState.dataStatus = "error";
+      feedState.dataErrorMessage = feedState.jumpErrorMessage;
+      feedState.samples = [];
+      loadState.status = "error";
+      loadState.errorMessage = feedState.jumpErrorMessage;
+      loadState.laterStatus = "complete";
+      loadState.nextBefore = null;
+      loadState.nextAfter = null;
+      renderFeed();
+      console.warn("[Serein calendar] Date jump failed.", {
+        message: feedState.jumpErrorMessage,
+      });
+    }
   }
 
   function initializePageNameState() {
@@ -2458,6 +2760,10 @@
       triggerEntryIndex: readIntegerToken(styles, "--load-trigger-entry-index", 5),
       simulatedDelayMs: readIntegerToken(styles, "--load-simulated-delay-ms", 1000),
       layoutFillTolerance: readNonNegativeIntegerToken(styles, "--load-layout-fill-tolerance", 0),
+      laterTriggerDistance: readNonNegativeIntegerToken(styles, "--load-later-trigger-distance", 160),
+      jumpBeforeCount: readNonNegativeIntegerToken(styles, "--jump-before-count", 12),
+      jumpAfterCount: readNonNegativeIntegerToken(styles, "--jump-after-count", 12),
+      jumpTargetOffset: readNonNegativeIntegerToken(styles, "--jump-target-scroll-offset", 96),
     };
   }
 
@@ -2575,6 +2881,7 @@
 
     entry.className = "diary-entry";
     entry.dataset.entryId = metadata.id;
+    entry.dataset.entryDate = calendarDate;
     entry.dataset.entryMode = ui.mode;
     body.className = "entry-body";
     date.className = "entry-date";

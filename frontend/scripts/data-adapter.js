@@ -37,9 +37,19 @@
         const params = createSearchParams({
           limit: options.limit,
           before: options.before,
+          after: options.after,
           include_deleted: options.includeDeleted,
         });
         return apiClient.requestJson(`/entries${params}`);
+      },
+      getEntryWindow(options = {}) {
+        const params = createSearchParams({
+          date: options.date,
+          before_count: options.beforeCount,
+          after_count: options.afterCount,
+          include_deleted: options.includeDeleted,
+        });
+        return apiClient.requestJson(`/entries/window${params}`);
       },
       getEntry(entryId) {
         return apiClient.requestJson(`/entries/${encodeURIComponent(entryId)}`);
@@ -118,17 +128,79 @@
         const summaries = getMockEntryDetails()
           .filter((entry) => includeDeleted || !entry.deleted)
           .map(detailToSummary);
+        if (options.before && options.after) {
+          throw createMockError(
+            "invalid_request",
+            "before and after cannot be used together",
+            400,
+          );
+        }
         const pageSource = options.before
           ? summaries.filter((entry) => compareEntryToCursor(entry, options.before) < 0)
-          : summaries;
-        const items = pageSource.slice(-limit);
+          : options.after
+            ? summaries.filter((entry) => compareEntryToCursor(entry, options.after) > 0)
+            : summaries;
+        const items = options.after ? pageSource.slice(0, limit) : pageSource.slice(-limit);
+        const hasMore = pageSource.length > limit;
 
         return {
           items,
           page: {
             limit,
-            has_more: pageSource.length > limit,
-            next_before: pageSource.length > limit && items.length ? items[0].cursor : null,
+            has_more: hasMore,
+            next_before: !options.after && hasMore && items.length ? items[0].cursor : null,
+            next_after: options.after && hasMore && items.length ? items.at(-1).cursor : null,
+          },
+        };
+      },
+      async getEntryWindow(options = {}) {
+        const beforeCount = normalizeWindowCount(options.beforeCount, "before_count");
+        const afterCount = normalizeWindowCount(options.afterCount, "after_count");
+        const date = String(options.date || "").slice(0, 10);
+        const includeDeleted = Boolean(options.includeDeleted);
+        const summaries = getMockEntryDetails()
+          .filter((entry) => includeDeleted || !entry.deleted)
+          .map(detailToSummary);
+        const targetIndices = summaries.reduce((indices, entry, index) => {
+          if (entry.created_at.slice(0, 10) === date) {
+            indices.push(index);
+          }
+          return indices;
+        }, []);
+
+        if (targetIndices.length === 0) {
+          return {
+            items: [],
+            window: {
+              target_date: date,
+              before_count: beforeCount,
+              after_count: afterCount,
+              target_count: 0,
+              has_earlier: false,
+              has_later: false,
+              earlier_before: null,
+              later_after: null,
+            },
+          };
+        }
+
+        const startIndex = Math.max(0, targetIndices[0] - beforeCount);
+        const endIndex = Math.min(summaries.length, targetIndices.at(-1) + afterCount + 1);
+        const items = summaries.slice(startIndex, endIndex);
+        const hasEarlier = startIndex > 0;
+        const hasLater = endIndex < summaries.length;
+
+        return {
+          items,
+          window: {
+            target_date: date,
+            before_count: beforeCount,
+            after_count: afterCount,
+            target_count: targetIndices.length,
+            has_earlier: hasEarlier,
+            has_later: hasLater,
+            earlier_before: hasEarlier && items.length ? items[0].cursor : null,
+            later_after: hasLater && items.length ? items.at(-1).cursor : null,
           },
         };
       },
@@ -345,6 +417,14 @@
     const value = Number(limit || DEFAULT_PAGE_LIMIT);
     if (!Number.isFinite(value) || value < 1) {
       throw createMockError("invalid_request", "limit must be at least 1", 400);
+    }
+    return Math.min(Math.floor(value), 100);
+  }
+
+  function normalizeWindowCount(count, fieldName) {
+    const value = Number(count ?? 12);
+    if (!Number.isFinite(value) || value < 0) {
+      throw createMockError("invalid_request", `${fieldName} must be at least 0`, 400);
     }
     return Math.min(Math.floor(value), 100);
   }

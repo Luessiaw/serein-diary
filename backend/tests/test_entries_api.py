@@ -164,6 +164,46 @@ class EntriesApiTests(TestCase):
         self.assertEqual([str(item.id) for item in second_page.items], [first_id])
         self.assertFalse(second_page.page.has_more)
 
+    def test_list_entries_supports_after_cursor_for_later_pages(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            request = self.make_request(root)
+            ids = []
+            for index in range(1, 6):
+                entry_id = f"{index:08d}-{index:04d}-4{index:03d}-8{index:03d}-{index:012d}"
+                ids.append(entry_id)
+                create_entry_fixture(
+                    root / "entries",
+                    name=f"2026062309{index:02d}-{entry_id}",
+                    entry_id=entry_id,
+                    created_at=f"2026-06-23T09:{index:02d}:00+08:00",
+                )
+
+            latest_page = list_entries(
+                Response(),
+                request,
+                limit=2,
+                session=self.make_session(),
+            )
+            earlier_page = list_entries(
+                Response(),
+                request,
+                limit=2,
+                before=latest_page.page.next_before,
+                session=self.make_session(),
+            )
+            later_page = list_entries(
+                Response(),
+                request,
+                limit=2,
+                after=earlier_page.items[-1].cursor,
+                session=self.make_session(),
+            )
+
+        self.assertEqual([str(item.id) for item in later_page.items], ids[3:5])
+        self.assertFalse(later_page.page.has_more)
+        self.assertIsNone(later_page.page.next_after)
+
     def test_list_entry_dates_returns_calendar_counts(self) -> None:
         with TemporaryDirectory() as data_dir:
             root = Path(data_dir)
