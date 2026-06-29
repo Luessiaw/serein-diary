@@ -150,8 +150,6 @@ def list_entries(
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_LIMIT)] = DEFAULT_PAGE_LIMIT,
     older_than: str | None = None,
     newer_than: str | None = None,
-    before: Annotated[str | None, Query(include_in_schema=False)] = None,
-    after: Annotated[str | None, Query(include_in_schema=False)] = None,
     include_deleted: bool = False,
     session: AuthenticatedSession = Depends(require_authenticated_session),
 ) -> EntryListResponse:
@@ -162,8 +160,8 @@ def list_entries(
     try:
         page = get_entry_service(request).list_entries(
             limit=limit,
-            older_than=resolve_direction_cursor("older_than", older_than, "before", before),
-            newer_than=resolve_direction_cursor("newer_than", newer_than, "after", after),
+            older_than=older_than,
+            newer_than=newer_than,
             include_deleted=include_deleted,
         )
         return entry_page_to_response(page)
@@ -178,8 +176,6 @@ def get_entry_window(
     target_date: Annotated[date, Query(alias="date")],
     older_count: Annotated[int | None, Query(ge=0, le=MAX_PAGE_LIMIT)] = None,
     newer_count: Annotated[int | None, Query(ge=0, le=MAX_PAGE_LIMIT)] = None,
-    before_count: Annotated[int | None, Query(ge=0, le=MAX_PAGE_LIMIT, include_in_schema=False)] = None,
-    after_count: Annotated[int | None, Query(ge=0, le=MAX_PAGE_LIMIT, include_in_schema=False)] = None,
     include_deleted: bool = False,
     session: AuthenticatedSession = Depends(require_authenticated_session),
 ) -> EntryWindowResponse:
@@ -191,8 +187,8 @@ def get_entry_window(
         return entry_window_to_response(
             get_entry_service(request).get_entry_window(
                 target_date=target_date,
-                older_count=resolve_window_count("older_count", older_count, "before_count", before_count),
-                newer_count=resolve_window_count("newer_count", newer_count, "after_count", after_count),
+                older_count=older_count if older_count is not None else 12,
+                newer_count=newer_count if newer_count is not None else 12,
                 include_deleted=include_deleted,
             )
         )
@@ -380,46 +376,6 @@ def normalize_create_content(content: str) -> str:
             EntryServiceError("invalid_request", "content must not be blank")
         )
     return content
-
-
-def resolve_direction_cursor(
-    current_name: str,
-    current_value: str | None,
-    legacy_name: str,
-    legacy_value: str | None,
-) -> str | None:
-    """Resolve a cursor while temporarily accepting the previous query name."""
-
-    if current_value is not None and legacy_value is not None:
-        raise service_http_error(
-            EntryServiceError(
-                "invalid_request",
-                f"{current_name} and {legacy_name} cannot be used together",
-            )
-        )
-    return current_value if current_value is not None else legacy_value
-
-
-def resolve_window_count(
-    current_name: str,
-    current_value: int | None,
-    legacy_name: str,
-    legacy_value: int | None,
-) -> int:
-    """Resolve a window count while temporarily accepting the previous query name."""
-
-    if current_value is not None and legacy_value is not None:
-        raise service_http_error(
-            EntryServiceError(
-                "invalid_request",
-                f"{current_name} and {legacy_name} cannot be used together",
-            )
-        )
-    if current_value is not None:
-        return current_value
-    if legacy_value is not None:
-        return legacy_value
-    return 12
 
 
 def get_entry_service(request: Request) -> EntryService:
