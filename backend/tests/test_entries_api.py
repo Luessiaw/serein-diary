@@ -66,7 +66,7 @@ class EntriesApiTests(TestCase):
             list_response = Response()
             empty_page = list_entries(list_response, request, session=session)
             self.assertEqual(empty_page.items, [])
-            self.assertEqual(empty_page.page.has_more, False)
+            self.assertEqual(empty_page.page.has_older, False)
             self.assertEqual(list_response.headers["cache-control"], NO_STORE_HEADER)
 
             create_response = Response()
@@ -91,8 +91,8 @@ class EntriesApiTests(TestCase):
             self.assertEqual(len(page.items), 1)
             self.assertEqual(page.items[0].id, created.id)
             self.assertEqual(page.items[0].content_excerpt, "这是一条 API 测试日记。")
-            self.assertFalse(page.page.has_more)
-            self.assertIsNone(page.page.next_before)
+            self.assertFalse(page.page.has_older)
+            self.assertIsNone(page.page.older_cursor)
 
             get_response = Response()
             detail = get_entry(created.id, get_response, request, session)
@@ -154,17 +154,17 @@ class EntriesApiTests(TestCase):
                 Response(),
                 request,
                 limit=2,
-                before=first_page.page.next_before,
+                older_than=first_page.page.older_cursor,
                 session=self.make_session(),
             )
 
         self.assertEqual([str(item.id) for item in first_page.items], [second_id, third_id])
-        self.assertTrue(first_page.page.has_more)
-        self.assertIsNotNone(first_page.page.next_before)
+        self.assertTrue(first_page.page.has_older)
+        self.assertIsNotNone(first_page.page.older_cursor)
         self.assertEqual([str(item.id) for item in second_page.items], [first_id])
-        self.assertFalse(second_page.page.has_more)
+        self.assertFalse(second_page.page.has_older)
 
-    def test_list_entries_supports_after_cursor_for_later_pages(self) -> None:
+    def test_list_entries_supports_newer_cursor_for_later_pages(self) -> None:
         with TemporaryDirectory() as data_dir:
             root = Path(data_dir)
             request = self.make_request(root)
@@ -189,20 +189,20 @@ class EntriesApiTests(TestCase):
                 Response(),
                 request,
                 limit=2,
-                before=latest_page.page.next_before,
+                older_than=latest_page.page.older_cursor,
                 session=self.make_session(),
             )
             later_page = list_entries(
                 Response(),
                 request,
                 limit=2,
-                after=earlier_page.items[-1].cursor,
+                newer_than=earlier_page.items[-1].cursor,
                 session=self.make_session(),
             )
 
         self.assertEqual([str(item.id) for item in later_page.items], ids[3:5])
-        self.assertFalse(later_page.page.has_more)
-        self.assertIsNone(later_page.page.next_after)
+        self.assertFalse(later_page.page.has_newer)
+        self.assertIsNone(later_page.page.newer_cursor)
 
     def test_list_entry_dates_returns_calendar_counts(self) -> None:
         with TemporaryDirectory() as data_dir:
@@ -276,21 +276,21 @@ class EntriesApiTests(TestCase):
                 response,
                 request,
                 target_date=date.fromisoformat("2026-06-03"),
-                before_count=1,
-                after_count=2,
+                older_count=1,
+                newer_count=2,
                 session=self.make_session(),
             )
 
         self.assertEqual(response.headers["cache-control"], NO_STORE_HEADER)
         self.assertEqual([str(item.id) for item in window.items], ids[1:5])
         self.assertEqual(window.window.target_date.isoformat(), "2026-06-03")
-        self.assertEqual(window.window.before_count, 1)
-        self.assertEqual(window.window.after_count, 2)
+        self.assertEqual(window.window.older_count, 1)
+        self.assertEqual(window.window.newer_count, 2)
         self.assertEqual(window.window.target_count, 1)
-        self.assertTrue(window.window.has_earlier)
-        self.assertTrue(window.window.has_later)
-        self.assertTrue(window.window.earlier_before)
-        self.assertTrue(window.window.later_after)
+        self.assertTrue(window.window.has_older)
+        self.assertTrue(window.window.has_newer)
+        self.assertTrue(window.window.older_cursor)
+        self.assertTrue(window.window.newer_cursor)
 
     def test_get_entry_window_returns_empty_stable_response(self) -> None:
         with TemporaryDirectory() as data_dir:
@@ -305,10 +305,10 @@ class EntriesApiTests(TestCase):
 
         self.assertEqual(window.items, [])
         self.assertEqual(window.window.target_count, 0)
-        self.assertFalse(window.window.has_earlier)
-        self.assertFalse(window.window.has_later)
-        self.assertIsNone(window.window.earlier_before)
-        self.assertIsNone(window.window.later_after)
+        self.assertFalse(window.window.has_older)
+        self.assertFalse(window.window.has_newer)
+        self.assertIsNone(window.window.older_cursor)
+        self.assertIsNone(window.window.newer_cursor)
 
     def test_list_entry_dates_rejects_inverted_range(self) -> None:
         with TemporaryDirectory() as data_dir:
@@ -351,7 +351,7 @@ class EntriesApiTests(TestCase):
                 list_entries(
                     Response(),
                     request,
-                    before="not-a-cursor",
+                    older_than="not-a-cursor",
                     session=self.make_session(),
                 )
 

@@ -57,9 +57,10 @@ class PageInfoResponse(BaseModel):
     """Pagination metadata for the continuous diary stream."""
 
     limit: int
-    has_more: bool
-    next_before: str | None
-    next_after: str | None = None
+    has_older: bool
+    has_newer: bool
+    older_cursor: str | None
+    newer_cursor: str | None
 
 
 class EntrySummaryResponse(BaseModel):
@@ -126,13 +127,13 @@ class EntryWindowInfoResponse(BaseModel):
     """Date-window metadata for calendar jump navigation."""
 
     target_date: date
-    before_count: int
-    after_count: int
+    older_count: int
+    newer_count: int
     target_count: int
-    has_earlier: bool
-    has_later: bool
-    earlier_before: str | None
-    later_after: str | None
+    has_older: bool
+    has_newer: bool
+    older_cursor: str | None
+    newer_cursor: str | None
 
 
 class EntryWindowResponse(BaseModel):
@@ -147,8 +148,10 @@ def list_entries(
     response: Response,
     request: Request,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_LIMIT)] = DEFAULT_PAGE_LIMIT,
-    before: str | None = None,
-    after: str | None = None,
+    older_than: str | None = None,
+    newer_than: str | None = None,
+    before: Annotated[str | None, Query(include_in_schema=False)] = None,
+    after: Annotated[str | None, Query(include_in_schema=False)] = None,
     include_deleted: bool = False,
     session: AuthenticatedSession = Depends(require_authenticated_session),
 ) -> EntryListResponse:
@@ -159,8 +162,8 @@ def list_entries(
     try:
         page = get_entry_service(request).list_entries(
             limit=limit,
-            before=before,
-            after=after,
+            older_than=resolve_direction_cursor("older_than", older_than, "before", before),
+            newer_than=resolve_direction_cursor("newer_than", newer_than, "after", after),
             include_deleted=include_deleted,
         )
         return entry_page_to_response(page)
@@ -173,8 +176,10 @@ def get_entry_window(
     response: Response,
     request: Request,
     target_date: Annotated[date, Query(alias="date")],
-    before_count: Annotated[int, Query(ge=0, le=MAX_PAGE_LIMIT)] = 12,
-    after_count: Annotated[int, Query(ge=0, le=MAX_PAGE_LIMIT)] = 12,
+    older_count: Annotated[int | None, Query(ge=0, le=MAX_PAGE_LIMIT)] = None,
+    newer_count: Annotated[int | None, Query(ge=0, le=MAX_PAGE_LIMIT)] = None,
+    before_count: Annotated[int | None, Query(ge=0, le=MAX_PAGE_LIMIT, include_in_schema=False)] = None,
+    after_count: Annotated[int | None, Query(ge=0, le=MAX_PAGE_LIMIT, include_in_schema=False)] = None,
     include_deleted: bool = False,
     session: AuthenticatedSession = Depends(require_authenticated_session),
 ) -> EntryWindowResponse:
@@ -186,8 +191,8 @@ def get_entry_window(
         return entry_window_to_response(
             get_entry_service(request).get_entry_window(
                 target_date=target_date,
-                before_count=before_count,
-                after_count=after_count,
+                older_count=resolve_window_count("older_count", older_count, "before_count", before_count),
+                newer_count=resolve_window_count("newer_count", newer_count, "after_count", after_count),
                 include_deleted=include_deleted,
             )
         )
@@ -287,9 +292,10 @@ def entry_page_to_response(page: EntryPage) -> EntryListResponse:
         items=[entry_summary_to_response(item) for item in page.items],
         page=PageInfoResponse(
             limit=page.limit,
-            has_more=page.has_more,
-            next_before=page.next_before,
-            next_after=page.next_after,
+            has_older=page.has_older,
+            has_newer=page.has_newer,
+            older_cursor=page.older_cursor,
+            newer_cursor=page.newer_cursor,
         ),
     )
 
@@ -308,13 +314,13 @@ def entry_window_to_response(window: EntryWindow) -> EntryWindowResponse:
         items=[entry_summary_to_response(item) for item in window.items],
         window=EntryWindowInfoResponse(
             target_date=window.target_date,
-            before_count=window.before_count,
-            after_count=window.after_count,
+            older_count=window.older_count,
+            newer_count=window.newer_count,
             target_count=window.target_count,
-            has_earlier=window.has_earlier,
-            has_later=window.has_later,
-            earlier_before=window.earlier_before,
-            later_after=window.later_after,
+            has_older=window.has_older,
+            has_newer=window.has_newer,
+            older_cursor=window.older_cursor,
+            newer_cursor=window.newer_cursor,
         ),
     )
 
@@ -374,6 +380,46 @@ def normalize_create_content(content: str) -> str:
             EntryServiceError("invalid_request", "content must not be blank")
         )
     return content
+
+
+def resolve_direction_cursor(
+    current_name: str,
+    current_value: str | None,
+    legacy_name: str,
+    legacy_value: str | None,
+) -> str | None:
+    """Resolve a cursor while temporarily accepting the previous query name."""
+
+    if current_value is not None and legacy_value is not None:
+        raise service_http_error(
+            EntryServiceError(
+                "invalid_request",
+                f"{current_name} and {legacy_name} cannot be used together",
+            )
+        )
+    return current_value if current_value is not None else legacy_value
+
+
+def resolve_window_count(
+    current_name: str,
+    current_value: int | None,
+    legacy_name: str,
+    legacy_value: int | None,
+) -> int:
+    """Resolve a window count while temporarily accepting the previous query name."""
+
+    if current_value is not None and legacy_value is not None:
+        raise service_http_error(
+            EntryServiceError(
+                "invalid_request",
+                f"{current_name} and {legacy_name} cannot be used together",
+            )
+        )
+    if current_value is not None:
+        return current_value
+    if legacy_value is not None:
+        return legacy_value
+    return 12
 
 
 def get_entry_service(request: Request) -> EntryService:

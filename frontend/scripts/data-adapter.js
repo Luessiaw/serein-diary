@@ -36,8 +36,8 @@
       listEntries(options = {}) {
         const params = createSearchParams({
           limit: options.limit,
-          before: options.before,
-          after: options.after,
+          older_than: options.olderThan,
+          newer_than: options.newerThan,
           include_deleted: options.includeDeleted,
         });
         return apiClient.requestJson(`/entries${params}`);
@@ -45,8 +45,8 @@
       getEntryWindow(options = {}) {
         const params = createSearchParams({
           date: options.date,
-          before_count: options.beforeCount,
-          after_count: options.afterCount,
+          older_count: options.olderCount,
+          newer_count: options.newerCount,
           include_deleted: options.includeDeleted,
         });
         return apiClient.requestJson(`/entries/window${params}`);
@@ -128,34 +128,35 @@
         const summaries = getMockEntryDetails()
           .filter((entry) => includeDeleted || !entry.deleted)
           .map(detailToSummary);
-        if (options.before && options.after) {
+        if (options.olderThan && options.newerThan) {
           throw createMockError(
             "invalid_request",
-            "before and after cannot be used together",
+            "olderThan and newerThan cannot be used together",
             400,
           );
         }
-        const pageSource = options.before
-          ? summaries.filter((entry) => compareEntryToCursor(entry, options.before) < 0)
-          : options.after
-            ? summaries.filter((entry) => compareEntryToCursor(entry, options.after) > 0)
+        const pageSource = options.olderThan
+          ? summaries.filter((entry) => compareEntryToCursor(entry, options.olderThan) < 0)
+          : options.newerThan
+            ? summaries.filter((entry) => compareEntryToCursor(entry, options.newerThan) > 0)
             : summaries;
-        const items = options.after ? pageSource.slice(0, limit) : pageSource.slice(-limit);
+        const items = options.newerThan ? pageSource.slice(0, limit) : pageSource.slice(-limit);
         const hasMore = pageSource.length > limit;
 
         return {
           items,
           page: {
             limit,
-            has_more: hasMore,
-            next_before: !options.after && hasMore && items.length ? items[0].cursor : null,
-            next_after: options.after && hasMore && items.length ? items.at(-1).cursor : null,
+            has_older: options.newerThan ? Boolean(items.length) : hasMore,
+            has_newer: options.olderThan ? Boolean(items.length) : hasMore && Boolean(options.newerThan),
+            older_cursor: !options.newerThan && hasMore && items.length ? items[0].cursor : null,
+            newer_cursor: options.newerThan && hasMore && items.length ? items.at(-1).cursor : null,
           },
         };
       },
       async getEntryWindow(options = {}) {
-        const beforeCount = normalizeWindowCount(options.beforeCount, "before_count");
-        const afterCount = normalizeWindowCount(options.afterCount, "after_count");
+        const olderCount = normalizeWindowCount(options.olderCount, "older_count");
+        const newerCount = normalizeWindowCount(options.newerCount, "newer_count");
         const date = String(options.date || "").slice(0, 10);
         const includeDeleted = Boolean(options.includeDeleted);
         const summaries = getMockEntryDetails()
@@ -173,34 +174,34 @@
             items: [],
             window: {
               target_date: date,
-              before_count: beforeCount,
-              after_count: afterCount,
+              older_count: olderCount,
+              newer_count: newerCount,
               target_count: 0,
-              has_earlier: false,
-              has_later: false,
-              earlier_before: null,
-              later_after: null,
+              has_older: false,
+              has_newer: false,
+              older_cursor: null,
+              newer_cursor: null,
             },
           };
         }
 
-        const startIndex = Math.max(0, targetIndices[0] - beforeCount);
-        const endIndex = Math.min(summaries.length, targetIndices.at(-1) + afterCount + 1);
+        const startIndex = Math.max(0, targetIndices[0] - olderCount);
+        const endIndex = Math.min(summaries.length, targetIndices.at(-1) + newerCount + 1);
         const items = summaries.slice(startIndex, endIndex);
-        const hasEarlier = startIndex > 0;
-        const hasLater = endIndex < summaries.length;
+        const hasOlder = startIndex > 0;
+        const hasNewer = endIndex < summaries.length;
 
         return {
           items,
           window: {
             target_date: date,
-            before_count: beforeCount,
-            after_count: afterCount,
+            older_count: olderCount,
+            newer_count: newerCount,
             target_count: targetIndices.length,
-            has_earlier: hasEarlier,
-            has_later: hasLater,
-            earlier_before: hasEarlier && items.length ? items[0].cursor : null,
-            later_after: hasLater && items.length ? items.at(-1).cursor : null,
+            has_older: hasOlder,
+            has_newer: hasNewer,
+            older_cursor: hasOlder && items.length ? items[0].cursor : null,
+            newer_cursor: hasNewer && items.length ? items.at(-1).cursor : null,
           },
         };
       },

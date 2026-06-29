@@ -70,9 +70,10 @@ class EntryPage:
 
     items: tuple[EntrySummaryItem, ...]
     limit: int
-    has_more: bool
-    next_before: str | None
-    next_after: str | None = None
+    has_older: bool
+    has_newer: bool
+    older_cursor: str | None
+    newer_cursor: str | None
 
 
 @dataclass(frozen=True)
@@ -81,13 +82,13 @@ class EntryWindow:
 
     target_date: date
     items: tuple[EntrySummaryItem, ...]
-    before_count: int
-    after_count: int
+    older_count: int
+    newer_count: int
     target_count: int
-    has_earlier: bool
-    has_later: bool
-    earlier_before: str | None
-    later_after: str | None
+    has_older: bool
+    has_newer: bool
+    older_cursor: str | None
+    newer_cursor: str | None
 
 
 @dataclass(frozen=True)
@@ -116,44 +117,45 @@ class EntryService:
         self,
         *,
         limit: int = DEFAULT_PAGE_LIMIT,
-        before: str | None = None,
-        after: str | None = None,
+        older_than: str | None = None,
+        newer_than: str | None = None,
         include_deleted: bool = False,
     ) -> EntryPage:
         """Return a created_at-ascending page for the diary stream."""
 
         normalized_limit = normalize_limit(limit)
-        if before is not None and after is not None:
+        if older_than is not None and newer_than is not None:
             raise EntryServiceError(
                 "invalid_request",
-                "before and after cannot be used together",
+                "older_than and newer_than cannot be used together",
             )
         try:
             summaries = self._read_indexed_entries(include_deleted=include_deleted)
         except EntryValidationError as error:
             raise map_storage_error(error) from error
-        if after is not None:
-            cursor = decode_entry_cursor(after)
+        if newer_than is not None:
+            cursor = decode_entry_cursor(newer_than)
             page_source = [
                 summary
                 for summary in summaries
                 if entry_sort_key(summary) > (cursor.created_at, cursor.entry_id)
             ]
             selected = page_source[:normalized_limit]
-            has_more = len(page_source) > normalized_limit
+            has_newer = len(page_source) > normalized_limit
             items = tuple(summary_to_item(summary) for summary in selected)
             return EntryPage(
                 items=items,
                 limit=normalized_limit,
-                has_more=has_more,
-                next_before=None,
-                next_after=items[-1].cursor if has_more and items else None,
+                has_older=bool(items),
+                has_newer=has_newer,
+                older_cursor=items[0].cursor if items else None,
+                newer_cursor=items[-1].cursor if has_newer and items else None,
             )
 
-        if before is None:
+        if older_than is None:
             page_source = summaries
         else:
-            cursor = decode_entry_cursor(before)
+            cursor = decode_entry_cursor(older_than)
             page_source = [
                 summary
                 for summary in summaries
@@ -161,16 +163,16 @@ class EntryService:
             ]
 
         selected = page_source[-normalized_limit:]
-        has_more = len(page_source) > normalized_limit
+        has_older = len(page_source) > normalized_limit
         items = tuple(summary_to_item(summary) for summary in selected)
-        next_before = items[0].cursor if has_more and items else None
 
         return EntryPage(
             items=items,
             limit=normalized_limit,
-            has_more=has_more,
-            next_before=next_before,
-            next_after=None,
+            has_older=has_older,
+            has_newer=older_than is not None,
+            older_cursor=items[0].cursor if has_older and items else None,
+            newer_cursor=items[-1].cursor if older_than is not None and items else None,
         )
 
     def get_entry(self, entry_id: UUID) -> EntryDetailItem:
@@ -266,14 +268,14 @@ class EntryService:
         self,
         *,
         target_date: date,
-        before_count: int,
-        after_count: int,
+        older_count: int,
+        newer_count: int,
         include_deleted: bool = False,
     ) -> EntryWindow:
         """Return entries on a date plus bounded context before and after it."""
 
-        normalized_before_count = normalize_window_count(before_count, "before_count")
-        normalized_after_count = normalize_window_count(after_count, "after_count")
+        normalized_older_count = normalize_window_count(older_count, "older_count")
+        normalized_newer_count = normalize_window_count(newer_count, "newer_count")
         try:
             summaries = self._read_indexed_entries(include_deleted=include_deleted)
         except EntryValidationError as error:
@@ -288,34 +290,34 @@ class EntryService:
             return EntryWindow(
                 target_date=target_date,
                 items=(),
-                before_count=normalized_before_count,
-                after_count=normalized_after_count,
+                older_count=normalized_older_count,
+                newer_count=normalized_newer_count,
                 target_count=0,
-                has_earlier=False,
-                has_later=False,
-                earlier_before=None,
-                later_after=None,
+                has_older=False,
+                has_newer=False,
+                older_cursor=None,
+                newer_cursor=None,
             )
 
         first_target_index = target_indices[0]
         last_target_index = target_indices[-1]
-        start_index = max(0, first_target_index - normalized_before_count)
-        end_index = min(len(summaries), last_target_index + normalized_after_count + 1)
+        start_index = max(0, first_target_index - normalized_older_count)
+        end_index = min(len(summaries), last_target_index + normalized_newer_count + 1)
         selected = summaries[start_index:end_index]
         items = tuple(summary_to_item(summary) for summary in selected)
-        has_earlier = start_index > 0
-        has_later = end_index < len(summaries)
+        has_older = start_index > 0
+        has_newer = end_index < len(summaries)
 
         return EntryWindow(
             target_date=target_date,
             items=items,
-            before_count=normalized_before_count,
-            after_count=normalized_after_count,
+            older_count=normalized_older_count,
+            newer_count=normalized_newer_count,
             target_count=len(target_indices),
-            has_earlier=has_earlier,
-            has_later=has_later,
-            earlier_before=items[0].cursor if has_earlier and items else None,
-            later_after=items[-1].cursor if has_later and items else None,
+            has_older=has_older,
+            has_newer=has_newer,
+            older_cursor=items[0].cursor if has_older and items else None,
+            newer_cursor=items[-1].cursor if has_newer and items else None,
         )
 
     def refresh_index(self) -> Path:

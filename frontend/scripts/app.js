@@ -26,14 +26,16 @@
     visibleStartIndex: 0,
     status: "idle",
     errorMessage: "",
-    nextBefore: null,
     laterStatus: "complete",
     laterErrorMessage: "",
-    nextAfter: null,
   };
   const feedState = {
-    mode: "latest",
-    samples: [],
+    entries: [],
+    olderCursor: null,
+    newerCursor: null,
+    hasOlder: false,
+    hasNewer: false,
+    atLatest: true,
     dataStatus: "idle",
     dataErrorMessage: "",
     targetDate: null,
@@ -265,7 +267,7 @@
     feed.dataset.status = feedState.dataStatus;
     feed.setAttribute("aria-label", "Diary entries");
     feed.append(createLoadControl());
-    if (feedState.mode === "window") {
+    if (feedState.targetDate) {
       feed.append(createWindowModeNotice());
     }
     if (isBackendDataSource() && feedState.dataStatus === "ready" && readingSamples.length === 0) {
@@ -293,7 +295,7 @@
       });
       feed.append(year.details);
     });
-    if (feedState.mode === "window") {
+    if (feedState.targetDate && !feedState.atLatest) {
       feed.append(createLoadLaterControl());
     }
 
@@ -352,7 +354,7 @@
 
   function getAllReadingSamples() {
     if (isBackendDataSource()) {
-      return feedState.samples;
+      return feedState.entries;
     }
 
     return window.SereinMockEntries
@@ -370,7 +372,7 @@
       sample,
     }));
 
-    if (feedState.mode === "latest") {
+    if (feedState.atLatest) {
       items.push({
         type: "new",
         createdAt: draftCreatedAt,
@@ -390,11 +392,13 @@
 
     loadState.visibleStartIndex = Math.max(0, total - settings.initialCount);
     loadState.status = loadState.visibleStartIndex === 0 ? "complete" : "idle";
-    loadState.nextBefore = null;
+    feedState.olderCursor = null;
     loadState.laterStatus = "complete";
     loadState.laterErrorMessage = "";
-    loadState.nextAfter = null;
-    feedState.mode = "latest";
+    feedState.newerCursor = null;
+    feedState.hasOlder = false;
+    feedState.hasNewer = false;
+    feedState.atLatest = true;
     feedState.targetDate = null;
     feedState.jumpStatus = "idle";
     feedState.jumpErrorMessage = "";
@@ -408,11 +412,13 @@
     loadState.status = "loading";
     loadState.errorMessage = "";
     loadState.visibleStartIndex = 0;
-    loadState.nextBefore = null;
+    feedState.olderCursor = null;
     loadState.laterStatus = "complete";
     loadState.laterErrorMessage = "";
-    loadState.nextAfter = null;
-    feedState.mode = "latest";
+    feedState.newerCursor = null;
+    feedState.hasOlder = false;
+    feedState.hasNewer = false;
+    feedState.atLatest = true;
     feedState.targetDate = null;
     feedState.jumpStatus = "idle";
     feedState.jumpErrorMessage = "";
@@ -421,12 +427,17 @@
       const page = await dataAdapter.listEntries({ limit: settings.initialCount });
       const samples = await loadEntryDetailsForSummaries(page.items || []);
 
-      feedState.samples = samples;
+      feedState.entries = samples;
       feedState.dataStatus = "ready";
-      loadState.status = page.page?.has_more ? "idle" : "complete";
-      loadState.nextBefore = page.page?.next_before || null;
+      feedState.hasOlder = Boolean(page.page?.has_older);
+      feedState.hasNewer = Boolean(page.page?.has_newer);
+      feedState.atLatest = !feedState.hasNewer;
+      loadState.status = feedState.hasOlder ? "idle" : "complete";
+      loadState.laterStatus = feedState.hasNewer ? "idle" : "complete";
+      feedState.olderCursor = page.page?.older_cursor || null;
+      feedState.newerCursor = page.page?.newer_cursor || null;
     } catch (error) {
-      feedState.samples = [];
+      feedState.entries = [];
       feedState.dataStatus = "error";
       feedState.dataErrorMessage = createDataErrorMessage(error);
       loadState.status = "error";
@@ -955,10 +966,10 @@
       const isInitialBackendError = (
         isBackendDataSource()
         && feedState.dataStatus === "error"
-        && feedState.samples.length === 0
+        && feedState.entries.length === 0
       );
       const isWindowJumpError = (
-        feedState.mode === "window"
+        Boolean(feedState.targetDate)
         && feedState.jumpStatus === "error"
         && Boolean(feedState.targetDate)
       );
@@ -1109,7 +1120,7 @@
     }
 
     if (isBackendDataSource()) {
-      if (!loadState.nextBefore) {
+      if (!feedState.olderCursor) {
         loadState.status = "complete";
         debugShouldLoad(false, "backend-no-earlier-content", { source, verbose });
         renderFeed();
@@ -1164,7 +1175,7 @@
     }
 
     if (isBackendDataSource()) {
-      if (!loadState.nextBefore) {
+      if (!feedState.olderCursor) {
         loadState.status = "complete";
         debugShouldLoad(false, "backend-no-earlier-content", { source, verbose });
         renderFeed();
@@ -1194,8 +1205,8 @@
   function shouldLoadLaterEntries(options = {}) {
     const { source = "unknown", verbose = false } = options;
 
-    if (feedState.mode !== "window") {
-      debugShouldLoad(false, "not-window-mode", { source, verbose, direction: "later" });
+    if (!feedState.hasNewer || feedState.atLatest) {
+      debugShouldLoad(false, "no-newer-window-content", { source, verbose, direction: "later" });
       return false;
     }
     if (loadState.laterStatus === "loading" || loadState.laterStatus === "complete") {
@@ -1207,7 +1218,7 @@
       });
       return false;
     }
-    if (!loadState.nextAfter) {
+    if (!feedState.newerCursor) {
       loadState.laterStatus = "complete";
       debugShouldLoad(false, "no-later-content", { source, verbose, direction: "later" });
       renderFeed();
@@ -1304,7 +1315,7 @@
     const { source = "unknown", attempt = null, anchor = null } = options;
 
     try {
-      if (!loadState.nextBefore) {
+      if (!feedState.olderCursor) {
         loadState.status = "complete";
         renderFeedRestoringAnchor(anchor);
         return false;
@@ -1312,36 +1323,37 @@
 
       const page = await dataAdapter.listEntries({
         limit: settings.pageSize,
-        before: loadState.nextBefore,
+        olderThan: feedState.olderCursor,
       });
       const anchorBeforeFinalRender = getScrollAnchor() || anchor;
-      const previousLoadedEntries = feedState.samples.length;
+      const previousLoadedEntries = feedState.entries.length;
       const earlierSamples = await loadEntryDetailsForSummaries(page.items || []);
-      const existingIds = new Set(feedState.samples.map((sample) => sample.data.metadata.id));
+      const existingIds = new Set(feedState.entries.map((sample) => sample.data.metadata.id));
       const newSamples = earlierSamples.filter((sample) => (
         !existingIds.has(sample.data.metadata.id)
       ));
 
-      feedState.samples = [...newSamples, ...feedState.samples]
+      feedState.entries = [...newSamples, ...feedState.entries]
         .sort((left, right) => (
           left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
           || left.data.metadata.id.localeCompare(right.data.metadata.id)
         ));
       feedState.dataStatus = "ready";
-      loadState.status = page.page?.has_more ? "idle" : "complete";
-      loadState.nextBefore = page.page?.next_before || null;
+      feedState.hasOlder = Boolean(page.page?.has_older);
+      loadState.status = feedState.hasOlder ? "idle" : "complete";
+      feedState.olderCursor = page.page?.older_cursor || null;
       renderFeedRestoringAnchor(anchorBeforeFinalRender);
       debugLoad("backend earlier entries loaded", {
         source,
         attempt,
         previousLoadedEntries,
-        nextLoadedEntries: feedState.samples.length,
+        nextLoadedEntries: feedState.entries.length,
         loadedThisPage: newSamples.length,
-        hasMore: page.page?.has_more,
-        nextBefore: loadState.nextBefore,
+        hasOlder: page.page?.has_older,
+        olderCursor: feedState.olderCursor,
       });
       runPendingLoadCheckAfterLoadSettles();
-      return newSamples.length > 0 || Boolean(page.page?.has_more);
+      return newSamples.length > 0 || Boolean(page.page?.has_older);
     } catch (error) {
       const anchorBeforeErrorRender = getScrollAnchor() || anchor;
 
@@ -1361,7 +1373,7 @@
   async function loadLaterEntries(options = {}) {
     const { source = "unknown", attempt = null } = options;
 
-    if (feedState.mode !== "window") {
+    if (!feedState.hasNewer || feedState.atLatest) {
       return false;
     }
     if (loadState.laterStatus === "loading" || loadState.laterStatus === "complete") {
@@ -1376,7 +1388,7 @@
     renderFeedRestoringAnchor(anchor);
 
     try {
-      if (!loadState.nextAfter) {
+      if (!feedState.newerCursor) {
         loadState.laterStatus = "complete";
         renderFeedRestoringAnchor(anchor);
         return false;
@@ -1384,26 +1396,28 @@
 
       const page = await dataAdapter.listEntries({
         limit: settings.pageSize,
-        after: loadState.nextAfter,
+        newerThan: feedState.newerCursor,
       });
       const anchorBeforeFinalRender = getScrollAnchor() || anchor;
       const laterSamples = await loadEntryDetailsForSummaries(page.items || []);
-      const previousLoadedEntries = feedState.samples.length;
+      const previousLoadedEntries = feedState.entries.length;
 
       mergeFeedSamples(laterSamples);
-      loadState.laterStatus = page.page?.has_more ? "idle" : "complete";
-      loadState.nextAfter = page.page?.next_after || null;
+      feedState.hasNewer = Boolean(page.page?.has_newer);
+      feedState.atLatest = !feedState.hasNewer;
+      loadState.laterStatus = feedState.hasNewer ? "idle" : "complete";
+      feedState.newerCursor = page.page?.newer_cursor || null;
       renderFeedRestoringAnchor(anchorBeforeFinalRender);
       debugLoad("later entries loaded", {
         source,
         attempt,
         previousLoadedEntries,
-        nextLoadedEntries: feedState.samples.length,
+        nextLoadedEntries: feedState.entries.length,
         loadedThisPage: laterSamples.length,
-        hasMore: page.page?.has_more,
-        nextAfter: loadState.nextAfter,
+        hasNewer: page.page?.has_newer,
+        newerCursor: feedState.newerCursor,
       });
-      return laterSamples.length > 0 || Boolean(page.page?.has_more);
+      return laterSamples.length > 0 || Boolean(page.page?.has_newer);
     } catch (error) {
       const anchorBeforeErrorRender = getScrollAnchor() || anchor;
 
@@ -1433,13 +1447,13 @@
 
   function mergeFeedSamples(samples) {
     const byId = new Map(
-      feedState.samples.map((sample) => [sample.data.metadata.id, sample]),
+      feedState.entries.map((sample) => [sample.data.metadata.id, sample]),
     );
 
     samples.forEach((sample) => {
       byId.set(sample.data.metadata.id, sample);
     });
-    feedState.samples = [...byId.values()].sort((left, right) => (
+    feedState.entries = [...byId.values()].sort((left, right) => (
       left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
       || left.data.metadata.id.localeCompare(right.data.metadata.id)
     ));
@@ -2526,8 +2540,10 @@
       return;
     }
 
-    feedState.mode = "window";
     feedState.targetDate = targetDate;
+    feedState.atLatest = false;
+    feedState.hasOlder = false;
+    feedState.hasNewer = false;
     feedState.jumpStatus = "loading";
     feedState.jumpErrorMessage = "";
     feedState.dataStatus = "loading";
@@ -2536,50 +2552,54 @@
     loadState.errorMessage = "";
     loadState.laterStatus = "complete";
     loadState.laterErrorMessage = "";
-    loadState.nextBefore = null;
-    loadState.nextAfter = null;
+    feedState.olderCursor = null;
+    feedState.newerCursor = null;
     setSidebarOpen(false);
     renderFeed();
 
     try {
       const windowResult = await dataAdapter.getEntryWindow({
         date: targetDate,
-        beforeCount: settings.jumpBeforeCount,
-        afterCount: settings.jumpAfterCount,
+        olderCount: settings.jumpBeforeCount,
+        newerCount: settings.jumpAfterCount,
       });
       const samples = await loadEntryDetailsForSummaries(windowResult.items || []);
       const windowInfo = windowResult.window || {};
 
-      feedState.samples = samples.sort((left, right) => (
+      feedState.entries = samples.sort((left, right) => (
         left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
         || left.data.metadata.id.localeCompare(right.data.metadata.id)
       ));
-      feedState.mode = "window";
       feedState.targetDate = targetDate;
       feedState.jumpStatus = "ready";
       feedState.jumpErrorMessage = "";
       feedState.dataStatus = "ready";
       loadState.visibleStartIndex = 0;
-      loadState.status = windowInfo.has_earlier ? "idle" : "complete";
+      feedState.hasOlder = Boolean(windowInfo.has_older);
+      feedState.hasNewer = Boolean(windowInfo.has_newer);
+      feedState.atLatest = !feedState.hasNewer;
+      loadState.status = feedState.hasOlder ? "idle" : "complete";
       loadState.errorMessage = "";
-      loadState.nextBefore = windowInfo.earlier_before || null;
-      loadState.laterStatus = windowInfo.has_later ? "idle" : "complete";
+      feedState.olderCursor = windowInfo.older_cursor || null;
+      loadState.laterStatus = feedState.hasNewer ? "idle" : "complete";
       loadState.laterErrorMessage = "";
-      loadState.nextAfter = windowInfo.later_after || null;
+      feedState.newerCursor = windowInfo.newer_cursor || null;
       renderFeed({ scrollToDate: targetDate });
     } catch (error) {
-      feedState.mode = "window";
       feedState.targetDate = targetDate;
+      feedState.atLatest = false;
+      feedState.hasOlder = false;
+      feedState.hasNewer = false;
       feedState.jumpStatus = "error";
       feedState.jumpErrorMessage = createDataErrorMessage(error);
       feedState.dataStatus = "error";
       feedState.dataErrorMessage = feedState.jumpErrorMessage;
-      feedState.samples = [];
+      feedState.entries = [];
       loadState.status = "error";
       loadState.errorMessage = feedState.jumpErrorMessage;
       loadState.laterStatus = "complete";
-      loadState.nextBefore = null;
-      loadState.nextAfter = null;
+      feedState.olderCursor = null;
+      feedState.newerCursor = null;
       renderFeed();
       console.warn("[Serein calendar] Date jump failed.", {
         message: feedState.jumpErrorMessage,

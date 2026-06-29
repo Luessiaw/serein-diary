@@ -30,12 +30,12 @@ Serein 已从 Portal 原型迁移为独立仓库：
 
 - P0--P4 已完成。
 - P5P 已完成：后端正式 entries API、日期统计 API、前端 data adapter 已建立。
-- P5A 已完成到 `P5A-T03B`：
+- P5A 已完成到 `P5A-T03C`：
   - 连续流可读取后端真实 entries。
   - 日历可读取后端日期统计。
   - 点击日历深色日期可请求后端日期窗口 API，并跳转到目标日期附近片段。
-  - 前端阅读流已引入 `latest` / `window` 两种模式。
-- `P5A-T03C` 窗口裁剪与内存控制尚未实现。
+  - 前端阅读流已收敛为统一 feed window 状态，并使用 `older_than` / `newer_than` 方向游标。
+- `P5A-T03D` 窗口裁剪与内存控制尚未实现。
 - `P5A-T04` 浏览器综合验收尚未完成。
 - P5B 真实写入闭环尚未开始。
 
@@ -95,113 +95,70 @@ DELETE /api/v1/entries/{entry_id}
 当前 P5A 只读浏览主要依赖：
 
 - `GET /api/v1/entries?limit=...`
-- `GET /api/v1/entries?before=...`
-- `GET /api/v1/entries?after=...`
-- `GET /api/v1/entries/window?date=YYYY-MM-DD&before_count=N&after_count=N`
+- `GET /api/v1/entries?older_than=...`
+- `GET /api/v1/entries?newer_than=...`
+- `GET /api/v1/entries/window?date=YYYY-MM-DD&older_count=N&newer_count=N`
 - `GET /api/v1/entries/dates?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
-`before` 用于加载更早内容，`after` 用于窗口模式中加载更晚内容。`before` 与 `after`
+`older_than` 用于加载更早内容，`newer_than` 用于加载更新内容。`older_than` 与 `newer_than`
 不可同时传。
 
-## P5A-T03B 详细交接：前端阅读流 latest/window 两种模式
+## P5A-T03C 详细交接：统一阅读窗口模型
 
-### 为什么引入两种模式
-
-原来的阅读流只有“从最近日记开始，向上加载更早内容”的逻辑。日历跳转引入后，如果用户点击
-一个很早的日期，不能从当前最新日记一路向上分页到目标日期，否则会很慢、占内存，也会让交互
-显得笨重。
-
-因此当前前端阅读流有两种模式：
-
-- `latest`：默认模式，打开页面后读取最近若干篇，并滚动到末尾的“此刻”新建区。
-- `window`：日历跳转模式，只加载某个目标日期附近的片段，替换当前阅读窗口，并滚动到目标日期。
+P5A-T03C 后，前端不再把阅读流拆成 `latest` / `window` 两套模式，而是统一为一个 feed window：当前页面只持有一段连续的 `entries`，并用窗口两端的方向游标继续向上或向下加载。
 
 ### 核心状态
 
-主要状态在 `frontend/scripts/app.js` 中。
-
-`feedState` 表示当前阅读流内容和模式：
+主要状态在 `frontend/scripts/app.js` 中：
 
 ```js
 const feedState = {
-  mode: "latest",
-  samples: [],
+  entries: [],
+  olderCursor: null,
+  newerCursor: null,
+  hasOlder: false,
+  hasNewer: false,
+  atLatest: true,
   targetDate: null,
 };
 ```
 
 约定：
 
-- `mode === "latest"`：
-  - 表示正常首页阅读流。
-  - 读取最近 N 篇真实条目。
-  - 渲染“此刻”新建区。
-  - 打开后应滚动到新建区。
-- `mode === "window"`：
-  - 表示日历跳转后的日期窗口。
-  - `samples` 是目标日期附近的有限条目片段。
-  - `targetDate` 是 `YYYY-MM-DD`。
-  - 不渲染“此刻”新建区。
-  - 页面顶部显示窗口模式提示和“回到此刻”按钮。
+- `entries`：当前已加载并渲染的一段连续日记，不是全部日记。
+- `olderCursor`：当前窗口最早条目的边界游标，用于继续加载更早内容。
+- `newerCursor`：当前窗口最新条目的边界游标，用于继续加载更新内容。
+- `hasOlder`：顶部是否还能继续向上加载。
+- `hasNewer`：底部是否还能继续向下加载。
+- `atLatest`：当前窗口是否已经抵达最新日记；为 `true` 时底部显示“此刻”新建区。
+- `targetDate`：日历跳转目标日期；不为空时显示“回到此刻”提示。
 
-`loadState` 管理分页状态，既服务于 latest，也服务于 window：
+游标是服务端不透明字符串，当前由 `created_at + id` 编码。前端只保存和回传，不解析。
 
-```js
-const loadState = {
-  status: "idle",
-  nextBefore: null,
-  laterStatus: "idle",
-  nextAfter: null,
-  ...
-};
-```
-
-约定：
-
-- `status` / `nextBefore`：向上加载更早内容。
-- `laterStatus` / `nextAfter`：窗口模式下向下加载更晚内容。
-- `latest` 模式通常只使用 `before` 方向。
-- `window` 模式同时可能使用 `before` 和 `after` 方向。
-
-### latest 模式的数据流
+### 初次进入的数据流
 
 默认启动后：
 
 1. 前端完成锁屏 session 检查。
-2. 调用 `loadInitialBackendEntries()`。
+2. 调用 `initializeBackendLoadedWindow()`。
 3. 通过 `dataAdapter.listEntries({ limit })` 请求后端最近 N 篇。
 4. 后端返回最近 N 篇，但 `items` 内部仍按 `created_at` 正序排列。
 5. 前端把 summaries 转为可渲染 sample。
-6. 设置：
+6. 同步窗口状态：
 
    ```js
-   feedState.mode = "latest";
+   feedState.entries = samples;
+   feedState.olderCursor = page.page.older_cursor;
+   feedState.newerCursor = page.page.newer_cursor;
+   feedState.hasOlder = page.page.has_older;
+   feedState.hasNewer = page.page.has_newer;
+   feedState.atLatest = !feedState.hasNewer;
    feedState.targetDate = null;
-   feedState.samples = samples;
-   loadState.nextBefore = page.page.next_before;
-   loadState.status = page.page.has_more ? "idle" : "complete";
    ```
 
-7. `renderFeed()` 渲染连续流，并保留末尾“此刻”新建区。
+7. `renderFeed()` 渲染连续流；当 `atLatest=true` 时保留末尾“此刻”新建区。
 
-latest 模式的继续加载：
-
-- 用户向上接近顶部时，调用 `loadEarlierEntries()`。
-- backend 模式下进入 `loadEarlierBackendEntries()`。
-- 使用 `loadState.nextBefore` 请求：
-
-  ```js
-  dataAdapter.listEntries({
-    limit: settings.pageSize,
-    before: loadState.nextBefore,
-  })
-  ```
-
-- 新条目插入 `feedState.samples` 前方。
-- 通过锚点计算保持视觉位置，避免加载完成后跳动。
-- 后端表示没有更早内容时，顶部显示“已加载所有日记内容”。
-
-### window 模式的数据流
+### 日历跳转的数据流
 
 日历点击深色日期时进入：
 
@@ -212,43 +169,35 @@ jumpToCalendarDate(date)
 核心流程：
 
 1. 校验 `date` 是 `YYYY-MM-DD`。
-2. 立即将阅读流切到窗口意图：
-
-   ```js
-   feedState.mode = "window";
-   feedState.targetDate = targetDate;
-   ```
-
+2. 设置 `feedState.targetDate = targetDate`，并临时进入加载状态。
 3. 读取 tokens 中的窗口参数：
-
-   - `--jump-before-count`
-   - `--jump-after-count`
-   - `--jump-target-scroll-offset`
-
+   - `--jump-before-count`：传给 adapter 时映射为 `olderCount`。
+   - `--jump-after-count`：传给 adapter 时映射为 `newerCount`。
+   - `--jump-target-scroll-offset`。
 4. 调用：
 
    ```js
    dataAdapter.getEntryWindow({
      date: targetDate,
-     beforeCount: settings.jumpBeforeCount,
-     afterCount: settings.jumpAfterCount,
+     olderCount: settings.jumpBeforeCount,
+     newerCount: settings.jumpAfterCount,
    })
    ```
 
-5. 后端返回：
+5. 后端返回目标日期当天条目及前后窗口：
 
    ```json
    {
      "items": [],
      "window": {
        "target_date": "YYYY-MM-DD",
-       "before_count": 12,
-       "after_count": 12,
+       "older_count": 12,
+       "newer_count": 12,
        "target_count": 1,
-       "has_earlier": true,
-       "has_later": true,
-       "earlier_before": "...",
-       "later_after": "..."
+       "has_older": true,
+       "has_newer": true,
+       "older_cursor": "...",
+       "newer_cursor": "..."
      }
    }
    ```
@@ -256,62 +205,44 @@ jumpToCalendarDate(date)
 6. 前端将 `items` 转成可渲染 sample，并替换当前窗口：
 
    ```js
-   feedState.mode = "window";
-   feedState.targetDate = targetDate;
-   feedState.samples = samples;
+   feedState.entries = samples;
+   feedState.hasOlder = windowInfo.has_older;
+   feedState.hasNewer = windowInfo.has_newer;
+   feedState.olderCursor = windowInfo.older_cursor;
+   feedState.newerCursor = windowInfo.newer_cursor;
+   feedState.atLatest = !feedState.hasNewer;
    ```
 
-7. 同步双向游标：
+7. `renderFeed({ scrollToDate: targetDate })` 渲染窗口片段，并滚动到目标日期第一篇日记。
 
-   ```js
-   loadState.status = windowInfo.has_earlier ? "idle" : "complete";
-   loadState.nextBefore = windowInfo.earlier_before || null;
-
-   loadState.laterStatus = windowInfo.has_later ? "idle" : "complete";
-   loadState.nextAfter = windowInfo.later_after || null;
-   ```
-
-8. `renderFeed({ scrollToDate: targetDate })` 渲染窗口片段，并滚动到目标日期第一篇日记。
-
-window 模式下的渲染差异：
-
-- 不显示“此刻”新建区。
-- 顶部显示窗口模式提示：
-  - 正在查看某日期附近的日记。
-  - 提供“回到此刻”按钮。
-- 年/月/日分组逻辑仍复用同一套 `created_at` 分组。
-- 年/月折叠状态仍按 key 恢复。
-
-### window 模式的双向加载
+### 双向加载
 
 向上加载更早内容：
 
-- 与 latest 类似，仍走 `loadEarlierEntries()`。
-- 使用 `loadState.nextBefore`。
-- 请求 `/entries?before=...`。
-- 新条目插入当前 `feedState.samples` 前方。
+- 触发 `loadEarlierEntries()`。
+- 使用 `feedState.olderCursor`。
+- 请求 `/entries?older_than=...`。
+- 新条目插入当前 `feedState.entries` 前方。
 
-向下加载更晚内容：
+向下加载更新内容：
 
-- 只在 `feedState.mode === "window"` 时启用。
+- 只在 `feedState.hasNewer=true` 且 `atLatest=false` 时启用。
 - 用户接近当前窗口底部时调用 `loadLaterEntries()`。
-- 使用 `loadState.nextAfter` 请求：
+- 使用 `feedState.newerCursor` 请求：
 
   ```js
   dataAdapter.listEntries({
     limit: settings.pageSize,
-    after: loadState.nextAfter,
+    newerThan: feedState.newerCursor,
   })
   ```
 
-- 新条目追加到 `feedState.samples` 后方。
-- 如果 `page.page.has_more` 为 false，则 `laterStatus = "complete"`。
-
-注意：latest 模式底部是“此刻”写作区，不应触发向下加载更晚内容。
+- 新条目追加到 `feedState.entries` 后方。
+- 如果 `page.page.has_newer` 为 false，则 `atLatest = true`，底部显示“此刻”新建区。
 
 ### 回到此刻
 
-窗口模式提示中的“回到此刻”调用：
+日期窗口提示中的“回到此刻”调用：
 
 ```js
 returnToLatestFeed()
@@ -319,20 +250,23 @@ returnToLatestFeed()
 
 它会：
 
-1. 重置窗口模式。
+1. 重置目标日期窗口状态。
 2. 重新请求最近 N 篇。
-3. 渲染 latest 模式。
+3. 渲染最新窗口。
 4. 滚动到新建区。
 
-后续如果要做浏览器历史、返回键或 URL 状态，可以把这个模式切换抽象成更明确的
-`setFeedMode()` / `loadFeedWindow()` 控制层。
+后续如果要做浏览器历史、返回键或 URL 状态，可以把窗口切换抽象成更明确的
+`loadFeedWindow()` 控制层。
 
-### P5A-T03B 涉及的主要文件
+### P5A-T03C 涉及的主要文件
 
 前端：
 
 - `frontend/scripts/app.js`
-  - `feedState.mode`
+  - `feedState.entries`
+  - `feedState.olderCursor` / `feedState.newerCursor`
+  - `feedState.hasOlder` / `feedState.hasNewer`
+  - `feedState.atLatest`
   - `jumpToCalendarDate()`
   - `returnToLatestFeed()`
   - `loadEarlierEntries()`
@@ -340,8 +274,8 @@ returnToLatestFeed()
   - `renderFeed()`
   - 日历点击事件
 - `frontend/scripts/data-adapter.js`
-  - `listEntries({ before, after })`
-  - `getEntryWindow({ date, beforeCount, afterCount })`
+  - `listEntries({ olderThan, newerThan })`
+  - `getEntryWindow({ date, olderCount, newerCount })`
 - `frontend/styles/tokens.css`
   - `--jump-before-count`
   - `--jump-after-count`
@@ -354,7 +288,7 @@ returnToLatestFeed()
 
 - `backend/serein/api/entries.py`
   - `GET /api/v1/entries/window`
-  - `GET /api/v1/entries` 支持 `after`
+  - `GET /api/v1/entries` 支持 `newer_than`
 - `backend/serein/services/entries.py`
   - `EntryService.list_entries()`
   - `EntryService.get_entry_window()`
@@ -369,28 +303,28 @@ returnToLatestFeed()
 
 ### 当前实现的设计风险与后续修改建议
 
-`P5A-T03B` 已能工作，但它是从现有静态滚动逻辑演进来的，因此有几个地方未来适合整理：
+`P5A-T03C` 已收敛状态模型，但它仍是从现有静态滚动逻辑演进来的，因此有几个地方未来适合整理：
 
-1. latest/window 模式逻辑仍散落在 `app.js` 多个函数中。
+1. 窗口状态转换仍散落在 `app.js` 多个函数中。
    - 后续可抽出 `FeedController` 或至少集中成一组函数。
    - 建议先不要引入框架，继续保持原生 JS，但把状态转换写清楚。
 
-2. `loadState` 同时管理上下方向、mock/backend、latest/window，职责偏多。
+2. `loadState` 仍管理上下方向、mock/backend 和加载状态，职责偏多。
    - 后续可拆成：
      - `earlierPagination`
      - `laterPagination`
      - `initialLoad`
      - `windowJump`
 
-3. window 模式尚未做 DOM 裁剪。
-   - `P5A-T03C` 负责解决窗口过长时内存和 DOM 节点过多的问题。
+3. 阅读窗口尚未做 DOM 裁剪。
+   - `P5A-T03D` 负责解决窗口过长时内存和 DOM 节点过多的问题。
    - 默认可以先关闭裁剪，只保留参数和结构。
 
 4. 日历跳转目前只保留在内存状态中。
    - 后续如需刷新后保持目标日期，可考虑 URL query/hash。
    - 但这会影响锁屏、隐私和分享语义，需单独设计。
 
-5. 新建区只在 latest 模式显示。
+5. 新建区只在 `atLatest=true` 时显示。
    - 这是当前有意设计：点击日记页面默认写“此刻”；查看历史窗口时不混入新建区。
    - 如果用户希望在历史窗口也能快速回到写作，应通过“回到此刻”解决。
 
@@ -408,7 +342,7 @@ returnToLatestFeed()
 - 日历：
   - 读取后端日期统计。
   - 有日记日期显示深色。
-  - 点击深色日期进入 window 模式并跳转。
+  - 点击深色日期进入目标日期窗口并跳转。
 - 阅读态 Markdown 使用轻量内置 renderer，不是完整 CommonMark。
 - 新建区目前还未正式写入后端；P5B 才开始真实写作闭环。
 
@@ -455,35 +389,33 @@ docker compose up -d web
 
 ## 浏览器验收建议
 
-下一步建议先做 `P5A-T04`，不要急着进入 P5B 写入。原因是 latest/window 阅读流刚变复杂，
+下一步建议先做 `P5A-T04`，不要急着进入 P5B 写入。原因是统一阅读窗口刚调整完成，
 应先让用户在浏览器中确认可理解、可控、不卡顿。
 
 建议验收路径：
 
 1. 无痕窗口打开 `/diary/`，确认锁屏出现。
-2. 登录后确认默认进入 latest 模式，并定位到“此刻”附近。
+2. 登录后确认默认进入最新窗口，并定位到“此刻”附近。
 3. 向上滚动，确认能加载更早日记，且视觉位置不跳。
 4. 打开侧边卡片的日历页。
 5. 确认有日记日期变深色。
 6. 点击一个较早日期，确认快速跳转到该日期附近，不需要一路向上加载。
-7. 在 window 模式中：
+7. 在目标日期窗口中：
    - 向上滚动可继续加载更早内容。
-   - 向下滚动可继续加载更晚内容。
-   - 不显示“此刻”新建区。
-   - “回到此刻”能回到 latest 模式。
+   - 向下滚动可继续加载更新内容。
+   - 未抵达最新日记前不显示“此刻”新建区。
+   - “回到此刻”能回到最新窗口。
 8. 在手机窄屏下重复 4--7。
 
-如果验收中出现问题，优先处理 P5A-T03B 的状态/滚动/模式问题，再进入 P5B。
+如果验收中出现问题，优先处理 P5A-T03C 的状态/滚动/游标问题，再进入 P5B。
 
 ## 下一步建议
 
 推荐顺序：
 
 1. `P5A-T04`：真实只读接入浏览器验收。
-2. 视验收结果，修正 latest/window 阅读流问题。
-3. 如果窗口模式在真实数据中条目过多，再进入 `P5A-T03C` 做窗口裁剪。
+2. 视验收结果，修正统一阅读窗口问题。
+3. 如果目标日期窗口在真实数据中条目过多，再进入 `P5A-T03D` 做窗口裁剪。
 4. 进入 `P5B-T01`：新建日记保存到后端。
 
 不建议下一步立刻做评论或媒体。当前最重要的是让“真实数据阅读 + 日期跳转 + 回到此刻”这个主循环稳定。
-
-

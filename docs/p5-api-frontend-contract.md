@@ -22,7 +22,8 @@ P5 的实现原则：
 - 所有 API 时间字段使用带 UTC 偏移量的 ISO 8601 字符串。
 - `created_at` 是排序、分组和目录命名的唯一时间事实源。
 - 列表 API 返回的 `items` 始终按 `created_at` 正序排列，即从旧到新。
-- “加载更早内容”通过 `before` 游标请求比当前最早条目更早的一页；响应仍按正序返回。
+- “加载更早内容”通过 `older_than` 游标请求比当前最早条目更早的一页；响应仍按正序返回。
+- “加载更新内容”通过 `newer_than` 游标请求比当前最新条目更新的一页；响应仍按正序返回。
 
 ### 分页参数
 
@@ -30,15 +31,15 @@ P5 的实现原则：
 
 ```text
 limit: 1..100，默认读取前端配置值，后端可设安全上限
-before: 可选游标，表示只返回早于该游标的条目
-after: 可选游标，表示只返回晚于该游标的条目
+older_than: 可选游标，表示只返回早于该游标的条目
+newer_than: 可选游标，表示只返回晚于该游标的条目
 include_deleted: 默认 false
 ```
 
-首屏请求不传 `before`，后端返回“最近 N 篇”，但 `items` 内部仍按正序排列。继续向上
-加载时，前端使用当前最早条目的 `cursor` 作为 `before`。
-日期窗口模式向下加载更晚内容时，前端使用当前最晚条目的 `cursor` 作为 `after`。
-`before` 与 `after` 不可同时传入。
+首屏请求不传方向游标，后端返回“最近 N 篇”，但 `items` 内部仍按正序排列。继续向上
+加载时，前端使用当前最早条目的 `cursor` 作为 `older_than`。
+向下加载更新内容时，前端使用当前最新条目的 `cursor` 作为 `newer_than`。
+`older_than` 与 `newer_than` 不可同时传入。
 
 ### 游标格式
 
@@ -183,7 +184,7 @@ POST /api/v1/auth/logout
 ### 条目列表
 
 ```text
-GET /api/v1/entries?limit=30&before=<cursor>&include_deleted=false
+GET /api/v1/entries?limit=30&older_than=<cursor>&include_deleted=false
 ```
 
 响应：
@@ -193,9 +194,10 @@ GET /api/v1/entries?limit=30&before=<cursor>&include_deleted=false
   "items": [],
   "page": {
     "limit": 30,
-    "has_more": false,
-    "next_before": null,
-    "next_after": null
+    "has_older": false,
+    "has_newer": false,
+    "older_cursor": null,
+    "newer_cursor": null
   }
 }
 ```
@@ -203,10 +205,11 @@ GET /api/v1/entries?limit=30&before=<cursor>&include_deleted=false
 约定：
 
 - 首次请求返回最近 N 篇，内部正序。
-- `has_more=true` 表示仍可继续请求更早内容。
-- `next_before` 是下一次加载更早内容时要传回的游标；通常等于当前响应最早条目的游标。
-- 使用 `after` 请求更晚内容时，`next_after` 是下一次加载更晚内容时要传回的游标；
+- `has_older=true` 表示仍可继续请求更早内容。
+- `older_cursor` 是下一次加载更早内容时要传回的游标；通常等于当前响应最早条目的游标。
+- 使用 `newer_than` 请求更新内容时，`newer_cursor` 是下一次加载更新内容时要传回的游标；
   通常等于当前响应最晚条目的游标。
+- `has_newer=false` 表示当前窗口已经抵达最新条目，前端可以在底部渲染“此刻”新建区。
 - 默认过滤软删除条目。
 
 ### 日期窗口
@@ -214,7 +217,7 @@ GET /api/v1/entries?limit=30&before=<cursor>&include_deleted=false
 用于日历点击跳转，不要求前端从当前窗口一路分页到目标日期。
 
 ```text
-GET /api/v1/entries/window?date=2026-06-23&before_count=12&after_count=12&include_deleted=false
+GET /api/v1/entries/window?date=2026-06-23&older_count=12&newer_count=12&include_deleted=false
 ```
 
 响应：
@@ -224,13 +227,13 @@ GET /api/v1/entries/window?date=2026-06-23&before_count=12&after_count=12&includ
   "items": [],
   "window": {
     "target_date": "2026-06-23",
-    "before_count": 12,
-    "after_count": 12,
+    "older_count": 12,
+    "newer_count": 12,
     "target_count": 0,
-    "has_earlier": false,
-    "has_later": false,
-    "earlier_before": null,
-    "later_after": null
+    "has_older": false,
+    "has_newer": false,
+    "older_cursor": null,
+    "newer_cursor": null
   }
 }
 ```
@@ -238,10 +241,10 @@ GET /api/v1/entries/window?date=2026-06-23&before_count=12&after_count=12&includ
 约定：
 
 - `date` 是目标本地日期，由 `created_at` 的本地日期派生。
-- 返回目标日期当天所有条目、之前最多 `before_count` 篇、之后最多 `after_count` 篇。
+- 返回目标日期当天所有条目、之前最多 `older_count` 篇、之后最多 `newer_count` 篇。
 - `items` 始终按 `created_at` 正序返回。
-- `has_earlier` / `earlier_before` 用于继续向上加载更早内容。
-- `has_later` / `later_after` 用于后续实现向下加载更晚内容。
+- `has_older` / `older_cursor` 用于继续向上加载更早内容。
+- `has_newer` / `newer_cursor` 用于继续向下加载更新内容。
 - 目标日期没有条目时返回空窗口，不报错。
 - 默认过滤软删除条目。
 
@@ -377,8 +380,8 @@ adapter 对组件暴露的方法：
 adapter.getSession()
 adapter.login(password)
 adapter.logout()
-adapter.listEntries({ limit, before, after, includeDeleted })
-adapter.getEntryWindow({ date, beforeCount, afterCount, includeDeleted })
+adapter.listEntries({ limit, olderThan, newerThan, includeDeleted })
+adapter.getEntryWindow({ date, olderCount, newerCount, includeDeleted })
 adapter.getEntry(entryId)
 adapter.createEntry({ title, content })
 adapter.deleteEntry(entryId)
@@ -425,7 +428,8 @@ API base 继续读取：
 - 创建失败：保留标题和正文。
 - 创建成功：将服务端返回条目插入连续流，并重置新建区。
 - 删除成功：从当前流移除或标记删除，并刷新日期统计；具体 UI 在 P5-T08 收窄。
-- `has_more=false`：顶部控件显示“已加载所有日记内容”，不再触发加载。
+- `has_older=false`：顶部控件显示“已加载所有日记内容”，不再触发向上加载。
+- `has_newer=false`：底部抵达最新条目，前端可以渲染“此刻”新建区。
 
 ## 索引刷新策略
 

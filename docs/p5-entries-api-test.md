@@ -29,17 +29,19 @@ curl -sS -b /tmp/serein-cookie.txt \
   "items": [],
   "page": {
     "limit": 30,
-    "has_more": false,
-    "next_before": null
+    "has_older": false,
+    "has_newer": false,
+    "older_cursor": null,
+    "newer_cursor": null
   }
 }
 ```
 
-如果 `has_more` 为 `true`，复制 `page.next_before`，继续请求更早内容：
+如果 `has_older` 为 `true`，复制 `page.older_cursor`，继续请求更早内容：
 
 ```bash
 curl -sS -b /tmp/serein-cookie.txt \
-  'http://127.0.0.1:8088/api/v1/entries?limit=30&before=<next_before>'
+  'http://127.0.0.1:8088/api/v1/entries?limit=30&older_than=<older_cursor>'
 ```
 
 ## 创建条目

@@ -29,62 +29,62 @@ class EntryServiceTests(TestCase):
 
             self.assertEqual(page.items, ())
             self.assertEqual(page.limit, 30)
-            self.assertFalse(page.has_more)
-            self.assertIsNone(page.next_before)
+            self.assertFalse(page.has_older)
+            self.assertIsNone(page.older_cursor)
             self.assertTrue(get_index_path(root).is_file())
 
-    def test_lists_recent_entries_ascending_with_before_cursor(self) -> None:
+    def test_lists_recent_entries_ascending_with_older_cursor(self) -> None:
         with TemporaryDirectory() as data_dir:
             root = Path(data_dir)
             created_ids = create_ordered_entries(root, count=5)
             service = EntryService(root)
 
             first_page = service.list_entries(limit=2)
-            second_page = service.list_entries(limit=2, before=first_page.next_before)
+            second_page = service.list_entries(limit=2, older_than=first_page.older_cursor)
 
         self.assertEqual([str(item.id) for item in first_page.items], created_ids[3:5])
-        self.assertTrue(first_page.has_more)
-        self.assertIsNotNone(first_page.next_before)
+        self.assertTrue(first_page.has_older)
+        self.assertIsNotNone(first_page.older_cursor)
         self.assertEqual([str(item.id) for item in second_page.items], created_ids[1:3])
-        self.assertTrue(second_page.has_more)
+        self.assertTrue(second_page.has_older)
 
-    def test_final_page_has_no_next_before(self) -> None:
+    def test_final_page_has_no_older_cursor(self) -> None:
         with TemporaryDirectory() as data_dir:
             root = Path(data_dir)
             created_ids = create_ordered_entries(root, count=3)
             service = EntryService(root)
 
             first_page = service.list_entries(limit=2)
-            final_page = service.list_entries(limit=2, before=first_page.next_before)
+            final_page = service.list_entries(limit=2, older_than=first_page.older_cursor)
 
         self.assertEqual([str(item.id) for item in final_page.items], created_ids[:1])
-        self.assertFalse(final_page.has_more)
-        self.assertIsNone(final_page.next_before)
+        self.assertFalse(final_page.has_older)
+        self.assertIsNone(final_page.older_cursor)
 
-    def test_lists_later_entries_with_after_cursor(self) -> None:
+    def test_lists_later_entries_with_newer_cursor(self) -> None:
         with TemporaryDirectory() as data_dir:
             root = Path(data_dir)
             created_ids = create_ordered_entries(root, count=5)
             service = EntryService(root)
 
-            early_page = service.list_entries(limit=2, before=service.list_entries(limit=2).next_before)
-            later_page = service.list_entries(limit=2, after=early_page.items[-1].cursor)
+            early_page = service.list_entries(limit=2, older_than=service.list_entries(limit=2).older_cursor)
+            later_page = service.list_entries(limit=2, newer_than=early_page.items[-1].cursor)
 
         self.assertEqual([str(item.id) for item in early_page.items], created_ids[1:3])
         self.assertEqual([str(item.id) for item in later_page.items], created_ids[3:5])
-        self.assertFalse(later_page.has_more)
-        self.assertIsNone(later_page.next_after)
+        self.assertFalse(later_page.has_newer)
+        self.assertIsNone(later_page.newer_cursor)
 
     def test_invalid_cursor_and_limit_raise_stable_errors(self) -> None:
         with TemporaryDirectory() as data_dir:
             service = EntryService(Path(data_dir))
 
             with self.assertRaises(EntryServiceError) as cursor_error:
-                service.list_entries(before="not-a-cursor")
+                service.list_entries(older_than="not-a-cursor")
             with self.assertRaises(EntryServiceError) as limit_error:
                 service.list_entries(limit=0)
             with self.assertRaises(EntryServiceError) as direction_error:
-                service.list_entries(before="abc", after="def")
+                service.list_entries(older_than="abc", newer_than="def")
 
         self.assertEqual(cursor_error.exception.code, "invalid_cursor")
         self.assertEqual(limit_error.exception.code, "invalid_request")
@@ -213,16 +213,16 @@ class EntryServiceTests(TestCase):
 
             window = service.get_entry_window(
                 target_date=date.fromisoformat("2026-06-23"),
-                before_count=2,
-                after_count=1,
+                older_count=2,
+                newer_count=1,
             )
 
         self.assertEqual([str(item.id) for item in window.items], created_ids)
         self.assertEqual(window.target_count, 6)
-        self.assertFalse(window.has_earlier)
-        self.assertFalse(window.has_later)
-        self.assertIsNone(window.earlier_before)
-        self.assertIsNone(window.later_after)
+        self.assertFalse(window.has_older)
+        self.assertFalse(window.has_newer)
+        self.assertIsNone(window.older_cursor)
+        self.assertIsNone(window.newer_cursor)
 
     def test_get_entry_window_bounds_context_around_middle_date(self) -> None:
         with TemporaryDirectory() as data_dir:
@@ -241,16 +241,16 @@ class EntryServiceTests(TestCase):
 
             window = service.get_entry_window(
                 target_date=date.fromisoformat("2026-06-04"),
-                before_count=2,
-                after_count=1,
+                older_count=2,
+                newer_count=1,
             )
 
         self.assertEqual([str(item.id) for item in window.items], ids[1:5])
         self.assertEqual(window.target_count, 1)
-        self.assertTrue(window.has_earlier)
-        self.assertTrue(window.has_later)
-        self.assertEqual(decode_entry_cursor(window.earlier_before).entry_id, UUID(ids[1]))
-        self.assertEqual(decode_entry_cursor(window.later_after).entry_id, UUID(ids[4]))
+        self.assertTrue(window.has_older)
+        self.assertTrue(window.has_newer)
+        self.assertEqual(decode_entry_cursor(window.older_cursor).entry_id, UUID(ids[1]))
+        self.assertEqual(decode_entry_cursor(window.newer_cursor).entry_id, UUID(ids[4]))
 
     def test_get_entry_window_returns_empty_for_date_without_entries(self) -> None:
         with TemporaryDirectory() as data_dir:
@@ -260,14 +260,14 @@ class EntryServiceTests(TestCase):
 
             window = service.get_entry_window(
                 target_date=date.fromisoformat("2026-07-01"),
-                before_count=2,
-                after_count=2,
+                older_count=2,
+                newer_count=2,
             )
 
         self.assertEqual(window.items, ())
         self.assertEqual(window.target_count, 0)
-        self.assertFalse(window.has_earlier)
-        self.assertFalse(window.has_later)
+        self.assertFalse(window.has_older)
+        self.assertFalse(window.has_newer)
 
     def test_get_entry_window_rejects_negative_counts(self) -> None:
         with TemporaryDirectory() as data_dir:
@@ -276,8 +276,8 @@ class EntryServiceTests(TestCase):
             with self.assertRaises(EntryServiceError) as error:
                 service.get_entry_window(
                     target_date=date.fromisoformat("2026-06-23"),
-                    before_count=-1,
-                    after_count=0,
+                    older_count=-1,
+                    newer_count=0,
                 )
 
         self.assertEqual(error.exception.code, "invalid_request")
