@@ -269,7 +269,7 @@
     feed.setAttribute("aria-label", "Diary entries");
     feed.append(createLoadControl());
     if (feedState.targetDate) {
-      feed.append(createWindowModeNotice());
+      feed.append(createReturnToLatestButton());
     }
     if (isBackendDataSource() && feedState.dataStatus === "ready" && readingSamples.length === 0) {
       feed.append(createEmptyBackendNotice());
@@ -315,23 +315,27 @@
     }
   }
 
-  function createWindowModeNotice() {
-    const notice = document.createElement("div");
-    const text = document.createElement("span");
+  function createReturnToLatestButton() {
     const button = document.createElement("button");
 
-    notice.className = "window-mode-notice";
-    text.textContent = feedState.jumpStatus === "loading"
-      ? "正在跳转到所选日期……"
-      : `正在查看 ${feedState.targetDate || "所选日期"} 附近的日记`;
     button.className = "window-mode-return";
     button.type = "button";
-    button.textContent = "回到此刻";
+    button.title = "回到此刻";
+    button.setAttribute("aria-label", "回到此刻");
+    button.innerHTML = createDownArrowIconSvg();
     button.addEventListener("click", () => {
       void returnToLatestFeed();
     });
-    notice.append(text, button);
-    return notice;
+    return button;
+  }
+
+  function createDownArrowIconSvg() {
+    return [
+      '<svg viewBox="0 0 24 24" aria-hidden="true">',
+      '<path d="M12 5v14"></path>',
+      '<path d="m6 13 6 6 6-6"></path>',
+      "</svg>",
+    ].join("");
   }
 
   function createEmptyBackendNotice() {

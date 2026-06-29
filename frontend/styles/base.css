@@ -357,34 +357,44 @@ body {
   font-size: 0.78rem;
 }
 
-.window-mode-notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  justify-self: center;
-  gap: var(--space-3);
-  inline-size: min(100%, var(--reading-width));
-  margin: 0;
-  color: var(--color-faint);
-  font-family: var(--font-ui);
-  font-size: 0.78rem;
-}
-
 .window-mode-return {
-  flex: none;
+  position: fixed;
+  inset-inline-end: max(var(--space-4), env(safe-area-inset-right));
+  inset-block-end: max(var(--space-4), env(safe-area-inset-bottom));
+  z-index: 24;
+  display: grid;
+  place-items: center;
+  inline-size: 2.35rem;
+  block-size: 2.35rem;
   border: 1px solid color-mix(in srgb, var(--color-line) 72%, transparent);
   border-radius: 999px;
-  padding: 0.18rem var(--space-2);
+  padding: 0;
   color: var(--color-muted);
-  background: transparent;
+  background: color-mix(in srgb, var(--color-page) 88%, transparent);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.07);
   cursor: pointer;
-  font: inherit;
+  backdrop-filter: blur(8px);
 }
 
 .window-mode-return:hover,
 .window-mode-return:focus-visible {
   color: var(--color-accent);
   border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+.window-mode-return:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 70%, transparent);
+  outline-offset: var(--space-1);
+}
+
+.window-mode-return svg {
+  inline-size: 1.16rem;
+  block-size: 1.16rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .sidebar-menu-button {
