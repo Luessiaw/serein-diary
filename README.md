@@ -23,17 +23,17 @@ Serein 是一款自托管的个人日记应用，名称取自雨后清澈宁静�
 
 ## 当前状态
 
-当前已完成 P3 的独立应用基础：
+当前已进入 P5A 真实只读接入的浏览器验收：
 
-- `frontend/` 提供静态连续日记流原型、设置卡片、日历占位和 Tiptap/Markdown
-  前端实验，并已接入极简锁屏流程。
-- `backend/` 提供 FastAPI 外壳、`DIARY_*` 配置校验、健康检查、极简锁屏认证和
-  一个受保护 API 骨架。
+- `frontend/` 提供连续日记流、极简锁屏、侧边日历、真实日期统计、日期窗口跳转、
+  双向滚动加载、回到此刻和阅读窗口裁剪能力。
+- `backend/` 提供 FastAPI 应用、`DIARY_*` 配置校验、锁屏认证、v1 日记事实文件读取、
+  可重建 SQLite 索引、正式 entries API、日期统计 API 和日期窗口 API。
 - `compose.yaml` 与 `deploy/Caddyfile` 提供可选的 Docker Compose + Caddy 示例：
   `web` 发布静态前端，`api` 在内部网络运行，`/api/v1/*` 经 `web` 反向代理。
 
-P3 仍不读取或写入真实日记。锁屏只决定是否显示前端日记界面；条目存储、可重建
-索引、迁移 dry-run 和正式写作 API 属于 P4/P5。
+P5A 仍是只读阶段；真实新建、删除、评论和媒体闭环属于后续 P5B--P5E。
+浏览器验收清单见 [P5A 真实只读接入浏览器验收](docs/p5a-readonly-browser-acceptance.md)。
 
 ## 后端快速检查
 
