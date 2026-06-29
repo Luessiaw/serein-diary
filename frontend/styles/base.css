@@ -186,6 +186,18 @@ body {
   --timeline-right-width: var(--timeline-left-width);
   --timeline-grid-width: calc(var(--timeline-left-width) + var(--reading-width) + var(--timeline-right-width));
   padding: var(--feed-padding-block) var(--page-gutter);
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity var(--jump-transition-ms) ease,
+    transform var(--jump-transition-ms) ease;
+}
+
+.diary-feed[data-transition="leaving"],
+.diary-feed[data-transition="entering"] {
+  opacity: 0.34;
+  transform: translateY(0.25rem);
+  pointer-events: none;
 }
 
 .diary-year {

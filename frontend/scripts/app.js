@@ -36,6 +36,7 @@
     hasOlder: false,
     hasNewer: false,
     atLatest: true,
+    transition: "idle",
     dataStatus: "idle",
     dataErrorMessage: "",
     targetDate: null,
@@ -52,6 +53,7 @@
   let pendingLoadCheckAfterLayoutChange = false;
   let activeNewEntryContentControl = null;
   let sidebarCalendarCursor = null;
+  let calendarJumpSequence = 0;
   const sidebarCalendarDateState = {
     status: "idle",
     dates: [],
@@ -266,6 +268,7 @@
 
     feed.className = "diary-feed";
     feed.dataset.status = feedState.dataStatus;
+    feed.dataset.transition = feedState.transition;
     feed.setAttribute("aria-label", "Diary entries");
     feed.append(createLoadControl());
     if (feedState.targetDate) {
@@ -1128,6 +1131,16 @@
   function shouldLoadEarlierEntries(options = {}) {
     const { source = "unknown", verbose = false } = options;
 
+    if (feedState.transition !== "idle") {
+      debugShouldLoad(false, "blocked-by-feed-transition", {
+        source,
+        verbose,
+        direction: "earlier",
+        transition: feedState.transition,
+      });
+      return false;
+    }
+
     if (loadState.status === "loading" || loadState.status === "complete") {
       debugShouldLoad(false, "blocked-by-status", { source, verbose, direction: "earlier" });
       return false;
@@ -1229,6 +1242,16 @@
 
   function shouldLoadLaterEntries(options = {}) {
     const { source = "unknown", verbose = false } = options;
+
+    if (feedState.transition !== "idle") {
+      debugShouldLoad(false, "blocked-by-feed-transition", {
+        source,
+        verbose,
+        direction: "later",
+        transition: feedState.transition,
+      });
+      return false;
+    }
 
     if (!feedState.hasNewer || feedState.atLatest) {
       debugShouldLoad(false, "no-newer-window-content", { source, verbose, direction: "later" });
@@ -1573,8 +1596,12 @@
   }
 
   function simulateLoadingDelay() {
+    return wait(settings.simulatedDelayMs);
+  }
+
+  function wait(milliseconds) {
     return new Promise((resolve) => {
-      window.setTimeout(resolve, settings.simulatedDelayMs);
+      window.setTimeout(resolve, Math.max(0, milliseconds));
     });
   }
 
@@ -2616,20 +2643,13 @@
       return;
     }
 
-    feedState.targetDate = targetDate;
-    feedState.atLatest = false;
-    feedState.hasOlder = false;
-    feedState.hasNewer = false;
+    calendarJumpSequence += 1;
+    const jumpSequence = calendarJumpSequence;
+    const transitionDelay = wait(settings.jumpTransitionMinWaitMs);
+
+    feedState.transition = "leaving";
     feedState.jumpStatus = "loading";
     feedState.jumpErrorMessage = "";
-    feedState.dataStatus = "loading";
-    feedState.dataErrorMessage = "";
-    loadState.status = "loading";
-    loadState.errorMessage = "";
-    loadState.laterStatus = "complete";
-    loadState.laterErrorMessage = "";
-    feedState.olderCursor = null;
-    feedState.newerCursor = null;
     setSidebarOpen(false);
     renderFeed();
 
@@ -2642,11 +2662,16 @@
       const samples = await loadEntryDetailsForSummaries(windowResult.items || []);
       const windowInfo = windowResult.window || {};
 
+      await transitionDelay;
+      if (jumpSequence !== calendarJumpSequence) {
+        return;
+      }
       feedState.entries = samples.sort((left, right) => (
         left.data.metadata.created_at.localeCompare(right.data.metadata.created_at)
         || left.data.metadata.id.localeCompare(right.data.metadata.id)
       ));
       feedState.targetDate = targetDate;
+      feedState.transition = "entering";
       feedState.jumpStatus = "ready";
       feedState.jumpErrorMessage = "";
       feedState.dataStatus = "ready";
@@ -2661,8 +2686,22 @@
       loadState.laterErrorMessage = "";
       feedState.newerCursor = windowInfo.newer_cursor || null;
       renderFeed({ scrollToDate: targetDate });
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          feedState.transition = "idle";
+          const feed = app.querySelector(".diary-feed");
+          if (feed) {
+            feed.dataset.transition = "idle";
+          }
+        });
+      });
     } catch (error) {
+      await transitionDelay;
+      if (jumpSequence !== calendarJumpSequence) {
+        return;
+      }
       feedState.targetDate = targetDate;
+      feedState.transition = "idle";
       feedState.atLatest = false;
       feedState.hasOlder = false;
       feedState.hasNewer = false;
@@ -2860,6 +2899,7 @@
       jumpBeforeCount: readNonNegativeIntegerToken(styles, "--jump-before-count", 12),
       jumpAfterCount: readNonNegativeIntegerToken(styles, "--jump-after-count", 12),
       jumpTargetOffset: readNonNegativeIntegerToken(styles, "--jump-target-scroll-offset", 96),
+      jumpTransitionMinWaitMs: readNonNegativeIntegerToken(styles, "--jump-transition-min-wait-ms", 280),
     };
   }
 
