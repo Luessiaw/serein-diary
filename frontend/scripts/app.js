@@ -997,7 +997,7 @@
       });
       control.append(message, retry);
     } else if (loadState.status === "complete") {
-      message.textContent = "已加载所有日记内容";
+      message.textContent = "这里是日记的起点。";
       control.append(message);
     } else {
       control.hidden = true;
