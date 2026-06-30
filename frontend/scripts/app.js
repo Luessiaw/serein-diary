@@ -49,6 +49,9 @@
     history: [],
     lastScrollProbeAt: 0,
   };
+  const indexDebugState = {
+    history: [],
+  };
   let loadCheckAfterLayoutChangeRunning = false;
   let pendingLoadCheckAfterLayoutChange = false;
   let activeNewEntryContentControl = null;
@@ -98,6 +101,7 @@
     renderFeed({ focusNewEntry: true, scrollToEnd: true });
     app.addEventListener("scroll", handleScroll, { passive: true });
     registerLoadDebugTools();
+    registerIndexDebugTools();
     registerLayoutDebugTools();
     registerEditorExperimentTools();
     createSidebarShell();
@@ -1785,6 +1789,81 @@
     });
   }
 
+  function registerIndexDebugTools() {
+    window.SereinDebugIndex = {
+      clear: clearIndexDebugLogs,
+      dumpReport: dumpIndexDebugReport,
+      inspect: inspectIndexDebugState,
+    };
+
+    debugIndex("debug tools registered", {
+      hint: "Use SereinDebugIndex.dumpReport() after testing rebuild-index.",
+    });
+  }
+
+  function inspectIndexDebugState() {
+    const snapshot = createIndexDebugSnapshot();
+
+    console.table(snapshot);
+    return snapshot;
+  }
+
+  function clearIndexDebugLogs() {
+    indexDebugState.history = [];
+    console.info("[Serein index] logs cleared");
+  }
+
+  function dumpIndexDebugReport() {
+    const report = {
+      generatedAt: new Date().toISOString(),
+      snapshot: createIndexDebugSnapshot(),
+      recentLogs: indexDebugState.history.slice(-80),
+      note: "Safe to share: this report excludes diary bodies, passwords, cookies, sessions, and private file paths.",
+    };
+
+    console.log(JSON.stringify(report, null, 2));
+    return report;
+  }
+
+  function debugIndex(message, details = {}) {
+    const payload = {
+      timestamp: new Date().toISOString(),
+      message,
+      ...createIndexDebugSnapshot(),
+      ...details,
+    };
+
+    indexDebugState.history.push(payload);
+    if (indexDebugState.history.length > 160) {
+      indexDebugState.history.shift();
+    }
+
+    console.info(`[Serein index] ${message}`, payload);
+  }
+
+  function createIndexDebugSnapshot() {
+    return {
+      dataSource: dataAdapter.source,
+      apiBase: API_BASE,
+      rebuildPath: `${API_BASE.replace(/\/$/u, "")}/entries/rebuild-index`,
+      resolvedRebuildUrl: resolveDebugUrl(`${API_BASE.replace(/\/$/u, "")}/entries/rebuild-index`),
+      pagePath: window.location.pathname,
+      pageSearch: window.location.search,
+      authenticated: authState.authenticated,
+      feedDataStatus: feedState.dataStatus,
+      loadedEntries: feedState.entries.length,
+      calendarDateStatus: sidebarCalendarDateState.status,
+    };
+  }
+
+  function resolveDebugUrl(path) {
+    try {
+      return new URL(path, window.location.href).href;
+    } catch {
+      return String(path || "");
+    }
+  }
+
   function setLoadDebugEnabled(enabled) {
     loadDebugState.enabled = Boolean(enabled);
     writeLoadDebugPreference(loadDebugState.enabled);
@@ -2315,14 +2394,36 @@
   }
 
   async function rebuildEntryIndexFromSettings() {
-    const result = await dataAdapter.rebuildIndex();
+    const startedAt = performance.now();
 
-    sidebarCalendarDateState.status = "idle";
-    sidebarCalendarDateState.dates = [];
-    sidebarCalendarDateState.errorMessage = "";
-    await initializeLoadedWindow();
-    renderFeed({ scrollToEnd: true });
-    return result;
+    debugIndex("rebuild index requested", {
+      source: "settings",
+    });
+
+    try {
+      const result = await dataAdapter.rebuildIndex();
+
+      debugIndex("rebuild index completed", {
+        durationMs: Math.round(performance.now() - startedAt),
+        result: createSafeIndexRebuildResult(result),
+      });
+      sidebarCalendarDateState.status = "idle";
+      sidebarCalendarDateState.dates = [];
+      sidebarCalendarDateState.errorMessage = "";
+      await initializeLoadedWindow();
+      renderFeed({ scrollToEnd: true });
+      debugIndex("feed refreshed after rebuild", {
+        durationMs: Math.round(performance.now() - startedAt),
+        result: createSafeIndexRebuildResult(result),
+      });
+      return result;
+    } catch (error) {
+      debugIndex("rebuild index failed", {
+        durationMs: Math.round(performance.now() - startedAt),
+        error: createSafeApiErrorDebug(error),
+      });
+      throw error;
+    }
   }
 
   function createIndexRebuildStatusMessage(result) {
@@ -2331,6 +2432,47 @@
     const deleted = Number(result?.deleted_entries || 0);
 
     return `已重建：${visible} 篇可见，${deleted} 篇已删除，共 ${total} 篇。`;
+  }
+
+  function createSafeIndexRebuildResult(result) {
+    return {
+      rebuilt: Boolean(result?.rebuilt),
+      totalEntries: Number(result?.total_entries || 0),
+      visibleEntries: Number(result?.visible_entries || 0),
+      deletedEntries: Number(result?.deleted_entries || 0),
+    };
+  }
+
+  function createSafeApiErrorDebug(error) {
+    return {
+      name: error?.name || null,
+      message: error instanceof Error ? error.message : String(error || "未知错误"),
+      status: Number.isFinite(error?.status) ? error.status : null,
+      code: error?.code || null,
+      body: summarizeApiErrorBody(error?.body),
+    };
+  }
+
+  function summarizeApiErrorBody(body) {
+    if (!body || typeof body !== "object") {
+      return null;
+    }
+
+    const apiError = body.error || body.detail?.error || null;
+
+    if (apiError) {
+      return {
+        error: {
+          code: apiError.code || null,
+          message: apiError.message || null,
+        },
+      };
+    }
+    if (typeof body.detail === "string") {
+      return { detail: body.detail };
+    }
+
+    return { keys: Object.keys(body).slice(0, 8) };
   }
 
   function createSidebarCalendar() {
