@@ -37,10 +37,11 @@ Serein 已从 Portal 原型迁移为独立仓库：
   - 前端阅读流已收敛为统一 feed window 状态，并使用 `older_than` / `newer_than` 方向游标。
 - 窗口裁剪与内存控制已实现，默认在 `tokens.css` 中关闭。
 - `P5A-T04` 浏览器综合验收已进入准备阶段，验收清单见 `docs/p5a-readonly-browser-acceptance.md`。
-- P5B 已完成到 `P5B-T01`：
+- P5B 已完成到 `P5B-T02`：
   - backend 正式写作路径固定为离线 Textarea，Tiptap demo 仅保留在 mock 实验中。
   - 设置页提供受认证的手动重建索引入口，用于外部迁移后刷新 SQLite 衍生索引。
   - 新建区保存按钮已接入 `SereinDataAdapter.createEntry()`，失败时保留输入。
+  - 保存成功后，服务端返回条目会插入当前最新阅读流；刷新页面后可从后端恢复。
 
 ## 重要协作规则
 
@@ -427,6 +428,6 @@ docs/p5a-readonly-browser-acceptance.md
 
 1. 完成 `P5A-T04`：真实只读接入浏览器验收。
 2. 视验收结果，修正统一阅读窗口、裁剪或视觉过渡问题。
-3. 进入 `P5B-T02`：保存后插入流并刷新可恢复。
+3. 进入 `P5B-T03`：写入闭环浏览器验收。
 
 不建议下一步立刻做评论或媒体。当前最重要的是让“真实数据阅读 + 日期跳转 + 回到此刻”这个主循环稳定。

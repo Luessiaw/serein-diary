@@ -55,6 +55,7 @@
   let loadCheckAfterLayoutChangeRunning = false;
   let pendingLoadCheckAfterLayoutChange = false;
   let activeNewEntryContentControl = null;
+  let pendingNewEntryMessage = "";
   let sidebarCalendarCursor = null;
   let calendarJumpSequence = 0;
   const sidebarCalendarDateState = {
@@ -569,6 +570,8 @@
     }
     message.className = "new-entry-message";
     message.setAttribute("role", "status");
+    message.textContent = pendingNewEntryMessage;
+    pendingNewEntryMessage = "";
     header.className = "new-entry-header";
     actions.className = "new-entry-actions";
     toolbar.className = "tiptap-toolbar";
@@ -625,20 +628,26 @@
       if (isBackendDataSource()) {
         setNewEntrySavingState(controls, true);
         message.textContent = "正在保存……";
+        let shouldRestoreSavingState = true;
         try {
-          await dataAdapter.createEntry({
+          const created = await dataAdapter.createEntry({
             title: titleValue,
             content: rawBody,
           });
           form.reset();
           contentControl.clear();
-          message.textContent = "已保存到后端；刷新页面后可读取。";
-          title.focus({ preventScroll: true });
+          insertCreatedEntryIntoFeed(created);
+          invalidateSidebarCalendarDates();
+          pendingNewEntryMessage = "已保存。";
+          renderFeed({ focusNewEntry: true, scrollToEnd: true });
+          shouldRestoreSavingState = false;
         } catch (error) {
           message.textContent = `保存失败：${createDataErrorMessage(error)}`;
           contentControl.focus();
         } finally {
-          setNewEntrySavingState(controls, false);
+          if (shouldRestoreSavingState) {
+            setNewEntrySavingState(controls, false);
+          }
         }
         return;
       }
@@ -662,6 +671,26 @@
     }
 
     return area;
+  }
+
+  function insertCreatedEntryIntoFeed(entry) {
+    mergeFeedSamples([apiEntryToSample(entry)]);
+    feedState.dataStatus = "ready";
+    feedState.dataErrorMessage = "";
+    feedState.targetDate = null;
+    feedState.jumpStatus = "idle";
+    feedState.jumpErrorMessage = "";
+    feedState.hasNewer = false;
+    feedState.atLatest = true;
+    feedState.newerCursor = null;
+    loadState.laterStatus = "complete";
+    loadState.laterErrorMessage = "";
+  }
+
+  function invalidateSidebarCalendarDates() {
+    sidebarCalendarDateState.status = "idle";
+    sidebarCalendarDateState.dates = [];
+    sidebarCalendarDateState.errorMessage = "";
   }
 
   function setNewEntrySavingState(controls, saving) {
