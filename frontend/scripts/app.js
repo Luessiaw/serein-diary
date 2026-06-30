@@ -13,6 +13,7 @@
   }
 
   const FALLBACK_PAGE_NAME = "Serein";
+  const FUTURE_FEED_SORT_TIMESTAMP = "9999-12-31T23:59:59+00:00";
   const API_BASE = readApiBase();
   const dataAdapter = window.SereinData.createDataAdapter({ apiBase: API_BASE });
   window.SereinDataAdapter = dataAdapter;
@@ -413,6 +414,7 @@
     const items = readingSamples.map((sample) => ({
       type: "entry",
       createdAt: sample.data.metadata.created_at,
+      sortAt: sample.data.metadata.created_at,
       sample,
     }));
 
@@ -420,10 +422,11 @@
       items.push({
         type: "new",
         createdAt: getNewEntryFeedTimestamp(readingSamples),
+        sortAt: FUTURE_FEED_SORT_TIMESTAMP,
       });
     }
 
-    return items.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+    return items.sort((left, right) => left.sortAt.localeCompare(right.sortAt));
   }
 
   function getNewEntryFeedTimestamp(readingSamples) {
