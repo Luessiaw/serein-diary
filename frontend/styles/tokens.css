@@ -33,17 +33,17 @@
    * `clamp()` 会让正文在较宽屏幕上略微增大，同时确保手机上的字号舒适。
    * 若目标是更安静、适合长文阅读的效果，应优先调整行高，再考虑增大字号。
    */
-  --font-size-title: clamp(1.2rem, 1rem + 1vw, 1.5rem);
-  --font-size-reading: clamp(1rem, 0.96rem + 0.15vw, 1.125rem);
+  --font-size-title: 1.5rem;
+  --font-size-reading: 1.25rem;
   --font-year: var(--font-ui);
   --font-month: var(--font-ui);
   --font-date: var(--font-ui);
-  --font-size-year: 1.2rem;
-  --font-size-month: 1.2rem;
-  --font-size-date: 1.2rem;
-  --font-size-entry-time: 0.6rem;
-  --line-height-reading: 1.5;
-  --letter-spacing-date: 0.08em;
+  --font-size-year: 1.25rem;
+  --font-size-month: 1.25rem;
+  --font-size-date: 1.25rem;
+  --font-size-entry-time: 0.8rem;
+  --line-height-reading: 2rem;
+  --letter-spacing-date: 0.1em;
 
   /*
    * 色彩角色

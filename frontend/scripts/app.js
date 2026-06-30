@@ -835,7 +835,7 @@
             },
           }),
           Placeholder.configure({
-            placeholder: element.dataset.placeholder || "写下此刻……",
+            placeholder: element.dataset.placeholder || "记录此刻……",
           }),
         ],
         content: "",
