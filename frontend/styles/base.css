@@ -1269,6 +1269,14 @@ body[data-sidebar-open="true"] .app-sidebar {
   resize: none;
 }
 
+.new-entry-title-input:disabled,
+.new-entry-content-input:disabled,
+.new-entry-cancel:disabled,
+.new-entry-save:disabled {
+  cursor: wait;
+  opacity: 0.52;
+}
+
 .tiptap-toolbar {
   grid-area: toolbar;
   display: flex;

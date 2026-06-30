@@ -601,7 +601,21 @@
     form.addEventListener("submit", (event) => {
       event.preventDefault();
 
-      const body = contentControl.readMarkdown().trim();
+      void handleNewEntrySubmit({
+        title,
+        contentControl,
+        message,
+        form,
+        cancel,
+        save,
+      });
+    });
+
+    async function handleNewEntrySubmit(controls) {
+      const rawBody = controls.contentControl.readMarkdown();
+      const body = rawBody.trim();
+      const titleValue = controls.title.value.trim();
+
       if (!body) {
         message.textContent = "请先写下一些内容。";
         contentControl.focus();
@@ -609,14 +623,29 @@
       }
 
       if (isBackendDataSource()) {
-        message.textContent = "真实保存将在下一步启用；当前只验证后端读取。";
-        contentControl.focus();
+        setNewEntrySavingState(controls, true);
+        message.textContent = "正在保存……";
+        try {
+          await dataAdapter.createEntry({
+            title: titleValue,
+            content: rawBody,
+          });
+          form.reset();
+          contentControl.clear();
+          message.textContent = "已保存到后端；刷新页面后可读取。";
+          title.focus({ preventScroll: true });
+        } catch (error) {
+          message.textContent = `保存失败：${createDataErrorMessage(error)}`;
+          contentControl.focus();
+        } finally {
+          setNewEntrySavingState(controls, false);
+        }
         return;
       }
 
-      addStaticEntry(title.value.trim(), body);
+      addStaticEntry(titleValue, body);
       renderFeed({ focusNewEntry: true, scrollToEnd: true });
-    });
+    }
 
     actions.append(draftStatus, cancel, save);
     header.append(title);
@@ -633,6 +662,16 @@
     }
 
     return area;
+  }
+
+  function setNewEntrySavingState(controls, saving) {
+    const isSaving = Boolean(saving);
+
+    controls.title.disabled = isSaving;
+    controls.cancel.disabled = isSaving;
+    controls.save.disabled = isSaving;
+    controls.contentControl.setDisabled?.(isSaving);
+    controls.save.setAttribute("aria-busy", String(isSaving));
   }
 
   function createNewEntryContentControl(content, message, toolbar) {
@@ -657,6 +696,9 @@
       clear() {
         content.value = "";
         resizeContentInput(content);
+      },
+      setDisabled(disabled) {
+        content.disabled = Boolean(disabled);
       },
       focus() {
         content.focus({ preventScroll: true });
@@ -697,6 +739,14 @@
         }
 
         content.textContent = "";
+      },
+      setDisabled(disabled) {
+        if (state.editor) {
+          state.editor.setEditable(!disabled);
+          return;
+        }
+
+        content.contentEditable = disabled ? "false" : "true";
       },
       focus() {
         if (state.editor) {
