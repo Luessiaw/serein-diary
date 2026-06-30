@@ -963,7 +963,7 @@ body[data-sidebar-open="true"] .app-sidebar {
   inline-size: var(--year-control-width);
   position: sticky;
   inset-block-start: var(--sticky-group-label-top);
-  z-index: var(--sticky-group-label-z-index);
+  z-index: var(--sticky-year-label-z-index);
   color: var(--color-year);
   background: var(--sticky-group-label-background);
   font-family: var(--font-year);
@@ -992,7 +992,7 @@ body[data-sidebar-open="true"] .app-sidebar {
   inline-size: var(--month-control-width);
   position: sticky;
   inset-block-start: var(--sticky-group-label-top);
-  z-index: var(--sticky-group-label-z-index);
+  z-index: var(--sticky-month-label-z-index);
   color: var(--color-month);
   background: var(--sticky-group-label-background);
   font-family: var(--font-month);

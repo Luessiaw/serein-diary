@@ -134,6 +134,8 @@
   --entry-body-padding-block-start: var(--group-summary-padding-block);
   --sticky-group-label-top: 0;
   --sticky-group-label-z-index: 8;
+  --sticky-year-label-z-index: 10;
+  --sticky-month-label-z-index: 9;
   --sticky-group-label-background: var(--color-page);
   --sticky-year-label-top-compact: 0;
   --sticky-year-label-height-compact: calc(
