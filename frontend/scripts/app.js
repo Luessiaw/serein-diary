@@ -56,6 +56,7 @@
   let pendingLoadCheckAfterLayoutChange = false;
   let activeNewEntryContentControl = null;
   let pendingNewEntryMessage = "";
+  let pendingSavedEntryId = null;
   let sidebarCalendarCursor = null;
   let calendarJumpSequence = 0;
   const sidebarCalendarDateState = {
@@ -265,6 +266,7 @@
       focusNewEntry = false,
       scrollToEnd = false,
       scrollToDate = null,
+      scrollToEntryId = null,
     } = options;
     const feed = document.createElement("section");
     const readingSamples = getReadingSamples();
@@ -328,6 +330,12 @@
     if (scrollToDate) {
       requestAnimationFrame(() => {
         scrollToDateEntry(scrollToDate);
+      });
+    }
+    if (scrollToEntryId) {
+      requestAnimationFrame(() => {
+        scrollToEntry(scrollToEntryId);
+        updateReturnToLatestButtonVisibility();
       });
     }
   }
@@ -411,11 +419,20 @@
     if (feedState.atLatest) {
       items.push({
         type: "new",
-        createdAt: draftCreatedAt,
+        createdAt: getNewEntryFeedTimestamp(readingSamples),
       });
     }
 
     return items.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+  }
+
+  function getNewEntryFeedTimestamp(readingSamples) {
+    const latestEntry = readingSamples.at(-1);
+    const latestEntryCreatedAt = latestEntry?.data?.metadata?.created_at || "";
+
+    return latestEntryCreatedAt && latestEntryCreatedAt > draftCreatedAt
+      ? latestEntryCreatedAt
+      : draftCreatedAt;
   }
 
   async function initializeLoadedWindow() {
@@ -638,8 +655,10 @@
           contentControl.clear();
           insertCreatedEntryIntoFeed(created);
           invalidateSidebarCalendarDates();
+          draftCreatedAt = createLocalTimestamp();
           pendingNewEntryMessage = "已保存。";
-          renderFeed({ focusNewEntry: true, scrollToEnd: true });
+          pendingSavedEntryId = created.id;
+          renderFeed({ scrollToEntryId: created.id });
           shouldRestoreSavingState = false;
         } catch (error) {
           message.textContent = `保存失败：${createDataErrorMessage(error)}`;
@@ -685,6 +704,11 @@
     feedState.newerCursor = null;
     loadState.laterStatus = "complete";
     loadState.laterErrorMessage = "";
+    debugLoad("created entry inserted into feed", {
+      entryId: entry.id,
+      createdAt: entry.created_at,
+      totalEntries: feedState.entries.length,
+    });
   }
 
   function invalidateSidebarCalendarDates() {
@@ -1830,6 +1854,21 @@
     }
 
     setScrollTopInstant(Math.max(0, target.offsetTop - settings.jumpTargetOffset));
+  }
+
+  function scrollToEntry(entryId) {
+    const target = app.querySelector(`[data-entry-id="${entryId}"]`);
+
+    if (!target) {
+      debugLoad("scroll to created entry skipped", {
+        reason: "entry-not-found",
+        entryId,
+      });
+      return;
+    }
+
+    setScrollTopInstant(Math.max(0, target.offsetTop - settings.jumpTargetOffset));
+    debugLoad("scrolled to created entry", { entryId });
   }
 
   function setScrollTopInstant(top) {
@@ -3510,6 +3549,15 @@
     const calendarDate = getCalendarDate(metadata.created_at);
 
     entry.className = "diary-entry";
+    if (metadata.id === pendingSavedEntryId) {
+      entry.classList.add("is-newly-saved");
+      window.setTimeout(() => {
+        if (pendingSavedEntryId === metadata.id) {
+          pendingSavedEntryId = null;
+        }
+        app.querySelector(`[data-entry-id="${metadata.id}"]`)?.classList.remove("is-newly-saved");
+      }, 1400);
+    }
     entry.dataset.entryId = metadata.id;
     entry.dataset.entryDate = calendarDate;
     entry.dataset.entryMode = ui.mode;

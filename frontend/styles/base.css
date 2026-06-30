@@ -1087,6 +1087,10 @@ body[data-sidebar-open="true"] .app-sidebar {
   margin: 0;
 }
 
+.diary-entry.is-newly-saved .entry-body {
+  animation: saved-entry-flash 1.4s ease-out;
+}
+
 .entry-content p + p,
 .entry-content p + ul,
 .entry-content p + ol,
@@ -1478,6 +1482,16 @@ body[data-sidebar-open="true"] .app-sidebar {
 
   to {
     opacity: 1;
+  }
+}
+
+@keyframes saved-entry-flash {
+  0% {
+    background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  }
+
+  100% {
+    background: transparent;
   }
 }
 
