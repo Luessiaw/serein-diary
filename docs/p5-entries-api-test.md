@@ -118,6 +118,34 @@ curl -sS -b /tmp/serein-cookie.txt \
   'http://127.0.0.1:8088/api/v1/entries?include_deleted=true'
 ```
 
+## 重建索引
+
+如果你绕过网页或 API，手动按契约向 `DIARY_HOST_DATA_DIR/entries/` 添加了条目，
+需要重建服务器端 SQLite 衍生索引：
+
+```bash
+curl -sS -b /tmp/serein-cookie.txt \
+  -X POST \
+  http://127.0.0.1:8088/api/v1/entries/rebuild-index
+```
+
+响应只包含安全摘要，不包含正文、宿主机路径或索引文件路径：
+
+```json
+{
+  "rebuilt": true,
+  "total_entries": 410,
+  "visible_entries": 410,
+  "deleted_entries": 0
+}
+```
+
+也可以登录网页后在设置页点击“重建索引”，或在浏览器 console 运行：
+
+```js
+await SereinDataAdapter.rebuildIndex()
+```
+
 ## 错误响应
 
 正式 API 使用稳定错误码：

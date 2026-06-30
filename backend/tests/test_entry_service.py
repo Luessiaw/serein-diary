@@ -124,6 +124,37 @@ class EntryServiceTests(TestCase):
         self.assertEqual(indexed[0].id, created.entry.metadata.id)
         self.assertEqual(indexed[0].title, "服务层创建")
 
+    def test_rebuild_index_summary_picks_up_manual_entries(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            first_id = "11111111-1111-4111-8111-111111111111"
+            second_id = "22222222-2222-4222-8222-222222222222"
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606230930-{first_id}",
+                entry_id=first_id,
+                created_at="2026-06-23T09:30:00+08:00",
+            )
+            service = EntryService(root)
+            rebuild_index(root)
+
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606231030-{second_id}",
+                entry_id=second_id,
+                created_at="2026-06-23T10:30:00+08:00",
+            )
+            stale_page = service.list_entries(include_deleted=True)
+            result = service.rebuild_index_summary()
+            fresh_page = service.list_entries(include_deleted=True)
+
+        self.assertEqual([str(item.id) for item in stale_page.items], [first_id])
+        self.assertTrue(result.rebuilt)
+        self.assertEqual(result.total_entries, 2)
+        self.assertEqual(result.visible_entries, 2)
+        self.assertEqual(result.deleted_entries, 0)
+        self.assertEqual([str(item.id) for item in fresh_page.items], [first_id, second_id])
+
     def test_delete_entry_refreshes_index_and_filters_deleted_by_default(self) -> None:
         with TemporaryDirectory() as data_dir:
             root = Path(data_dir)

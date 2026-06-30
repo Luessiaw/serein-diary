@@ -21,6 +21,7 @@ from serein.services.entries import (
     MAX_PAGE_LIMIT,
     EntryDetailItem,
     EntryDateCount,
+    EntryIndexRefreshResult,
     EntryPage,
     EntryService,
     EntryServiceError,
@@ -143,6 +144,15 @@ class EntryWindowResponse(BaseModel):
     window: EntryWindowInfoResponse
 
 
+class EntryIndexRebuildResponse(BaseModel):
+    """Safe response for a derived index rebuild."""
+
+    rebuilt: bool
+    total_entries: int
+    visible_entries: int
+    deleted_entries: int
+
+
 @router.get("", response_model=EntryListResponse)
 def list_entries(
     response: Response,
@@ -244,6 +254,22 @@ def create_entry_endpoint(
         raise service_http_error(error) from error
 
 
+@router.post("/rebuild-index", response_model=EntryIndexRebuildResponse)
+def rebuild_entry_index(
+    response: Response,
+    request: Request,
+    session: AuthenticatedSession = Depends(require_authenticated_session),
+) -> EntryIndexRebuildResponse:
+    """Rebuild the derived SQLite index from entry fact files."""
+
+    _ = session
+    mark_auth_response_uncacheable(response)
+    try:
+        return entry_index_rebuild_to_response(get_entry_service(request).rebuild_index_summary())
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
+
+
 @router.get("/{entry_id}", response_model=EntryDetailResponse)
 def get_entry(
     entry_id: UUID,
@@ -318,6 +344,15 @@ def entry_window_to_response(window: EntryWindow) -> EntryWindowResponse:
             older_cursor=window.older_cursor,
             newer_cursor=window.newer_cursor,
         ),
+    )
+
+
+def entry_index_rebuild_to_response(result: EntryIndexRefreshResult) -> EntryIndexRebuildResponse:
+    return EntryIndexRebuildResponse(
+        rebuilt=result.rebuilt,
+        total_entries=result.total_entries,
+        visible_entries=result.visible_entries,
+        deleted_entries=result.deleted_entries,
     )
 
 

@@ -77,6 +77,9 @@
         });
         return apiClient.requestJson(`/entries/dates${params}`);
       },
+      rebuildIndex() {
+        return apiClient.requestJson("/entries/rebuild-index", { method: "POST" });
+      },
       listComments(entryId) {
         return apiClient.requestJson(`/entries/${encodeURIComponent(entryId)}/comments`);
       },
@@ -269,6 +272,17 @@
           dates: [...counts.entries()]
             .sort(([left], [right]) => left.localeCompare(right))
             .map(([date, count]) => ({ date, count })),
+        };
+      },
+      async rebuildIndex() {
+        const entries = getMockEntryDetails();
+        const visibleEntries = entries.filter((entry) => !entry.deleted);
+
+        return {
+          rebuilt: true,
+          total_entries: entries.length,
+          visible_entries: visibleEntries.length,
+          deleted_entries: entries.length - visibleEntries.length,
         };
       },
       async listComments(entryId) {

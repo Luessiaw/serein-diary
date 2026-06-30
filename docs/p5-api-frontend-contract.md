@@ -365,6 +365,28 @@ alt: optional string
 - 读取媒体必须认证。
 - 前端正文使用 `media:<uuid>` 引用，不保存真实文件路径。
 
+### 维护：重建 entries 索引
+
+用于手动迁移或外部工具按 v1 契约写入 `entries/` 后，显式刷新服务器端可重建 SQLite 索引。
+这是单管理员维护入口，不是日常读取路径。
+
+```text
+POST /api/v1/entries/rebuild-index
+```
+
+响应只返回安全摘要，不返回正文、宿主机路径或索引文件路径：
+
+```json
+{
+  "rebuilt": true,
+  "total_entries": 410,
+  "visible_entries": 410,
+  "deleted_entries": 0
+}
+```
+
+前端设置页可触发该入口；成功后应重新读取最新窗口并刷新日历日期缓存。
+
 ## 前端 API adapter
 
 前端新增单一 adapter 层，建议文件：
@@ -386,6 +408,7 @@ adapter.getEntry(entryId)
 adapter.createEntry({ title, content })
 adapter.deleteEntry(entryId)
 adapter.getEntryDates({ from, to })
+adapter.rebuildIndex()
 adapter.listComments(entryId)
 adapter.createComment(entryId, { content, anchor })
 adapter.deleteComment(entryId, commentId)

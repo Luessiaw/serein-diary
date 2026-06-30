@@ -21,6 +21,7 @@ from serein.api.entries import (
     get_entry_window,
     list_entry_dates,
     list_entries,
+    rebuild_entry_index,
 )
 from serein.config import Settings
 
@@ -203,6 +204,40 @@ class EntriesApiTests(TestCase):
         self.assertEqual([str(item.id) for item in later_page.items], ids[3:5])
         self.assertFalse(later_page.page.has_newer)
         self.assertIsNone(later_page.page.newer_cursor)
+
+    def test_rebuild_entry_index_endpoint_refreshes_manual_entries(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            request = self.make_request(root)
+            session = self.make_session()
+            first_id = "11111111-1111-4111-8111-111111111111"
+            second_id = "22222222-2222-4222-8222-222222222222"
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606230930-{first_id}",
+                entry_id=first_id,
+                created_at="2026-06-23T09:30:00+08:00",
+            )
+            list_entries(Response(), request, session=session)
+
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606231030-{second_id}",
+                entry_id=second_id,
+                created_at="2026-06-23T10:30:00+08:00",
+            )
+            stale_page = list_entries(Response(), request, include_deleted=True, session=session)
+            response = Response()
+            rebuild_result = rebuild_entry_index(response, request, session)
+            fresh_page = list_entries(Response(), request, include_deleted=True, session=session)
+
+        self.assertEqual(response.headers["cache-control"], NO_STORE_HEADER)
+        self.assertEqual([str(item.id) for item in stale_page.items], [first_id])
+        self.assertTrue(rebuild_result.rebuilt)
+        self.assertEqual(rebuild_result.total_entries, 2)
+        self.assertEqual(rebuild_result.visible_entries, 2)
+        self.assertEqual(rebuild_result.deleted_entries, 0)
+        self.assertEqual([str(item.id) for item in fresh_page.items], [first_id, second_id])
 
     def test_list_entry_dates_returns_calendar_counts(self) -> None:
         with TemporaryDirectory() as data_dir:

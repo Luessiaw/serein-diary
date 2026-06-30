@@ -100,6 +100,16 @@ class EntryDateCount:
 
 
 @dataclass(frozen=True)
+class EntryIndexRefreshResult:
+    """Safe summary of a derived index rebuild."""
+
+    rebuilt: bool
+    total_entries: int
+    visible_entries: int
+    deleted_entries: int
+
+
+@dataclass(frozen=True)
 class EntryCursor:
     """Decoded cursor facts."""
 
@@ -324,6 +334,22 @@ class EntryService:
         """Rebuild the derived SQLite index from fact files."""
 
         return rebuild_index(self.data_dir)
+
+    def rebuild_index_summary(self) -> EntryIndexRefreshResult:
+        """Rebuild the derived index and return body-safe counts."""
+
+        try:
+            index_path = self.refresh_index()
+            all_entries = list_indexed_entries(index_path, include_deleted=True)
+        except EntryValidationError as error:
+            raise map_storage_error(error) from error
+        visible_entries = [entry for entry in all_entries if not entry.deleted]
+        return EntryIndexRefreshResult(
+            rebuilt=True,
+            total_entries=len(all_entries),
+            visible_entries=len(visible_entries),
+            deleted_entries=len(all_entries) - len(visible_entries),
+        )
 
     def _read_indexed_entries(self, *, include_deleted: bool) -> list[EntrySummary]:
         index_path = get_index_path(self.data_dir)

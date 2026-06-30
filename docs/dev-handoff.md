@@ -89,6 +89,7 @@ POST   /api/v1/auth/logout
 GET    /api/v1/entries
 GET    /api/v1/entries/window
 GET    /api/v1/entries/dates
+POST   /api/v1/entries/rebuild-index
 GET    /api/v1/entries/{entry_id}
 POST   /api/v1/entries
 DELETE /api/v1/entries/{entry_id}

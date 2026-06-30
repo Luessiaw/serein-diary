@@ -2194,6 +2194,15 @@
           renderFeed({ focusNewEntry: true, scrollToEnd: true });
         },
       }),
+      createSidebarActionSetting({
+        id: "serein-setting-rebuild-index",
+        label: "重建索引",
+        description: "手动导入 entries 后刷新服务器端列表索引。",
+        buttonLabel: "重建",
+        disabled: !isBackendDataSource(),
+        disabledMessage: "mock 模式不需要重建索引。",
+        onAction: rebuildEntryIndexFromSettings,
+      }),
     );
 
     return settingsPanel;
@@ -2253,6 +2262,42 @@
     return row;
   }
 
+  function createSidebarActionSetting(config) {
+    const row = document.createElement("div");
+    const heading = document.createElement("div");
+    const button = document.createElement("button");
+    const status = document.createElement("p");
+
+    row.className = "sidebar-setting-row";
+    heading.className = "sidebar-setting-heading";
+    button.className = "sidebar-setting-button";
+    button.id = config.id;
+    button.type = "button";
+    button.textContent = config.buttonLabel;
+    button.disabled = Boolean(config.disabled);
+    status.className = "sidebar-setting-status";
+    status.setAttribute("role", "status");
+    status.textContent = config.disabled ? config.disabledMessage || "" : "";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      status.textContent = "正在重建……";
+      try {
+        const result = await config.onAction();
+
+        status.textContent = createIndexRebuildStatusMessage(result);
+      } catch (error) {
+        status.textContent = `重建失败：${createDataErrorMessage(error)}`;
+      } finally {
+        button.disabled = Boolean(config.disabled);
+      }
+    });
+
+    heading.append(createSidebarSettingLabel(config), button);
+    row.append(heading, status);
+
+    return row;
+  }
+
   function createSidebarSettingLabel(config) {
     const labelWrap = document.createElement("div");
     const label = document.createElement("label");
@@ -2267,6 +2312,25 @@
 
     labelWrap.append(label, description);
     return labelWrap;
+  }
+
+  async function rebuildEntryIndexFromSettings() {
+    const result = await dataAdapter.rebuildIndex();
+
+    sidebarCalendarDateState.status = "idle";
+    sidebarCalendarDateState.dates = [];
+    sidebarCalendarDateState.errorMessage = "";
+    await initializeLoadedWindow();
+    renderFeed({ scrollToEnd: true });
+    return result;
+  }
+
+  function createIndexRebuildStatusMessage(result) {
+    const total = Number(result?.total_entries || 0);
+    const visible = Number(result?.visible_entries || 0);
+    const deleted = Number(result?.deleted_entries || 0);
+
+    return `已重建：${visible} 篇可见，${deleted} 篇已删除，共 ${total} 篇。`;
   }
 
   function createSidebarCalendar() {
