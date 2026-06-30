@@ -63,6 +63,7 @@
     errorMessage: "",
   };
 
+  registerIndexDebugTools();
   void bootApplication();
 
   async function bootApplication() {
@@ -101,7 +102,6 @@
     renderFeed({ focusNewEntry: true, scrollToEnd: true });
     app.addEventListener("scroll", handleScroll, { passive: true });
     registerLoadDebugTools();
-    registerIndexDebugTools();
     registerLayoutDebugTools();
     registerEditorExperimentTools();
     createSidebarShell();
@@ -1790,6 +1790,10 @@
   }
 
   function registerIndexDebugTools() {
+    if (window.SereinDebugIndex) {
+      return;
+    }
+
     window.SereinDebugIndex = {
       clear: clearIndexDebugLogs,
       dumpReport: dumpIndexDebugReport,
