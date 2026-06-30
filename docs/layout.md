@@ -261,7 +261,7 @@ SereinDebugLayout.setDebugMode(false)
 
 ## 编辑器实验开关
 
-中央面板“设置”页中的“编辑器模式”下拉菜单用于切换新建日记正文区域：
+中央面板“设置”页中的“编辑器模式”下拉菜单只在 `mock` 数据源中用于切换新建日记正文区域：
 
 - `Textarea`：原生文本框，保持最轻量、最稳定的输入体验。
 - `Tiptap demo`：加载 Tiptap 实验编辑器，用于测试富文本工具栏和 Markdown 导出。
@@ -272,6 +272,9 @@ SereinDebugLayout.setDebugMode(false)
 ```js
 SereinEditorExperiment.setTiptapEnabled(true)
 ```
+
+backend 数据源下，P5B 正式写作固定使用离线 `Textarea`；此时本地 Tiptap 偏好会被忽略，
+设置项保持为 Textarea，页面不会加载 `esm.sh` 或 Tiptap CDN。
 
 颜色约定：
 

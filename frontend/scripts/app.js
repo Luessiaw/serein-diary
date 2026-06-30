@@ -2179,11 +2179,14 @@
       createSidebarSelectSetting({
         id: "serein-setting-editor-mode",
         label: "编辑器模式",
-        description: "切换原生文本框和Tiptap控件。",
+        description: isTiptapExperimentAvailable()
+          ? "切换原生文本框和 Tiptap 实验控件。"
+          : "正式写作固定使用离线 Textarea。",
         value: isTiptapExperimentEnabled() ? "tiptap" : "textarea",
+        disabled: !isTiptapExperimentAvailable(),
         options: [
           { value: "textarea", label: "Textarea" },
-          { value: "tiptap", label: "Tiptap demo" },
+          { value: "tiptap", label: "Tiptap demo", disabled: !isTiptapExperimentAvailable() },
         ],
         settingName: "editor-mode",
         onChange(value) {
@@ -2235,9 +2238,11 @@
 
       option.value = optionConfig.value;
       option.textContent = optionConfig.label;
+      option.disabled = Boolean(optionConfig.disabled);
       select.append(option);
     });
     select.value = config.value;
+    select.disabled = Boolean(config.disabled);
     select.addEventListener("change", () => {
       config.onChange(select.value);
     });
@@ -3004,8 +3009,10 @@
   }
 
   function initializeEditorExperimentState() {
-    if (readEditorExperimentPreference()) {
+    if (isTiptapExperimentAvailable() && readEditorExperimentPreference()) {
       document.documentElement.dataset.editorExperiment = "tiptap";
+    } else {
+      delete document.documentElement.dataset.editorExperiment;
     }
   }
 
@@ -3014,7 +3021,12 @@
       persist = true,
       select = document.querySelector('[data-setting="editor-mode"]'),
     } = options;
-    const nextEnabled = Boolean(enabled);
+    const requestedEnabled = Boolean(enabled);
+    const nextEnabled = requestedEnabled && isTiptapExperimentAvailable();
+
+    if (requestedEnabled && !nextEnabled) {
+      console.info("[Serein editor] Tiptap demo is only available in mock mode; backend writing uses Textarea.");
+    }
 
     if (nextEnabled) {
       document.documentElement.dataset.editorExperiment = "tiptap";
@@ -3022,19 +3034,27 @@
       delete document.documentElement.dataset.editorExperiment;
     }
 
-    if (persist) {
+    if (persist && (!requestedEnabled || nextEnabled)) {
       writeEditorExperimentPreference(nextEnabled);
     }
 
     if (select) {
       select.value = nextEnabled ? "tiptap" : "textarea";
+      select.disabled = !isTiptapExperimentAvailable();
     }
 
     return nextEnabled;
   }
 
   function isTiptapExperimentEnabled() {
-    return document.documentElement.dataset.editorExperiment === "tiptap";
+    return (
+      isTiptapExperimentAvailable()
+      && document.documentElement.dataset.editorExperiment === "tiptap"
+    );
+  }
+
+  function isTiptapExperimentAvailable() {
+    return dataAdapter.source === "mock";
   }
 
   function readEditorExperimentPreference() {

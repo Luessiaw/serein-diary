@@ -90,7 +90,7 @@ SereinDebugLoad.dumpReport()
 ## 通过标准
 
 完成桌面和手机验收后，如果没有阻断问题，可将 `tasks.csv` 中 `P5A-T04` 标为
-`done`，然后进入 `P5B-T00` / `P5B-T01` 的真实写入闭环。
+`done`，然后进入 `P5B-T01` 的真实写入闭环。
 
 如果出现问题，保留当前任务为待办，并把 `SereinDebugLoad.dumpReport()` 的输出和
 对应操作步骤保存到 `prompts/logs/`，再优先修复 P5A 的状态、滚动或游标问题。

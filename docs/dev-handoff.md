@@ -37,7 +37,7 @@ Serein 已从 Portal 原型迁移为独立仓库：
   - 前端阅读流已收敛为统一 feed window 状态，并使用 `older_than` / `newer_than` 方向游标。
 - 窗口裁剪与内存控制已实现，默认在 `tokens.css` 中关闭。
 - `P5A-T04` 浏览器综合验收已进入准备阶段，验收清单见 `docs/p5a-readonly-browser-acceptance.md`。
-- P5B 真实写入闭环尚未开始。
+- P5B 已完成 `P5B-T00`：backend 正式写作路径固定为离线 Textarea，Tiptap demo 仅保留在 mock 实验中。
 
 ## 重要协作规则
 
@@ -423,7 +423,6 @@ docs/p5a-readonly-browser-acceptance.md
 
 1. 完成 `P5A-T04`：真实只读接入浏览器验收。
 2. 视验收结果，修正统一阅读窗口、裁剪或视觉过渡问题。
-3. 进入 `P5B-T00`：收敛正式新建编辑器为离线 Textarea。
-4. 进入 `P5B-T01`：新建日记保存到后端。
+3. 进入 `P5B-T01`：新建日记保存到后端。
 
 不建议下一步立刻做评论或媒体。当前最重要的是让“真实数据阅读 + 日期跳转 + 回到此刻”这个主循环稳定。
