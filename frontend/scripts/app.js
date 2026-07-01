@@ -4010,12 +4010,12 @@
 
     const image = document.createElement("img");
     image.className = "markdown-media-image";
-    image.alt = alt || media.alt || "";
+    image.alt = alt || media?.alt || "";
     image.loading = "lazy";
     image.decoding = "async";
     image.src = dataAdapter.getMediaUrl(options.entryId, mediaId);
     image.addEventListener("error", () => {
-      const placeholder = createMarkdownImagePlaceholder(alt || media.alt, src);
+      const placeholder = createMarkdownImagePlaceholder(alt || media?.alt, src);
       image.replaceWith(placeholder);
     }, { once: true });
     container.append(image);
@@ -4035,7 +4035,7 @@
   }
 
   function parseMediaReference(src) {
-    const match = String(src || "").trim().match(/^media:([0-9a-fA-F-]+)$/u);
+    const match = String(src || "").trim().match(/^media:([0-9a-fA-F-]{36})$/u);
 
     return match ? match[1] : null;
   }

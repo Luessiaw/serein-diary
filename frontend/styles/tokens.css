@@ -81,7 +81,7 @@
    * 自动计算：main-width = reading-width + 2 * left-width；右侧隐形占位
    * 宽度等于 left-width，用于让正文列位于主体中央。
    */
-  --reading-width: 35rem;
+  --reading-width: 40rem;
   --year-control-width: 4.5rem;
   --month-control-width: 3rem;
   --date-control-width: 3rem;

@@ -289,6 +289,7 @@ def get_entry_media(
     except EntryServiceError as error:
         raise service_http_error(error) from error
 
+    entry_root = detail.entry.path.resolve()
     media_item = next(
         (item for item in detail.entry.media_manifest.media if item.id == media_id),
         None,
@@ -296,7 +297,6 @@ def get_entry_media(
     if media_item is None:
         raise service_http_error(EntryServiceError("media_not_found", "Media not found"))
 
-    entry_root = detail.entry.path.resolve()
     candidates = [media_item.preview, media_item.original]
     for relative_path in candidates:
         if not relative_path:

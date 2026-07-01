@@ -1195,8 +1195,6 @@ body[data-sidebar-open="true"] .app-sidebar {
   inline-size: 100%;
   border-collapse: collapse;
   color: var(--color-ink);
-  font-family: var(--font-ui);
-  font-size: 0.86em;
   line-height: 1.65;
 }
 
