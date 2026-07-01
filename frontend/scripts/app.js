@@ -49,6 +49,7 @@
     enabled: readLoadDebugPreference(),
     history: [],
     lastScrollProbeAt: 0,
+    lastReturnButtonHidden: null,
   };
   const indexDebugState = {
     history: [],
@@ -1217,7 +1218,16 @@
       return;
     }
 
-    button.hidden = !shouldShowReturnToLatestButton();
+    const shouldShow = shouldShowReturnToLatestButton();
+    const nextHidden = !shouldShow;
+
+    button.hidden = nextHidden;
+    if (loadDebugState.lastReturnButtonHidden !== nextHidden) {
+      loadDebugState.lastReturnButtonHidden = nextHidden;
+      debugLoad("return button visibility changed", {
+        returnButton: createReturnButtonDebugSnapshot(),
+      });
+    }
   }
 
   function shouldShowReturnToLatestButton() {
@@ -1900,6 +1910,7 @@
       dumpLogs: dumpLoadDebugLogs,
       dumpReport: dumpLoadDebugReport,
       inspect: inspectLoadState,
+      inspectReturnButton: inspectReturnButtonState,
       setEnabled: setLoadDebugEnabled,
       get enabled() {
         return loadDebugState.enabled;
@@ -1907,7 +1918,7 @@
     };
 
     debugLoad("debug tools registered", {
-      hint: "Use SereinDebugLoad.inspect(), SereinDebugLoad.dumpReport(), SereinDebugLoad.dumpLogs(), or SereinDebugLoad.setEnabled(false).",
+      hint: "Use SereinDebugLoad.inspectReturnButton(), SereinDebugLoad.dumpReport(), SereinDebugLoad.dumpLogs(), or SereinDebugLoad.setEnabled(false).",
     });
   }
 
@@ -2004,6 +2015,13 @@
     return snapshot;
   }
 
+  function inspectReturnButtonState() {
+    const snapshot = createReturnButtonDebugSnapshot();
+
+    console.table(snapshot);
+    return snapshot;
+  }
+
   function clearLoadDebugLogs() {
     loadDebugState.history = [];
     console.info("[Serein load] logs cleared");
@@ -2020,6 +2038,7 @@
     const report = {
       generatedAt: new Date().toISOString(),
       snapshot: createLoadDebugSnapshot(),
+      returnButton: createReturnButtonDebugSnapshot(),
       recentLogs: loadDebugState.history.slice(-120),
       note: "Safe to share: this report excludes diary bodies, passwords, cookies, and private file paths.",
     };
@@ -2107,6 +2126,32 @@
       windowTrimKeepAfter: settings.windowTrimKeepAfter,
       pendingPostLayoutCheck: pendingLoadCheckAfterLayoutChange,
       postLayoutCheckRunning: loadCheckAfterLayoutChangeRunning,
+    };
+  }
+
+  function createReturnButtonDebugSnapshot() {
+    const button = app.querySelector(".window-mode-return");
+    const newEntry = app.querySelector(".new-entry");
+    const appRect = app.getBoundingClientRect();
+    const newEntryRect = newEntry?.getBoundingClientRect();
+    const topDelta = newEntryRect ? newEntryRect.top - appRect.top : null;
+    const bottomDelta = newEntryRect ? newEntryRect.bottom - appRect.top : null;
+    const shouldShow = shouldShowReturnToLatestButton();
+
+    return {
+      transition: feedState.transition,
+      buttonExists: Boolean(button),
+      buttonHidden: button ? button.hidden : null,
+      shouldShow,
+      tolerance: settings.returnButtonTopTolerance,
+      appTop: Math.round(appRect.top),
+      appBottom: Math.round(appRect.bottom),
+      newEntryExists: Boolean(newEntry),
+      newEntryTop: newEntryRect ? Math.round(newEntryRect.top) : null,
+      newEntryBottom: newEntryRect ? Math.round(newEntryRect.bottom) : null,
+      newEntryTopMinusAppTop: topDelta === null ? null : Math.round(topDelta),
+      newEntryBottomMinusAppTop: bottomDelta === null ? null : Math.round(bottomDelta),
+      rule: "show only when newEntryTopMinusAppTop is greater than tolerance",
     };
   }
 
