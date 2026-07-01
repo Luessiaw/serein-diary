@@ -173,9 +173,11 @@ Box-year
 分别处在嵌套 grid 的真实列中，因此优先改这些 token，而不是直接给
 `.diary-entry`、`.diary-month` 或 `.diary-year` 增加横向 padding。
 
-宽屏布局中，`.diary-scroll-region` 使用 `--color-workspace` 作为页面外侧工作区，
-`.diary-feed` 保持 `--color-page` 浅色并居中，形成类似文档编辑器的中央阅读带。
-窄屏布局继续使用全浅色背景，避免手机阅读区域被额外框住。
+宽屏布局中，`.diary-scroll-region` 和 `.diary-feed` 使用 `--color-workspace` 作为
+页面外侧工作区。浅色阅读带从日期列开始，宽度由 `--reading-paper-width` 计算：
+“日期列 + 日期正文间距 + 正文列 + 日期正文间距 + 日期列”。年份、月份列以及右侧
+对应的镜像区域保持深灰，形成类似文档编辑器的中央阅读带。窄屏布局继续使用全浅色
+背景，避免手机阅读区域被额外框住。
 
 ## 纵向对齐参数
 

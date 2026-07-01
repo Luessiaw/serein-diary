@@ -28,6 +28,13 @@ body {
     + var(--date-control-width)
     + var(--date-content-gap)
   );
+  --reading-paper-width: calc(
+    var(--date-control-width)
+    + var(--date-content-gap)
+    + var(--reading-width)
+    + var(--date-content-gap)
+    + var(--date-control-width)
+  );
   --timeline-right-width: var(--timeline-left-width);
   --timeline-grid-width: calc(var(--timeline-left-width) + var(--reading-width) + var(--timeline-right-width));
   block-size: 100dvh;
@@ -1559,7 +1566,24 @@ body[data-sidebar-open="true"] .app-sidebar {
   .diary-feed {
     inline-size: min(100%, calc(var(--timeline-grid-width) + 2 * var(--page-gutter)));
     margin-inline: auto;
-    background: var(--color-page);
+    background: var(--color-workspace);
+  }
+
+  .diary-year > .diary-group-summary,
+  .diary-month > .diary-group-summary {
+    color: color-mix(in srgb, var(--color-page) 76%, transparent);
+    background: var(--color-workspace);
+  }
+
+  .diary-month > .diary-group-content {
+    background:
+      linear-gradient(
+        to right,
+        var(--color-page) 0,
+        var(--color-page) var(--reading-paper-width),
+        transparent var(--reading-paper-width),
+        transparent 100%
+      );
   }
 }
 
