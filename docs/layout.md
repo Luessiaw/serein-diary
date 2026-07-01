@@ -121,10 +121,9 @@ Box-year
 “年 + 年月间距 + 月 + 月正文间距”等宽的隐形空间。
 这块右侧空间在 `base.css` 中由 `--timeline-right-width` 表示，默认等于
 `--timeline-left-width`；调试模式下的橙色框就是这块占位列。
-主体宽度在 `base.css` 中由 `--reading-width + --timeline-left-width +
---timeline-right-width` 自动计算。日记条目自身宽度使用“日期列、日期正文间距、
-正文和右侧占位”的显式总和，避免 `inline-size: 100%` 在嵌套 grid 中留下额外
-剩余空间。
+主体宽度在 `base.css` 中由 `--reading-paper-width + --timeline-left-width +
+--timeline-right-width` 自动计算。日记条目自身宽度使用“正文纸带和右侧占位”的显式
+总和，避免 `inline-size: 100%` 在嵌套 grid 中留下额外剩余空间。
 
 ## 横向对齐参数
 

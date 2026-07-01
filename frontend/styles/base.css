@@ -25,8 +25,6 @@ body {
     + var(--year-month-inline-gap)
     + var(--month-control-width)
     + var(--month-date-inline-gap)
-    + var(--date-control-width)
-    + var(--date-content-gap)
   );
   --reading-paper-width: calc(
     var(--reading-width)
@@ -34,7 +32,7 @@ body {
     + var(--reading-paper-inline-padding)
   );
   --timeline-right-width: var(--timeline-left-width);
-  --timeline-grid-width: calc(var(--timeline-left-width) + var(--reading-width) + var(--timeline-right-width));
+  --timeline-grid-width: calc(var(--timeline-left-width) + var(--reading-paper-width) + var(--timeline-right-width));
   block-size: 100dvh;
   inline-size: 100%;
   overflow-x: hidden;
