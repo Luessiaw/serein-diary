@@ -29,11 +29,9 @@ body {
     + var(--date-content-gap)
   );
   --reading-paper-width: calc(
-    var(--date-control-width)
-    + var(--date-content-gap)
-    + var(--reading-width)
-    + var(--date-content-gap)
-    + var(--date-control-width)
+    var(--reading-width)
+    + var(--reading-paper-inline-padding)
+    + var(--reading-paper-inline-padding)
   );
   --timeline-right-width: var(--timeline-left-width);
   --timeline-grid-width: calc(var(--timeline-left-width) + var(--reading-width) + var(--timeline-right-width));
@@ -296,7 +294,7 @@ body {
 .diary-entry::after,
 .new-entry::after {
   content: "";
-  grid-column: 4;
+  grid-column: 2;
   justify-self: stretch;
   inline-size: 100%;
   min-block-size: var(--debug-layout-placeholder-min-height);
@@ -1046,34 +1044,34 @@ body[data-sidebar-open="true"] .app-sidebar {
 .diary-entry {
   display: grid;
   grid-template-columns:
-    var(--date-control-width)
-    var(--date-content-gap)
-    var(--reading-width)
+    var(--reading-paper-width)
     var(--timeline-right-width);
   align-items: start;
   inline-size: calc(
-    var(--date-control-width)
-    + var(--date-content-gap)
-    + var(--reading-width)
+    var(--reading-paper-width)
     + var(--timeline-right-width)
   );
   min-inline-size: 0;
 }
 
+.entry-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-end: var(--space-3);
+}
+
 .entry-date {
-  grid-column: 1;
-  display: grid;
-  gap: var(--space-1);
-  position: sticky;
-  inset-block-start: var(--sticky-group-label-top);
-  z-index: var(--sticky-date-label-z-index);
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: var(--space-2);
   color: var(--color-date);
-  background: var(--sticky-group-label-background);
   font-family: var(--font-date);
   font-size: var(--font-size-date);
   letter-spacing: var(--letter-spacing-date);
   line-height: 1;
-  padding-block-start: var(--date-control-padding-block-start);
 }
 
 .entry-time {
@@ -1082,13 +1080,16 @@ body[data-sidebar-open="true"] .app-sidebar {
 }
 
 .entry-body {
-  grid-column: 3;
+  grid-column: 1;
   min-inline-size: 0;
+  padding-inline: var(--reading-paper-inline-padding);
   padding-block-start: var(--entry-body-padding-block-start);
 }
 
 .entry-title {
-  margin: var(--title-gap) 0 var(--space-3);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: var(--title-gap) 0 0;
   font-family: var(--font-title);
   font-size: var(--font-size-title);
   font-weight: 500;
@@ -1248,14 +1249,10 @@ body[data-sidebar-open="true"] .app-sidebar {
 .new-entry {
   display: grid;
   grid-template-columns:
-    var(--date-control-width)
-    var(--date-content-gap)
-    var(--reading-width)
+    var(--reading-paper-width)
     var(--timeline-right-width);
   inline-size: calc(
-    var(--date-control-width)
-    + var(--date-content-gap)
-    + var(--reading-width)
+    var(--reading-paper-width)
     + var(--timeline-right-width)
   );
   align-items: start;
@@ -1271,7 +1268,8 @@ body[data-sidebar-open="true"] .app-sidebar {
 .new-entry-header {
   grid-area: title;
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  gap: var(--space-3);
 }
 
 .new-entry-cancel,
@@ -1606,9 +1604,6 @@ body[data-sidebar-open="true"] .app-sidebar {
       );
   }
 
-  .entry-date {
-    padding-inline-start: var(--reading-paper-date-padding-inline-start);
-  }
 }
 
 @media (max-width: 42rem) {
@@ -1657,16 +1652,7 @@ body[data-sidebar-open="true"] .app-sidebar {
   }
 
   .entry-date {
-    margin-block-end: var(--space-3);
-    justify-items: end;
-    position: static;
-    text-align: end;
-  }
-
-  .entry-day,
-  .entry-time {
-    justify-self: end;
-    text-align: end;
+    text-align: start;
   }
 }
 

@@ -680,10 +680,10 @@
     }
 
     actions.append(draftStatus, cancel, save);
-    header.append(title);
+    header.append(date, title);
     form.append(header, toolbar, content, message, actions);
     body.append(form);
-    area.append(date, body);
+    area.append(body);
     if (focusNewEntry) {
       requestAnimationFrame(() => {
         contentControl.resize();
@@ -3592,6 +3592,7 @@
     const entry = document.createElement("article");
     const date = document.createElement("time");
     const body = document.createElement("div");
+    const header = document.createElement("div");
     const content = document.createElement("div");
     const { data, ui } = sample;
     const { metadata } = data;
@@ -3619,19 +3620,22 @@
       metadata.created_at,
       entriesByDate.get(calendarDate),
     );
+    header.className = "entry-header";
     content.className = "entry-content";
     appendMarkdownBlocks(content, data.content, {
       entryId: metadata.id,
       mediaById: createEntryMediaMap(sample),
     });
 
-    entry.append(date, body);
+    header.append(date);
     if (metadata.title) {
       const title = document.createElement("h2");
       title.className = "entry-title";
       title.textContent = metadata.title;
-      body.append(title);
+      header.append(title);
     }
+    entry.append(body);
+    body.append(header);
     body.append(content);
 
     return entry;
@@ -4151,9 +4155,7 @@
       ["entry", entryRect],
       ["date", getRect(date)],
       ["body", bodyRect],
-      ["predicted date", predicted.date],
-      ["predicted date gap", predicted.dateGap],
-      ["predicted body", predicted.body],
+      ["predicted paper", predicted.paper],
       ["predicted right placeholder", predicted.rightPlaceholder],
     ].map(([name, rect]) => ({
       name,
@@ -4164,10 +4166,8 @@
     }));
 
     const columns = {
-      date: round(entryColumns[0] || 0),
-      dateContentGap: round(entryColumns[1] || 0),
-      body: round(entryColumns[2] || 0),
-      rightPlaceholder: round(entryColumns[3] || 0),
+      paper: round(entryColumns[0] || 0),
+      rightPlaceholder: round(entryColumns[1] || 0),
       entryColumnSum: round(entryColumns.reduce((sum, value) => sum + value, 0)),
       entryActualWidth: round(entryRect.width),
     };
@@ -4217,20 +4217,14 @@
   }
 
   function predictEntryColumns(left, columns) {
-    const [date = 0, dateGap = 0, body = 0, rightPlaceholder = 0] = columns;
-    const dateLeft = left;
-    const dateRight = dateLeft + date;
-    const gapLeft = dateRight;
-    const gapRight = gapLeft + dateGap;
-    const bodyLeft = gapRight;
-    const bodyRight = bodyLeft + body;
-    const placeholderLeft = bodyRight;
+    const [paper = 0, rightPlaceholder = 0] = columns;
+    const paperLeft = left;
+    const paperRight = paperLeft + paper;
+    const placeholderLeft = paperRight;
     const placeholderRight = placeholderLeft + rightPlaceholder;
 
     return {
-      date: { left: dateLeft, right: dateRight, width: date },
-      dateGap: { left: gapLeft, right: gapRight, width: dateGap },
-      body: { left: bodyLeft, right: bodyRight, width: body },
+      paper: { left: paperLeft, right: paperRight, width: paper },
       rightPlaceholder: {
         left: placeholderLeft,
         right: placeholderRight,

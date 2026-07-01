@@ -34,12 +34,14 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
           <button class="diary-group-summary" aria-expanded="true">06</button>
           <div class="diary-group-content">
             <article class="diary-entry">
-              <time class="entry-date">
-                <span class="entry-day">24</span>
-                <span class="entry-time">19:10</span>
-              </time>
               <div class="entry-body">
-                <h2 class="entry-title">标题</h2>
+                <div class="entry-header">
+                  <time class="entry-date">
+                    <span class="entry-day">24</span>
+                    <span class="entry-time">19:10</span>
+                  </time>
+                  <h2 class="entry-title">标题</h2>
+                </div>
                 <div class="entry-content">
                   <p>正文</p>
                 </div>
@@ -47,7 +49,6 @@ CSS token。当前布局主要由 `frontend/scripts/app.js` 生成 DOM，由
             </article>
 
             <section class="new-entry">
-              <p class="entry-date new-entry-date">现在</p>
               <div class="entry-body new-entry-body">
                 <form class="new-entry-form">...</form>
               </div>
@@ -105,18 +106,19 @@ Box-year
 └── Box-month
     ├── month label: 06
     └── Box-entry
-        ├── date label: 25 / 12:35
-        └── body: 正文
+        └── body
+            ├── header: date label 25 12:35 + title
+            └── content: 正文
 ```
 
 对应的横向列关系是：
 
 ```text
-[年] [年-月间距] [月] [月-日间距] [日] [日-正文间距] [正文]
+[年] [年-月间距] [月] [月-正文间距] [正文纸带]
 ```
 
 为了让正文而不是整条时间轴保持居中，CSS 会在正文右侧自动保留一块与左侧
-“年 + 年月间距 + 月 + 月日间距 + 日 + 日正文间距”等宽的隐形空间。
+“年 + 年月间距 + 月 + 月正文间距”等宽的隐形空间。
 这块右侧空间在 `base.css` 中由 `--timeline-right-width` 表示，默认等于
 `--timeline-left-width`；调试模式下的橙色框就是这块占位列。
 主体宽度在 `base.css` 中由 `--reading-width + --timeline-left-width +
@@ -136,7 +138,7 @@ Box-year
 --year-month-inline-gap: var(--space-3);
 --month-date-inline-gap: var(--space-3);
 --date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
---reading-paper-date-padding-inline-start: var(--space-2);
+--reading-paper-inline-padding: var(--space-3);
 --page-gutter: clamp(1rem, 4vw, 3rem);
 --color-workspace: #3f4141;
 --panel-width: 26rem;
@@ -146,11 +148,11 @@ Box-year
 - `--reading-width`：正文列宽度，只影响正文；主体总宽会由正文宽度和左右等宽占位自动计算。
 - `--year-control-width`：年份左侧控件列宽度。
 - `--month-control-width`：月份左侧控件列宽度。
-- `--date-control-width`：日期/“现在”左侧控件列宽度。
+- `--date-control-width`：旧版日期列宽度；当前日期已进入正文 header，仅影响相关兼容计算。
 - `--year-month-inline-gap`：年份列与月份列之间的横向距离。
-- `--month-date-inline-gap`：月份列与日期列之间的横向距离。
-- `--date-content-gap`：日期列与正文列之间的横向距离。
-- `--reading-paper-date-padding-inline-start`：宽屏下日期标签在浅色阅读带内的左侧留白。
+- `--month-date-inline-gap`：月份列与正文纸带之间的横向距离。
+- `--date-content-gap`：旧版日期列与正文列之间的横向距离；当前仅影响时间轴兼容计算。
+- `--reading-paper-inline-padding`：宽屏下正文纸带内部的左右留白。
 - `--page-gutter`：整个滚动区左右边距，主要防止窄屏贴边。
 - `--color-workspace`：宽屏下中央浅色日记带之外的工作区背景色。
 - `--panel-width`：中央面板外框宽度。
@@ -176,8 +178,8 @@ Box-year
 `.diary-entry`、`.diary-month` 或 `.diary-year` 增加横向 padding。
 
 宽屏布局中，`.diary-scroll-region` 和 `.diary-feed` 使用 `--color-workspace` 作为
-页面外侧工作区。浅色阅读带从日期列开始，宽度由 `--reading-paper-width` 计算：
-“日期列 + 日期正文间距 + 正文列 + 日期正文间距 + 日期列”。年份、月份列以及右侧
+页面外侧工作区。浅色阅读带从正文纸带开始，宽度由 `--reading-paper-width` 计算：
+“正文列 + 左右内部留白”。年份、月份列以及右侧
 对应的镜像区域保持深灰，形成类似文档编辑器的中央阅读带。年份内容容器也绘制同一
 条浅色阅读带，以填满相邻月份之间的间隔。窄屏布局继续使用全浅色背景，避免手机
 阅读区域被额外框住。
@@ -362,8 +364,9 @@ copy(JSON.stringify(SereinDebugLayout.inspect(), null, 2))
 - `.diary-month`：月份盒子，负责“月 / 月日间距 / 条目区域”三列。
 - `.diary-group-summary`：年/月文字与折叠符号。
 - `.diary-group-content`：年/月右侧内容区域，与 summary 共享第一行以实现顶部对齐。
-- `.diary-entry`：已有日记的“日 / 日正文间距 / 正文 / 右侧隐形占位”布局。
-- `.entry-date`：日期和时间的竖向显示。
-- `.new-entry`：新建日记的“现在 / 日正文间距 / 写作区 / 右侧隐形占位”布局、分隔线、写作区高度和底部留白。
+- `.diary-entry`：已有日记的“正文纸带 / 右侧隐形占位”布局。
+- `.entry-header`：阅读态日期、时间和标题所在的顶部行。
+- `.entry-date`：日期和时间的横向显示。
+- `.new-entry`：新建日记的“写作纸带 / 右侧隐形占位”布局、写作区高度和底部留白。
 
 建议先改 token，再改 `base.css`。若需要新增 token，应放入 `tokens.css` 并在本文补充说明。
