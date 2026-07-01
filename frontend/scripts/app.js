@@ -1234,7 +1234,8 @@
     const appTop = app.getBoundingClientRect().top;
     const newEntryTop = newEntry.getBoundingClientRect().top;
 
-    return Math.abs(newEntryTop - appTop) > settings.returnButtonTopTolerance;
+    // Only show when the new-entry card is still below the top edge.
+    return newEntryTop - appTop > settings.returnButtonTopTolerance;
   }
 
   function scheduleLoadCheckAfterLayoutChange() {
