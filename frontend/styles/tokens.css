@@ -85,10 +85,11 @@
   --reading-width: 40rem;
   --year-control-width: 4.5rem;
   --month-control-width: 3rem;
-  --date-control-width: 3rem;
+  --date-control-width: 3.5rem;
   --year-month-inline-gap: var(--space-3);
   --month-date-inline-gap: var(--space-3);
-  --date-content-gap: clamp(0.75rem, 2vw, 1rem);
+  --date-content-gap: 2rem;
+  --reading-paper-date-padding-inline-start: var(--space-2);
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);

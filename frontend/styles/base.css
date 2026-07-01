@@ -1262,7 +1262,6 @@ body[data-sidebar-open="true"] .app-sidebar {
   min-block-size: var(--new-entry-min-height);
   margin-block-end: var(--new-entry-bottom-space);
   padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--color-line);
 }
 
 .new-entry-date {
@@ -1575,6 +1574,27 @@ body[data-sidebar-open="true"] .app-sidebar {
     background: var(--color-workspace);
   }
 
+  .diary-year > .diary-group-content {
+    background:
+      linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(var(--month-control-width) + var(--month-date-inline-gap)),
+        var(--color-page) calc(var(--month-control-width) + var(--month-date-inline-gap)),
+        var(--color-page) calc(
+          var(--month-control-width)
+          + var(--month-date-inline-gap)
+          + var(--reading-paper-width)
+        ),
+        transparent calc(
+          var(--month-control-width)
+          + var(--month-date-inline-gap)
+          + var(--reading-paper-width)
+        ),
+        transparent 100%
+      );
+  }
+
   .diary-month > .diary-group-content {
     background:
       linear-gradient(
@@ -1584,6 +1604,10 @@ body[data-sidebar-open="true"] .app-sidebar {
         transparent var(--reading-paper-width),
         transparent 100%
       );
+  }
+
+  .entry-date {
+    padding-inline-start: var(--reading-paper-date-padding-inline-start);
   }
 }
 
