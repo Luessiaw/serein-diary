@@ -42,6 +42,33 @@ API 使用 `DIARY_DATA_DIR=/data`。快速本机测试可以使用默认的 `./d
 DIARY_HOST_DATA_DIR=/home/you/storage/data/diary
 ```
 
+为了避免容器在宿主机数据目录中写出 `root:root` 文件，Compose 示例默认让 `api`
+服务以 `DIARY_API_UID:DIARY_API_GID` 运行。请把这两个值设为应拥有日记文件的宿主
+用户：
+
+```bash
+id -u luessiaw
+id -g luessiaw
+```
+
+```env
+DIARY_API_UID=1000
+DIARY_API_GID=1000
+```
+
+修改 `.env` 后需要重建并重启 API 容器：
+
+```bash
+docker compose up -d --build api
+```
+
+如果此前已经由 root 写入过条目，新的配置只影响之后创建的文件；已有文件需要操作者
+在宿主机上修正所有者，例如：
+
+```bash
+sudo chown -R luessiaw:luessiaw /home/you/storage/data/diary
+```
+
 P3 阶段 API 只提供健康检查、锁屏认证和受保护接口骨架，不读取或写入真实日记。
 P4-T04A 起，项目额外提供最小 entries API 供存储层调试；手动验证方式见
 [`p4-entries-api-test.md`](p4-entries-api-test.md)。

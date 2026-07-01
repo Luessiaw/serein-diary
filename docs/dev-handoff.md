@@ -27,6 +27,8 @@ Serein 是独立自托管日记仓库，位于：
 
 真实日记数据不进入仓库。Compose 示例中，`.env` 的 `DIARY_HOST_DATA_DIR` 映射到容器
 `/data`，后端通过 `DIARY_DATA_DIR=/data` 读取。
+API 容器通过 `DIARY_API_UID:DIARY_API_GID` 写入该目录，避免新条目在宿主机上归属
+`root:root`。luessiaw-server 当前 UID/GID 为 `1000:1000`。
 
 阶段进度：
 
@@ -213,6 +215,9 @@ Compose 示例更新后端 API：
 cd /home/luessiaw/storage/srv/serein-diary
 docker compose up -d --build api
 ```
+
+如果更新了 `.env` 中的 `DIARY_API_UID` / `DIARY_API_GID`，也需要运行上面的命令。
+已有 root-owned 条目不会自动改 owner，需要操作者在宿主机上执行一次 `sudo chown -R`。
 
 前端由 Caddy 挂载 `./frontend`，一般修改前端文件后强制刷新浏览器即可。若 Caddy 状态异常，可由操作者运行：
 

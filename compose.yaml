@@ -2,6 +2,7 @@ services:
   api:
     build:
       context: ./backend
+    user: "${DIARY_API_UID:-1000}:${DIARY_API_GID:-1000}"
     environment:
       DIARY_DATA_DIR: /data
       DIARY_TIMEZONE: ${DIARY_TIMEZONE:-Asia/Shanghai}
