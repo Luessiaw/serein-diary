@@ -18,6 +18,7 @@ from serein.api.entries import (
     create_entry_endpoint,
     delete_entry,
     get_entry,
+    get_entry_media,
     get_entry_window,
     list_entry_dates,
     list_entries,
@@ -25,7 +26,7 @@ from serein.api.entries import (
 )
 from serein.config import Settings
 
-from test_entry_contract import create_entry_fixture
+from test_entry_contract import create_entry_fixture, read_json, write_json
 
 
 class EntriesApiTests(TestCase):
@@ -238,6 +239,75 @@ class EntriesApiTests(TestCase):
         self.assertEqual(rebuild_result.visible_entries, 2)
         self.assertEqual(rebuild_result.deleted_entries, 0)
         self.assertEqual([str(item.id) for item in fresh_page.items], [first_id, second_id])
+
+    def test_get_entry_media_returns_preview_file(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            request = self.make_request(root)
+            session = self.make_session()
+            entry_id = "11111111-1111-4111-8111-111111111111"
+            media_id = "22222222-2222-4222-8222-222222222222"
+            entry_dir = create_entry_fixture(
+                root / "entries",
+                name=f"202606230930-{entry_id}",
+                entry_id=entry_id,
+                created_at="2026-06-23T09:30:00+08:00",
+                content=f"![图](media:{media_id})\n",
+            )
+            (entry_dir / "media" / "original").mkdir(parents=True)
+            (entry_dir / "media" / "preview").mkdir(parents=True)
+            original_path = entry_dir / "media" / "original" / "photo.jpg"
+            preview_path = entry_dir / "media" / "preview" / "photo.webp"
+            original_path.write_bytes(b"original")
+            preview_path.write_bytes(b"preview")
+            manifest = read_json(entry_dir / "media-manifest.json")
+            manifest["media"] = [
+                {
+                    "id": media_id,
+                    "kind": "image",
+                    "original": "media/original/photo.jpg",
+                    "preview": "media/preview/photo.webp",
+                    "alt": "图",
+                }
+            ]
+            write_json(entry_dir / "media-manifest.json", manifest)
+
+            response = Response()
+            media_response = get_entry_media(
+                UUID(entry_id),
+                UUID(media_id),
+                response,
+                request,
+                session,
+            )
+
+        self.assertNotIn("cache-control", response.headers)
+        self.assertEqual(media_response.headers["cache-control"], NO_STORE_HEADER)
+        self.assertEqual(Path(media_response.path), preview_path)
+        self.assertEqual(media_response.media_type, "image/webp")
+
+    def test_get_entry_media_rejects_unknown_media_id(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            request = self.make_request(root)
+            entry_id = "11111111-1111-4111-8111-111111111111"
+            create_entry_fixture(
+                root / "entries",
+                name=f"202606230930-{entry_id}",
+                entry_id=entry_id,
+                created_at="2026-06-23T09:30:00+08:00",
+            )
+
+            with self.assertRaises(HTTPException) as context:
+                get_entry_media(
+                    UUID(entry_id),
+                    UUID("22222222-2222-4222-8222-222222222222"),
+                    Response(),
+                    request,
+                    self.make_session(),
+                )
+
+        self.assertEqual(context.exception.status_code, 404)
 
     def test_list_entry_dates_returns_calendar_counts(self) -> None:
         with TemporaryDirectory() as data_dir:

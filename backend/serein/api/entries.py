@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import mimetypes
 from datetime import date, datetime
 from typing import Annotated
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from serein.api.auth import (
@@ -270,6 +272,47 @@ def rebuild_entry_index(
         raise service_http_error(error) from error
 
 
+@router.get("/{entry_id}/media/{media_id}")
+def get_entry_media(
+    entry_id: UUID,
+    media_id: UUID,
+    response: Response,
+    request: Request,
+    session: AuthenticatedSession = Depends(require_authenticated_session),
+) -> FileResponse:
+    """Return one protected media file for an entry, preferring previews."""
+
+    _ = session
+    _ = response
+    try:
+        detail = get_entry_service(request).get_entry(entry_id)
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
+
+    media_item = next(
+        (item for item in detail.entry.media_manifest.media if item.id == media_id),
+        None,
+    )
+    if media_item is None:
+        raise service_http_error(EntryServiceError("media_not_found", "Media not found"))
+
+    entry_root = detail.entry.path.resolve()
+    candidates = [media_item.preview, media_item.original]
+    for relative_path in candidates:
+        if not relative_path:
+            continue
+        media_path = (detail.entry.path / relative_path).resolve()
+        if not media_path.is_relative_to(entry_root):
+            continue
+        if media_path.is_file():
+            media_type = mimetypes.guess_type(media_path.name)[0] or "application/octet-stream"
+            media_response = FileResponse(media_path, media_type=media_type)
+            mark_auth_response_uncacheable(media_response)
+            return media_response
+
+    raise service_http_error(EntryServiceError("media_not_found", "Media not found"))
+
+
 @router.get("/{entry_id}", response_model=EntryDetailResponse)
 def get_entry(
     entry_id: UUID,
@@ -427,6 +470,7 @@ def service_http_error(error: EntryServiceError) -> HTTPException:
         "invalid_cursor": status.HTTP_400_BAD_REQUEST,
         "storage_contract_error": status.HTTP_400_BAD_REQUEST,
         "entry_not_found": status.HTTP_404_NOT_FOUND,
+        "media_not_found": status.HTTP_404_NOT_FOUND,
         "entry_deleted": status.HTTP_409_CONFLICT,
     }
     return HTTPException(

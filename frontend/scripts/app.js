@@ -3620,7 +3620,10 @@
       entriesByDate.get(calendarDate),
     );
     content.className = "entry-content";
-    appendMarkdownBlocks(content, data.content);
+    appendMarkdownBlocks(content, data.content, {
+      entryId: metadata.id,
+      mediaById: createEntryMediaMap(sample),
+    });
 
     entry.append(date, body);
     if (metadata.title) {
@@ -3692,7 +3695,13 @@
     return createdAt.slice(0, 10);
   }
 
-  function appendMarkdownBlocks(container, markdown) {
+  function createEntryMediaMap(sample) {
+    const items = sample.data.mediaManifest?.media || sample.data.media_manifest?.media || [];
+
+    return new Map(items.map((item) => [String(item.id), item]));
+  }
+
+  function appendMarkdownBlocks(container, markdown, options = {}) {
     const lines = String(markdown || "").replace(/\r\n?/gu, "\n").split("\n");
     let index = 0;
 
@@ -3715,6 +3724,18 @@
           index += 1;
         }
         appendCodeBlock(container, code.join("\n"));
+        continue;
+      }
+
+      if (isMarkdownTableStart(lines, index)) {
+        const tableLines = [];
+        tableLines.push(lines[index], lines[index + 1]);
+        index += 2;
+        while (index < lines.length && isMarkdownTableRow(lines[index])) {
+          tableLines.push(lines[index]);
+          index += 1;
+        }
+        appendMarkdownTable(container, tableLines, options);
         continue;
       }
 
@@ -3741,7 +3762,7 @@
           index += 1;
         }
         const quote = document.createElement("blockquote");
-        appendMarkdownBlocks(quote, quoteLines.join("\n"));
+        appendMarkdownBlocks(quote, quoteLines.join("\n"), options);
         container.append(quote);
         continue;
       }
@@ -3749,7 +3770,7 @@
       if (/^\s*[-*]\s+/u.test(line)) {
         const list = document.createElement("ul");
         while (index < lines.length && /^\s*[-*]\s+/u.test(lines[index])) {
-          appendListItem(list, lines[index].replace(/^\s*[-*]\s+/u, ""));
+          appendListItem(list, lines[index].replace(/^\s*[-*]\s+/u, ""), options);
           index += 1;
         }
         container.append(list);
@@ -3759,7 +3780,7 @@
       if (/^\s*\d+[.)]\s+/u.test(line)) {
         const list = document.createElement("ol");
         while (index < lines.length && /^\s*\d+[.)]\s+/u.test(lines[index])) {
-          appendListItem(list, lines[index].replace(/^\s*\d+[.)]\s+/u, ""));
+          appendListItem(list, lines[index].replace(/^\s*\d+[.)]\s+/u, ""), options);
           index += 1;
         }
         container.append(list);
@@ -3775,7 +3796,7 @@
         paragraphLines.push(lines[index]);
         index += 1;
       }
-      appendParagraph(container, paragraphLines);
+      appendParagraph(container, paragraphLines, options);
     }
   }
 
@@ -3791,21 +3812,21 @@
     );
   }
 
-  function appendParagraph(container, lines) {
+  function appendParagraph(container, lines, options = {}) {
     const paragraph = document.createElement("p");
 
     lines.forEach((line, lineIndex) => {
       if (lineIndex > 0) {
         paragraph.append(document.createElement("br"));
       }
-      appendInlineMarkdown(paragraph, line);
+      appendInlineMarkdown(paragraph, line, options);
     });
     container.append(paragraph);
   }
 
-  function appendListItem(list, markdown) {
+  function appendListItem(list, markdown, options = {}) {
     const item = document.createElement("li");
-    appendInlineMarkdown(item, markdown);
+    appendInlineMarkdown(item, markdown, options);
     list.append(item);
   }
 
@@ -3818,7 +3839,77 @@
     container.append(pre);
   }
 
-  function appendInlineMarkdown(container, markdown) {
+  function isMarkdownTableStart(lines, index) {
+    return (
+      index + 1 < lines.length &&
+      isMarkdownTableRow(lines[index]) &&
+      isMarkdownTableSeparator(lines[index + 1])
+    );
+  }
+
+  function isMarkdownTableRow(line) {
+    const trimmed = String(line || "").trim();
+
+    return trimmed.includes("|") && !/^```/u.test(trimmed);
+  }
+
+  function isMarkdownTableSeparator(line) {
+    const cells = parseMarkdownTableRow(line);
+
+    return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/u.test(cell.trim()));
+  }
+
+  function parseMarkdownTableRow(line) {
+    let row = String(line || "").trim();
+
+    if (row.startsWith("|")) {
+      row = row.slice(1);
+    }
+    if (row.endsWith("|")) {
+      row = row.slice(0, -1);
+    }
+
+    return row.split("|").map((cell) => cell.trim());
+  }
+
+  function appendMarkdownTable(container, lines, options = {}) {
+    const wrapper = document.createElement("div");
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const tbody = document.createElement("tbody");
+    const header = document.createElement("tr");
+    const headerCells = parseMarkdownTableRow(lines[0]);
+
+    wrapper.className = "markdown-table-wrap";
+    table.className = "markdown-table";
+    headerCells.forEach((cell) => {
+      const th = document.createElement("th");
+      appendInlineMarkdown(th, cell, options);
+      header.append(th);
+    });
+    thead.append(header);
+
+    lines.slice(2).forEach((line) => {
+      const row = document.createElement("tr");
+      const cells = parseMarkdownTableRow(line);
+      const normalizedCells = cells.length < headerCells.length
+        ? cells.concat(Array(headerCells.length - cells.length).fill(""))
+        : cells.slice(0, headerCells.length);
+
+      normalizedCells.forEach((cell) => {
+        const td = document.createElement("td");
+        appendInlineMarkdown(td, cell, options);
+        row.append(td);
+      });
+      tbody.append(row);
+    });
+
+    table.append(thead, tbody);
+    wrapper.append(table);
+    container.append(wrapper);
+  }
+
+  function appendInlineMarkdown(container, markdown, options = {}) {
     let remaining = markdown;
 
     while (remaining) {
@@ -3833,7 +3924,7 @@
         container.append(remaining.slice(0, token.index));
       }
 
-      appendInlineToken(container, token);
+      appendInlineToken(container, token, options);
       remaining = remaining.slice(token.index + token.match[0].length);
     }
   }
@@ -3870,7 +3961,7 @@
     }, null);
   }
 
-  function appendInlineToken(container, token) {
+  function appendInlineToken(container, token, options = {}) {
     const elementByType = {
       code: "code",
       strong: "strong",
@@ -3884,7 +3975,7 @@
     }
 
     if (token.type === "image") {
-      appendMarkdownImagePlaceholder(container, token.match[1], token.match[2]);
+      appendMarkdownImage(container, token.match[1], token.match[2], options);
       return;
     }
 
@@ -3892,7 +3983,7 @@
     if (token.type === "code") {
       element.textContent = token.match[1];
     } else {
-      appendInlineMarkdown(element, token.match[1]);
+      appendInlineMarkdown(element, token.match[1], options);
     }
     container.append(element);
   }
@@ -3908,13 +3999,45 @@
     container.append(link);
   }
 
+  function appendMarkdownImage(container, alt, src, options = {}) {
+    const mediaId = parseMediaReference(src);
+    const media = mediaId ? options.mediaById?.get(mediaId) : null;
+
+    if (!media || media.kind !== "image") {
+      appendMarkdownImagePlaceholder(container, alt, src);
+      return;
+    }
+
+    const image = document.createElement("img");
+    image.className = "markdown-media-image";
+    image.alt = alt || media.alt || "";
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.src = dataAdapter.getMediaUrl(options.entryId, mediaId);
+    image.addEventListener("error", () => {
+      const placeholder = createMarkdownImagePlaceholder(alt || media.alt, src);
+      image.replaceWith(placeholder);
+    }, { once: true });
+    container.append(image);
+  }
+
   function appendMarkdownImagePlaceholder(container, alt, src) {
+    container.append(createMarkdownImagePlaceholder(alt, src));
+  }
+
+  function createMarkdownImagePlaceholder(alt, src) {
     const placeholder = document.createElement("span");
 
     placeholder.className = "markdown-media-placeholder";
     placeholder.textContent = alt ? `图片：${alt}` : "图片";
     placeholder.title = src;
-    container.append(placeholder);
+    return placeholder;
+  }
+
+  function parseMediaReference(src) {
+    const match = String(src || "").trim().match(/^media:([0-9a-fA-F-]+)$/u);
+
+    return match ? match[1] : null;
   }
 
   function isSafeMarkdownUrl(url) {

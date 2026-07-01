@@ -1186,6 +1186,47 @@ body[data-sidebar-open="true"] .app-sidebar {
   border-block-start: 1px solid color-mix(in srgb, var(--color-line) 82%, transparent);
 }
 
+.markdown-table-wrap {
+  overflow-x: auto;
+  margin: var(--paragraph-gap) 0;
+}
+
+.markdown-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  font-size: 0.86em;
+  line-height: 1.65;
+}
+
+.markdown-table th,
+.markdown-table td {
+  border-block-end: 1px solid color-mix(in srgb, var(--color-line) 82%, transparent);
+  padding: 0.38rem 0.55rem;
+  text-align: start;
+  vertical-align: top;
+}
+
+.markdown-table th {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.markdown-table tr:last-child td {
+  border-block-end: 0;
+}
+
+.markdown-media-image {
+  display: block;
+  max-inline-size: 100%;
+  max-block-size: min(28rem, 70vh);
+  block-size: auto;
+  margin: var(--paragraph-gap) 0;
+  border-radius: var(--radius-subtle);
+  object-fit: contain;
+}
+
 .markdown-media-placeholder {
   display: inline-flex;
   align-items: center;
