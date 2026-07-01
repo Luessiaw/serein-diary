@@ -78,9 +78,10 @@
   /*
    * 阅读布局
    *
-   * `--reading-width` 控制正文列宽度。主体宽度由正文宽度和左侧时间轴区域
-   * 自动计算：main-width = reading-width + 2 * left-width；右侧隐形占位
-   * 宽度等于 left-width，用于让正文列位于主体中央。
+   * `--reading-width` 控制正文文字列宽度，`--reading-paper-inline-padding`
+   * 控制正文两侧的浅色纸面页边距。主体宽度由正文纸带宽度和左侧时间轴区域
+   * 自动计算：main-width = paper-width + 2 * left-width；右侧隐形占位
+   * 宽度等于 left-width，用于让正文纸带位于主体中央。
    */
   --reading-width: 40rem;
   --year-control-width: 4.5rem;
@@ -89,7 +90,7 @@
   --year-month-inline-gap: var(--space-3);
   --month-date-inline-gap: var(--space-3);
   --date-content-gap: 2rem;
-  --reading-paper-inline-padding: var(--space-3);
+  --reading-paper-inline-padding: 5rem;
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);
