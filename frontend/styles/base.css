@@ -1056,7 +1056,11 @@ body[data-sidebar-open="true"] .app-sidebar {
   grid-column: 1;
   display: grid;
   gap: var(--space-1);
+  position: sticky;
+  inset-block-start: var(--sticky-group-label-top);
+  z-index: var(--sticky-date-label-z-index);
   color: var(--color-date);
+  background: var(--sticky-group-label-background);
   font-family: var(--font-date);
   font-size: var(--font-size-date);
   letter-spacing: var(--letter-spacing-date);
@@ -1555,6 +1559,7 @@ body[data-sidebar-open="true"] .app-sidebar {
   .entry-date {
     margin-block-end: var(--space-3);
     justify-items: end;
+    position: static;
     text-align: end;
   }
 

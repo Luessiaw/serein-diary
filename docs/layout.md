@@ -205,6 +205,8 @@ Box-year
 - `--entry-body-padding-block-start`：正文/标题距离本行顶部的微调值，用于让正文首行与年、月、日对齐。
 - `--sticky-group-label-top`：桌面端年/月标签吸附到滚动容器顶部时的顶部偏移。
 - `--sticky-group-label-z-index`：吸附标签的层级。
+- `--sticky-year-label-z-index`、`--sticky-month-label-z-index`、`--sticky-date-label-z-index`：
+  年、月、日吸附标签之间的层级顺序。
 - `--sticky-group-label-background`：吸附标签背景色，用于避免滚动内容透出。
 - `--sticky-year-label-top-compact`：窄屏下年份标签吸附到顶部时的偏移。
 - `--sticky-year-label-height-compact`：窄屏下年份吸附区高度，用于决定月份标签的吸附触发线。
@@ -217,9 +219,10 @@ Box-year
 `--month-control-padding-block-start` 和 `--date-control-padding-block-start`
 做细微补偿，并确认年、月、日字号和 line-height 接近。
 
-桌面端年/月标签使用 `position: sticky` 吸附在滚动容器顶部；窄屏布局中也启用
-sticky。月份标签的 sticky 触发线默认位于“页面顶端 + 年份吸附区高度”，避免
-月份与年份重叠。
+桌面端年/月/日标签使用 `position: sticky` 吸附在滚动容器顶部。日标签只在当前
+条目范围内吸附，长日记滚动时可以持续显示该条目的日期，滚出条目后会自然释放。
+窄屏布局中年/月仍启用 sticky，日标签恢复为普通行。月份标签的 sticky 触发线默认
+位于“页面顶端 + 年份吸附区高度”，避免月份与年份重叠。
 
 ## 字号与行高
 
