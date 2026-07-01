@@ -34,7 +34,7 @@
    * 若目标是更安静、适合长文阅读的效果，应优先调整行高，再考虑增大字号。
    */
   --font-size-title: 1.5rem;
-  --font-size-reading: 1.4rem;
+  --font-size-reading: 1.25rem;
   --font-year: var(--font-ui);
   --font-month: var(--font-ui);
   --font-date: var(--font-ui);
