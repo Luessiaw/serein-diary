@@ -137,6 +137,7 @@ Box-year
 --month-date-inline-gap: var(--space-3);
 --date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
 --page-gutter: clamp(1rem, 4vw, 3rem);
+--color-workspace: #3f4141;
 --panel-width: 26rem;
 --panel-height: 34rem;
 ```
@@ -149,6 +150,7 @@ Box-year
 - `--month-date-inline-gap`：月份列与日期列之间的横向距离。
 - `--date-content-gap`：日期列与正文列之间的横向距离。
 - `--page-gutter`：整个滚动区左右边距，主要防止窄屏贴边。
+- `--color-workspace`：宽屏下中央浅色日记带之外的工作区背景色。
 - `--panel-width`：中央面板外框宽度。
 - `--panel-height`：中央面板外框高度。
 
@@ -170,6 +172,10 @@ Box-year
 实现上不再使用 `padding-inline` 给日记条目补偿年/月空间。年、月、日和正文
 分别处在嵌套 grid 的真实列中，因此优先改这些 token，而不是直接给
 `.diary-entry`、`.diary-month` 或 `.diary-year` 增加横向 padding。
+
+宽屏布局中，`.diary-scroll-region` 使用 `--color-workspace` 作为页面外侧工作区，
+`.diary-feed` 保持 `--color-page` 浅色并居中，形成类似文档编辑器的中央阅读带。
+窄屏布局继续使用全浅色背景，避免手机阅读区域被额外框住。
 
 ## 纵向对齐参数
 

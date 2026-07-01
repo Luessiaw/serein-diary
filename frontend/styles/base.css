@@ -186,6 +186,7 @@ body {
   display: grid;
   gap: var(--year-block-gap);
   padding: var(--feed-padding-block) var(--page-gutter);
+  min-block-size: 100%;
   opacity: 1;
   filter: blur(0);
   transform: translateY(0);
@@ -1547,6 +1548,18 @@ body[data-sidebar-open="true"] .app-sidebar {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@media (min-width: 72rem) {
+  .diary-scroll-region {
+    background: var(--color-workspace);
+  }
+
+  .diary-feed {
+    inline-size: min(100%, calc(var(--timeline-grid-width) + 2 * var(--page-gutter)));
+    margin-inline: auto;
+    background: var(--color-page);
   }
 }
 
