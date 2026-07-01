@@ -557,7 +557,7 @@
     area.className = "new-entry";
     area.setAttribute("aria-label", "New diary entry");
     date.className = "entry-date new-entry-date";
-    date.textContent = "现在";
+    date.textContent = "此刻";
     body.className = "entry-body new-entry-body";
 
     const form = document.createElement("form");

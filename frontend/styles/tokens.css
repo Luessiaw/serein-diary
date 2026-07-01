@@ -24,7 +24,7 @@
    * 使用 `--font-reading`，小型界面标签使用 `--font-ui`。
    */
   --font-title: "Times New Roman", "Noto Serif SC", "Songti SC", SimSun, serif;
-  --font-reading: "Times New Roman", KaiTi, "Noto Serif SC", serif;
+  --font-reading: "Times New Roman", STFangsong, KaiTi, "Noto Serif SC", serif;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
   /*
@@ -34,7 +34,7 @@
    * 若目标是更安静、适合长文阅读的效果，应优先调整行高，再考虑增大字号。
    */
   --font-size-title: 1.5rem;
-  --font-size-reading: 1.25rem;
+  --font-size-reading: 1.4rem;
   --font-year: var(--font-ui);
   --font-month: var(--font-ui);
   --font-date: var(--font-ui);
@@ -42,7 +42,7 @@
   --font-size-month: 1.25rem;
   --font-size-date: 1.25rem;
   --font-size-entry-time: 0.8rem;
-  --line-height-reading: 2rem;
+  --line-height-reading: 3rem;
   --letter-spacing-date: 0.1em;
 
   /*
