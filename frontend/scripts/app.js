@@ -745,14 +745,21 @@
   }
 
   function createTextareaContentControl(content) {
+    let caretAnchor = null;
+
     return {
       kind: "textarea",
       mount() {
+        content.addEventListener("beforeinput", (event) => {
+          caretAnchor = createTextareaCaretAnchor(content, event.inputType);
+        });
         content.addEventListener("input", (event) => {
           resizeContentInput(content, {
+            caretAnchor,
             inputType: event.inputType,
             preserveScroll: true,
           });
+          caretAnchor = null;
         });
       },
       readMarkdown() {
@@ -3636,7 +3643,7 @@
   }
 
   function resizeContentInput(content, options = {}) {
-    const { inputType = "", preserveScroll = false } = options;
+    const { caretAnchor = null, inputType = "", preserveScroll = false } = options;
     const shouldPreserveScroll = preserveScroll && document.activeElement === content;
     const previousScrollTop = app.scrollTop;
     const previousBlockSize = content.getBoundingClientRect().height;
@@ -3646,6 +3653,7 @@
 
     debugTyping("resize input started", {
       inputType,
+      caretAnchorTop: caretAnchor?.top ?? null,
       preserveScroll,
       shouldPreserveScroll,
       previousBlockSize: Math.round(previousBlockSize),
@@ -3662,17 +3670,117 @@
     content.style.blockSize = `${nextBlockSize}px`;
 
     if (shouldPreserveScroll) {
-      restoreTypingScrollPosition(content, previousScrollTop, "immediate");
+      const caretShift = calculateTextareaCaretShift(content, caretAnchor);
+      const targetScrollTop = previousScrollTop + caretShift;
+
+      debugTyping("resize scroll target resolved", {
+        caretShift: Math.round(caretShift),
+        previousScrollTop: Math.round(previousScrollTop),
+        targetScrollTop: Math.round(targetScrollTop),
+      });
+
+      restoreTypingScrollPosition(content, targetScrollTop, "immediate");
       window.queueMicrotask(() => {
-        restoreTypingScrollPosition(content, previousScrollTop, "microtask");
+        restoreTypingScrollPosition(content, targetScrollTop, "microtask");
       });
       requestAnimationFrame(() => {
-        restoreTypingScrollPosition(content, previousScrollTop, "animation-frame-1");
+        restoreTypingScrollPosition(content, targetScrollTop, "animation-frame-1");
         requestAnimationFrame(() => {
-          restoreTypingScrollPosition(content, previousScrollTop, "animation-frame-2");
+          restoreTypingScrollPosition(content, targetScrollTop, "animation-frame-2");
         });
       });
     }
+  }
+
+  function createTextareaCaretAnchor(content, inputType = "") {
+    if (document.activeElement !== content) {
+      return null;
+    }
+
+    return {
+      inputType,
+      selectionStart: content.selectionStart,
+      top: measureTextareaCaretTop(content),
+    };
+  }
+
+  function calculateTextareaCaretShift(content, caretAnchor) {
+    if (!caretAnchor || !Number.isFinite(caretAnchor.top)) {
+      return 0;
+    }
+
+    const nextCaretTop = measureTextareaCaretTop(content);
+
+    if (!Number.isFinite(nextCaretTop)) {
+      return 0;
+    }
+
+    const shift = Math.max(0, nextCaretTop - caretAnchor.top);
+
+    debugTyping("caret shift measured", {
+      inputType: caretAnchor.inputType,
+      previousCaretTop: Math.round(caretAnchor.top),
+      nextCaretTop: Math.round(nextCaretTop),
+      caretShift: Math.round(shift),
+      previousSelectionStart: caretAnchor.selectionStart,
+      nextSelectionStart: content.selectionStart,
+    });
+
+    return shift;
+  }
+
+  function measureTextareaCaretTop(content) {
+    const selectionStart = content.selectionStart;
+
+    if (!Number.isFinite(selectionStart)) {
+      return null;
+    }
+
+    const styles = window.getComputedStyle(content);
+    const mirror = document.createElement("div");
+    const marker = document.createElement("span");
+    const mirrorProperties = [
+      "borderBlockEndWidth",
+      "borderBlockStartWidth",
+      "borderInlineEndWidth",
+      "borderInlineStartWidth",
+      "boxSizing",
+      "fontFamily",
+      "fontSize",
+      "fontStyle",
+      "fontWeight",
+      "letterSpacing",
+      "lineHeight",
+      "paddingBlockEnd",
+      "paddingBlockStart",
+      "paddingInlineEnd",
+      "paddingInlineStart",
+      "textTransform",
+      "whiteSpace",
+      "wordBreak",
+      "wordSpacing",
+    ];
+
+    mirrorProperties.forEach((property) => {
+      mirror.style[property] = styles[property];
+    });
+    mirror.style.position = "fixed";
+    mirror.style.insetBlockStart = "-9999px";
+    mirror.style.insetInlineStart = "0";
+    mirror.style.visibility = "hidden";
+    mirror.style.overflowWrap = styles.overflowWrap || "break-word";
+    mirror.style.whiteSpace = "pre-wrap";
+    mirror.style.inlineSize = `${content.clientWidth}px`;
+
+    mirror.textContent = content.value.slice(0, selectionStart);
+    marker.textContent = "\u200b";
+    mirror.append(marker);
+    document.body.append(mirror);
+
+    const top = marker.getBoundingClientRect().top - mirror.getBoundingClientRect().top;
+
+    mirror.remove();
+    return top;
   }
 
   function restoreTypingScrollPosition(content, scrollTop, phase) {
