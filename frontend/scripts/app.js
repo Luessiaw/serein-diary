@@ -51,6 +51,10 @@
     lastScrollProbeAt: 0,
     lastReturnButtonHidden: null,
   };
+  const typingDebugState = {
+    enabled: readTypingDebugPreference(),
+    history: [],
+  };
   const indexDebugState = {
     history: [],
   };
@@ -106,6 +110,7 @@
     renderFeed({ focusNewEntry: true, scrollToEnd: true });
     app.addEventListener("scroll", handleScroll, { passive: true });
     registerLoadDebugTools();
+    registerTypingDebugTools();
     registerLayoutDebugTools();
     registerEditorExperimentTools();
     createSidebarShell();
@@ -743,8 +748,11 @@
     return {
       kind: "textarea",
       mount() {
-        content.addEventListener("input", () => {
-          resizeContentInput(content, { preserveScroll: true });
+        content.addEventListener("input", (event) => {
+          resizeContentInput(content, {
+            inputType: event.inputType,
+            preserveScroll: true,
+          });
         });
       },
       readMarkdown() {
@@ -1894,6 +1902,14 @@
     requestAnimationFrame(updateReturnToLatestButtonVisibility);
   }
 
+  function setAppScrollTopWithoutSmooth(top) {
+    const previousBehavior = app.style.scrollBehavior;
+
+    app.style.scrollBehavior = "auto";
+    app.scrollTop = Math.max(0, top);
+    app.style.scrollBehavior = previousBehavior;
+  }
+
   function simulateLoadingDelay() {
     return wait(settings.simulatedDelayMs);
   }
@@ -1938,6 +1954,22 @@
     });
   }
 
+  function registerTypingDebugTools() {
+    window.SereinTypingDebug = {
+      clear: clearTypingDebugLogs,
+      dumpReport: dumpTypingDebugReport,
+      inspect: inspectTypingDebugState,
+      setEnabled: setTypingDebugEnabled,
+      get enabled() {
+        return typingDebugState.enabled;
+      },
+    };
+
+    debugTyping("debug tools registered", {
+      hint: "Use SereinTypingDebug.setEnabled(true), then SereinTypingDebug.dumpReport() after reproducing the typing scroll issue.",
+    });
+  }
+
   function inspectIndexDebugState() {
     const snapshot = createIndexDebugSnapshot();
 
@@ -1950,11 +1982,28 @@
     console.info("[Serein index] logs cleared");
   }
 
+  function clearTypingDebugLogs() {
+    typingDebugState.history = [];
+    console.info("[Serein typing] logs cleared");
+  }
+
   function dumpIndexDebugReport() {
     const report = {
       generatedAt: new Date().toISOString(),
       snapshot: createIndexDebugSnapshot(),
       recentLogs: indexDebugState.history.slice(-80),
+      note: "Safe to share: this report excludes diary bodies, passwords, cookies, sessions, and private file paths.",
+    };
+
+    console.log(JSON.stringify(report, null, 2));
+    return report;
+  }
+
+  function dumpTypingDebugReport() {
+    const report = {
+      generatedAt: new Date().toISOString(),
+      snapshot: createTypingDebugSnapshot(),
+      recentLogs: typingDebugState.history.slice(-120),
       note: "Safe to share: this report excludes diary bodies, passwords, cookies, sessions, and private file paths.",
     };
 
@@ -1978,6 +2027,26 @@
     console.info(`[Serein index] ${message}`, payload);
   }
 
+  function debugTyping(message, details = {}) {
+    if (!typingDebugState.enabled) {
+      return;
+    }
+
+    const payload = {
+      timestamp: new Date().toISOString(),
+      message,
+      ...createTypingDebugSnapshot(),
+      ...details,
+    };
+
+    typingDebugState.history.push(payload);
+    if (typingDebugState.history.length > 240) {
+      typingDebugState.history.shift();
+    }
+
+    console.info(`[Serein typing] ${message}`, payload);
+  }
+
   function createIndexDebugSnapshot() {
     return {
       dataSource: dataAdapter.source,
@@ -1990,6 +2059,29 @@
       feedDataStatus: feedState.dataStatus,
       loadedEntries: feedState.entries.length,
       calendarDateStatus: sidebarCalendarDateState.status,
+    };
+  }
+
+  function createTypingDebugSnapshot() {
+    const input = app.querySelector(".new-entry-content-input");
+    const inputRect = input?.getBoundingClientRect?.();
+    const appRect = app.getBoundingClientRect();
+
+    return {
+      dataSource: dataAdapter.source,
+      activeElementClass: document.activeElement?.className || "",
+      scrollTop: Math.round(app.scrollTop),
+      clientHeight: Math.round(app.clientHeight),
+      scrollHeight: Math.round(app.scrollHeight),
+      distanceToBottom: Math.round(app.scrollHeight - app.scrollTop - app.clientHeight),
+      inputExists: Boolean(input),
+      inputTop: inputRect ? Math.round(inputRect.top - appRect.top) : null,
+      inputBottom: inputRect ? Math.round(inputRect.bottom - appRect.top) : null,
+      inputBlockSize: inputRect ? Math.round(inputRect.height) : null,
+      inputScrollHeight: input ? Math.round(input.scrollHeight) : null,
+      inputValueLength: input && "value" in input ? input.value.length : null,
+      selectionStart: input && "selectionStart" in input ? input.selectionStart : null,
+      selectionEnd: input && "selectionEnd" in input ? input.selectionEnd : null,
     };
   }
 
@@ -2008,6 +2100,13 @@
     return loadDebugState.enabled;
   }
 
+  function setTypingDebugEnabled(enabled) {
+    typingDebugState.enabled = Boolean(enabled);
+    writeTypingDebugPreference(typingDebugState.enabled);
+    console.info(`[Serein typing] debug ${typingDebugState.enabled ? "enabled" : "disabled"}`);
+    return typingDebugState.enabled;
+  }
+
   function inspectLoadState() {
     const snapshot = createLoadDebugSnapshot();
 
@@ -2017,6 +2116,13 @@
 
   function inspectReturnButtonState() {
     const snapshot = createReturnButtonDebugSnapshot();
+
+    console.table(snapshot);
+    return snapshot;
+  }
+
+  function inspectTypingDebugState() {
+    const snapshot = createTypingDebugSnapshot();
 
     console.table(snapshot);
     return snapshot;
@@ -2183,6 +2289,22 @@
   function writeLoadDebugPreference(enabled) {
     try {
       window.localStorage.setItem("serein-load-debug", String(enabled));
+    } catch {
+      // Ignore storage failures; console debugging still works for this session.
+    }
+  }
+
+  function readTypingDebugPreference() {
+    try {
+      return window.localStorage.getItem("serein-typing-debug") === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function writeTypingDebugPreference(enabled) {
+    try {
+      window.localStorage.setItem("serein-typing-debug", String(enabled));
     } catch {
       // Ignore storage failures; console debugging still works for this session.
     }
@@ -3514,17 +3636,60 @@
   }
 
   function resizeContentInput(content, options = {}) {
-    const { preserveScroll = false } = options;
+    const { inputType = "", preserveScroll = false } = options;
+    const shouldPreserveScroll = preserveScroll && document.activeElement === content;
     const previousScrollTop = app.scrollTop;
+    const previousBlockSize = content.getBoundingClientRect().height;
+    const nextScrollHeight = content.scrollHeight;
+    const mayShrink = String(inputType).startsWith("delete");
+    const shouldMeasureFromAuto = !shouldPreserveScroll || mayShrink || nextScrollHeight < previousBlockSize - 1;
 
-    content.style.blockSize = "auto";
-    content.style.blockSize = `${content.scrollHeight}px`;
-    if (preserveScroll && document.activeElement === content) {
-      app.scrollTop = previousScrollTop;
+    debugTyping("resize input started", {
+      inputType,
+      preserveScroll,
+      shouldPreserveScroll,
+      previousBlockSize: Math.round(previousBlockSize),
+      nextScrollHeight: Math.round(nextScrollHeight),
+      mayShrink,
+      shouldMeasureFromAuto,
+    });
+
+    if (shouldMeasureFromAuto) {
+      content.style.blockSize = "auto";
+    }
+
+    const nextBlockSize = content.scrollHeight;
+    content.style.blockSize = `${nextBlockSize}px`;
+
+    if (shouldPreserveScroll) {
+      restoreTypingScrollPosition(content, previousScrollTop, "immediate");
+      window.queueMicrotask(() => {
+        restoreTypingScrollPosition(content, previousScrollTop, "microtask");
+      });
       requestAnimationFrame(() => {
-        app.scrollTop = previousScrollTop;
+        restoreTypingScrollPosition(content, previousScrollTop, "animation-frame-1");
+        requestAnimationFrame(() => {
+          restoreTypingScrollPosition(content, previousScrollTop, "animation-frame-2");
+        });
       });
     }
+  }
+
+  function restoreTypingScrollPosition(content, scrollTop, phase) {
+    if (document.activeElement !== content) {
+      debugTyping("resize scroll restore skipped", { phase, reason: "content-not-focused" });
+      return;
+    }
+
+    const before = app.scrollTop;
+
+    setAppScrollTopWithoutSmooth(scrollTop);
+    debugTyping("resize scroll restored", {
+      phase,
+      before: Math.round(before),
+      after: Math.round(app.scrollTop),
+      target: Math.round(scrollTop),
+    });
   }
 
   function createMockUuid() {
