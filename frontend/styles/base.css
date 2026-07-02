@@ -1316,6 +1316,7 @@ body[data-sidebar-open="true"] .app-sidebar {
   grid-area: content;
   min-block-size: var(--new-entry-min-height);
   overflow-y: hidden;
+  overflow-anchor: none;
   resize: none;
 }
 

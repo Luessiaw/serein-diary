@@ -16,10 +16,12 @@ from serein.storage.index import (
     get_index_path,
     list_indexed_entries,
     rebuild_index,
+    upsert_entry_summary,
 )
 from serein.storage.repository import (
     EntrySummary,
     create_entry,
+    create_entry_summary,
     find_entry_by_id,
     mark_entry_deleted,
 )
@@ -216,7 +218,7 @@ class EntryService:
                 created_at=created_at,
                 entry_id=entry_id,
             )
-            self.refresh_index()
+            self.refresh_entry_index(entry)
         except EntryValidationError as error:
             raise map_storage_error(error) from error
 
@@ -239,7 +241,7 @@ class EntryService:
                 entry_id,
                 deleted_at=deleted_at,
             )
-            self.refresh_index()
+            self.refresh_entry_index(entry)
         except EntryValidationError as error:
             raise map_storage_error(error) from error
 
@@ -334,6 +336,18 @@ class EntryService:
         """Rebuild the derived SQLite index from fact files."""
 
         return rebuild_index(self.data_dir)
+
+    def refresh_entry_index(self, entry: DiaryEntry) -> Path:
+        """Update one entry in the derived index, rebuilding only if missing."""
+
+        index_path = get_index_path(self.data_dir)
+        if not index_path.is_file():
+            return self.refresh_index()
+
+        return upsert_entry_summary(
+            index_path,
+            create_entry_summary(entry, self.data_dir),
+        )
 
     def rebuild_index_summary(self) -> EntryIndexRefreshResult:
         """Rebuild the derived index and return body-safe counts."""

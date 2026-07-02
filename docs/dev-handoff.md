@@ -103,11 +103,12 @@ DELETE /api/v1/entries/{entry_id}
 - `GET /entries` 支持 `limit`、`older_than`、`newer_than`、`include_deleted`。
 - `GET /entries/window` 支持按日期获取目标日及上下文窗口。
 - `GET /entries/dates` 支持日历日期统计。
-- `POST /entries` 创建不可变 v1 条目，写入事实文件并重建索引。
-- `DELETE /entries/{id}` 写入 `metadata.deleted_at` 软删除并重建索引。
+- `POST /entries` 创建不可变 v1 条目，写入事实文件并增量更新索引。
+- `DELETE /entries/{id}` 写入 `metadata.deleted_at` 软删除并增量更新索引。
 - `POST /entries/rebuild-index` 从事实文件重建 SQLite 索引，只返回数量摘要。
 
-重建索引接口常用于外部手动添加 entries 后刷新列表和日历：
+创建和删除在索引存在时只更新单条摘要；索引缺失或外部手动添加
+entries 后，可以使用重建索引接口刷新列表和日历：
 
 ```js
 await SereinDataAdapter.rebuildIndex()

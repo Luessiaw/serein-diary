@@ -744,7 +744,7 @@
       kind: "textarea",
       mount() {
         content.addEventListener("input", () => {
-          resizeContentInput(content);
+          resizeContentInput(content, { preserveScroll: true });
         });
       },
       readMarkdown() {
@@ -3513,9 +3513,18 @@
     };
   }
 
-  function resizeContentInput(content) {
+  function resizeContentInput(content, options = {}) {
+    const { preserveScroll = false } = options;
+    const previousScrollTop = app.scrollTop;
+
     content.style.blockSize = "auto";
     content.style.blockSize = `${content.scrollHeight}px`;
+    if (preserveScroll && document.activeElement === content) {
+      app.scrollTop = previousScrollTop;
+      requestAnimationFrame(() => {
+        app.scrollTop = previousScrollTop;
+      });
+    }
   }
 
   function createMockUuid() {

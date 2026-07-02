@@ -86,8 +86,30 @@ def replace_entries(connection: sqlite3.Connection, summaries: list[EntrySummary
 
     connection.execute("DELETE FROM entries")
     connection.executemany(
-        """
-        INSERT INTO entries (
+        create_entry_upsert_sql(),
+        [entry_summary_to_row(summary) for summary in summaries],
+    )
+
+
+def upsert_entry_summary(
+    index_path: Path,
+    summary: EntrySummary,
+) -> Path:
+    """Create the index if needed and upsert one entry summary."""
+
+    index_path = Path(index_path)
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    with closing(sqlite3.connect(index_path)) as connection:
+        with connection:
+            create_schema(connection)
+            connection.execute(create_entry_upsert_sql(), entry_summary_to_row(summary))
+
+    return index_path
+
+
+def create_entry_upsert_sql() -> str:
+    return """
+        INSERT OR REPLACE INTO entries (
             id,
             created_at,
             local_date,
@@ -98,21 +120,20 @@ def replace_entries(connection: sqlite3.Connection, summaries: list[EntrySummary
             media_count,
             deleted
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        [
-            (
-                str(summary.id),
-                summary.created_at.isoformat(),
-                summary.created_at.date().isoformat(),
-                summary.path.as_posix(),
-                summary.title,
-                summary.content_excerpt,
-                summary.comment_count,
-                summary.media_count,
-                int(summary.deleted),
-            )
-            for summary in summaries
-        ],
+        """
+
+
+def entry_summary_to_row(summary: EntrySummary) -> tuple:
+    return (
+        str(summary.id),
+        summary.created_at.isoformat(),
+        summary.created_at.date().isoformat(),
+        summary.path.as_posix(),
+        summary.title,
+        summary.content_excerpt,
+        summary.comment_count,
+        summary.media_count,
+        int(summary.deleted),
     )
 
 
