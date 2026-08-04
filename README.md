@@ -40,7 +40,8 @@ P5A 仍是只读阶段；真实新建、删除、评论和媒体闭环属于后�
 安装后端依赖后，可运行：
 
 ```bash
-backend/.venv/bin/python -m unittest discover -s backend/tests
+cd backend
+.venv/bin/python -m unittest discover -s tests
 ```
 
 也可以复制 `.env.example` 为 `.env`，修改管理员密码、session secret 和数据目录后

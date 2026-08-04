@@ -16,7 +16,7 @@
 Serein 是独立自托管日记仓库，位于：
 
 ```text
-/home/luessiaw/storage/srv/serein-diary
+/home/luessiaw/storage/srv/projects/serein-diary
 ├── backend/        # FastAPI 后端
 ├── frontend/       # 原生 HTML/CSS/JS 前端
 ├── deploy/         # Caddy 示例配置
@@ -187,16 +187,16 @@ backend 数据源下强制 Textarea，`setTiptapEnabled(true)` 不会生效。
 后端测试：
 
 ```bash
-cd /home/luessiaw/storage/srv/serein-diary
-backend/.venv/bin/python -m unittest discover -s backend/tests
+cd /home/luessiaw/storage/srv/projects/serein-diary/backend
+.venv/bin/python -m unittest discover -s tests
 ```
 
-当前后端测试为 85 个。
+当前后端测试为 87 个。
 
 前端 JS 语法检查：
 
 ```bash
-cd /home/luessiaw/storage/srv/serein-diary
+cd /home/luessiaw/storage/srv/projects/serein-diary
 node --check frontend/scripts/api-client.js
 node --check frontend/scripts/data-adapter.js
 node --check frontend/scripts/mock-entries.js
@@ -206,14 +206,14 @@ node --check frontend/scripts/app.js
 Git 空白检查：
 
 ```bash
-cd /home/luessiaw/storage/srv/serein-diary
+cd /home/luessiaw/storage/srv/projects/serein-diary
 git diff --check
 ```
 
 Compose 示例更新后端 API：
 
 ```bash
-cd /home/luessiaw/storage/srv/serein-diary
+cd /home/luessiaw/storage/srv/projects/serein-diary
 docker compose up -d --build api
 ```
 
@@ -223,7 +223,7 @@ docker compose up -d --build api
 前端由 Caddy 挂载 `./frontend`，一般修改前端文件后强制刷新浏览器即可。若 Caddy 状态异常，可由操作者运行：
 
 ```bash
-cd /home/luessiaw/storage/srv/serein-diary
+cd /home/luessiaw/storage/srv/projects/serein-diary
 docker compose up -d web
 ```
 

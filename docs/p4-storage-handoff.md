@@ -98,16 +98,17 @@ HTTP 响应：
 
 ## 自动测试
 
-从仓库根目录运行：
+从后端目录运行：
 
 ```bash
-backend/.venv/bin/python -m unittest discover -s backend/tests
+cd backend
+.venv/bin/python -m unittest discover -s tests
 ```
 
 辅助检查：
 
 ```bash
-backend/.venv/bin/python -m compileall -q backend/serein backend/tests
+.venv/bin/python -m compileall -q serein tests
 git diff --check
 ```
 

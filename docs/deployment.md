@@ -90,7 +90,7 @@ Nginx、Caddy、Apache、开发服务器或静态托管服务发布。进入 P3 
 
 在 luessiaw-server 上，Serein 现阶段作为静态前端挂载到 Portal 的 `/diary/`
 路径。父级运维仓库的脚本会在检测到
-`/home/luessiaw/storage/srv/serein-diary/frontend` 时，将其同步到
+`/home/luessiaw/storage/srv/projects/serein-diary/frontend` 时，将其同步到
 `/var/www/luessiaw-portal/diary/`：
 
 ```bash

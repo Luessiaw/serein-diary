@@ -5,10 +5,11 @@ application shell, configuration checks, public health endpoint, lock-screen
 auth helpers, P4 storage contract, rebuildable index, migration dry-run, and
 the minimal protected entries API.
 
-Run from the repository root:
+Run from the backend directory:
 
 ```bash
-backend/.venv/bin/python -m unittest discover -s backend/tests
+cd backend
+.venv/bin/python -m unittest discover -s tests
 ```
 
 Current coverage:
