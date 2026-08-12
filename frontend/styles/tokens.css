@@ -191,7 +191,7 @@
   --load-control-gap: var(--space-2);
   --load-control-padding-block: var(--space-2);
   --spinner-size: 0.9rem;
-  --new-entry-min-height: 55vh;
+  --new-entry-min-height: calc(var(--line-height-reading) * 2);
   --new-entry-bottom-space: 100dvh;
 
   /*

@@ -622,6 +622,7 @@
     let draggedMediaIndex = null;
     let dropTargetIndex = null;
     let lastDroppedMediaIndex = null;
+    let pendingPreviewTimer = null;
     const showDropTarget = () => {
       mediaPreview.querySelectorAll(".is-drop-before").forEach((node) => node.classList.remove("is-drop-before"));
       const target = dropTargetIndex === selectedMedia.length
@@ -638,7 +639,7 @@
         tile.className = "new-entry-media-tile";
         if (index === dropTargetIndex) tile.classList.add("is-drop-before");
         if (index === lastDroppedMediaIndex) tile.classList.add("is-reordered");
-        tile.draggable = true;
+        tile.draggable = false;
         tile.dataset.mediaIndex = String(index);
         image.alt = file.name;
         image.src = URL.createObjectURL(file);
@@ -647,7 +648,20 @@
         remove.className = "new-entry-media-remove";
         remove.textContent = "×";
         remove.setAttribute("aria-label", `移除 ${file.name}`);
-        remove.addEventListener("click", () => { selectedMedia.splice(index, 1); renderMediaPreview(); });
+        remove.addEventListener("click", (event) => { event.stopPropagation(); selectedMedia.splice(index, 1); renderMediaPreview(); });
+        tile.addEventListener("click", () => {
+          if (tile.dataset.reorderEnabled === "true") return;
+          window.clearTimeout(pendingPreviewTimer);
+          pendingPreviewTimer = window.setTimeout(() => openQueuedImageViewer(selectedMedia, index), 220);
+        });
+        tile.addEventListener("dblclick", (event) => {
+          event.preventDefault();
+          window.clearTimeout(pendingPreviewTimer);
+          tile.dataset.reorderEnabled = "true";
+          tile.draggable = true;
+          tile.classList.add("is-reorder-enabled");
+          tile.title = "现在可拖动调整顺序";
+        });
         tile.addEventListener("dragstart", (event) => {
           draggedMediaIndex = index;
           tile.classList.add("is-dragging");
@@ -4152,6 +4166,53 @@
     const color = colors[seed % colors.length];
 
     return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#${color}"/><circle cx="${90 + seed % 220}" cy="160" r="96" fill="#fff4"/></svg>`)}`;
+  }
+
+  function openQueuedImageViewer(files, initialIndex) {
+    const dialog = document.createElement("dialog");
+    const shell = document.createElement("div");
+    const top = document.createElement("div");
+    const position = document.createElement("span");
+    const close = document.createElement("button");
+    const stage = document.createElement("div");
+    const previous = document.createElement("button");
+    const image = document.createElement("img");
+    const next = document.createElement("button");
+    let index = initialIndex;
+    let objectUrl = null;
+
+    dialog.className = "entry-image-viewer";
+    dialog.setAttribute("aria-label", "待上传图片查看器");
+    shell.className = "entry-image-viewer-shell";
+    top.className = "entry-image-viewer-top";
+    close.type = "button";
+    close.textContent = "关闭 ×";
+    previous.type = "button";
+    previous.textContent = "‹";
+    next.type = "button";
+    next.textContent = "›";
+    stage.className = "entry-image-viewer-stage";
+    top.append(position, close);
+    stage.append(previous, image, next);
+    shell.append(top, stage);
+    dialog.append(shell);
+    const render = () => {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(files[index]);
+      image.src = objectUrl;
+      image.alt = files[index].name;
+      position.textContent = `${index + 1} / ${files.length}`;
+      previous.disabled = index === 0;
+      next.disabled = index === files.length - 1;
+    };
+    previous.addEventListener("click", () => { if (index > 0) { index -= 1; render(); } });
+    next.addEventListener("click", () => { if (index < files.length - 1) { index += 1; render(); } });
+    close.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => { URL.revokeObjectURL(objectUrl); dialog.remove(); }, { once: true });
+    dialog.addEventListener("keydown", (event) => { if (event.key === "ArrowLeft") previous.click(); if (event.key === "ArrowRight") next.click(); });
+    document.body.append(dialog);
+    render();
+    dialog.showModal();
   }
 
   function openEntryImageViewer(entryId, mediaItems, initialIndex) {
