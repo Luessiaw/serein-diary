@@ -103,6 +103,7 @@
         if (payload.alt) {
           form.append("alt", payload.alt);
         }
+        form.append("revision", String(payload.revision));
         return apiClient.requestJson(`/entries/${encodeURIComponent(entryId)}/media`, {
           method: "POST",
           body: form,

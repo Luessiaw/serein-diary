@@ -22,6 +22,7 @@ from serein.storage.index import (
 from serein.storage.repository import (
     EntrySummary,
     create_entry,
+    attach_image,
     create_entry_summary,
     find_entry_by_id,
     get_entry_history_version,
@@ -293,6 +294,14 @@ class EntryService:
             entry=entry,
             cursor=encode_entry_cursor(entry.metadata.created_at, entry.metadata.id),
         )
+
+    def attach_image(self, entry_id: UUID, *, content: bytes, alt: str | None, expected_revision: int, created_at: datetime | None = None) -> EntryDetailItem:
+        try:
+            entry = attach_image(self.data_dir, entry_id, content=content, alt=alt, expected_revision=expected_revision, created_at=created_at)
+            self.refresh_entry_index(entry)
+        except EntryValidationError as error:
+            raise map_storage_error(error) from error
+        return EntryDetailItem(entry=entry, cursor=encode_entry_cursor(entry.metadata.created_at, entry.metadata.id))
 
     def list_entry_history(self, entry_id: UUID) -> tuple[EntryHistoryItem, ...]:
         """List immutable snapshots, including a compact diff from the preceding state."""

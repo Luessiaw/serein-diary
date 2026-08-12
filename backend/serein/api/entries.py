@@ -8,7 +8,7 @@ from typing import Annotated
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -35,6 +35,8 @@ from serein.storage.repository import create_content_excerpt
 
 
 router = APIRouter(prefix="/entries", tags=["entries"])
+IMAGE_UPLOAD_TYPES = {"image/jpeg", "image/png", "image/webp"}
+IMAGE_UPLOAD_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
 class ApiErrorBody(BaseModel):
@@ -404,6 +406,36 @@ def get_entry_media(
             return media_response
 
     raise service_http_error(EntryServiceError("media_not_found", "Media not found"))
+
+
+@router.post("/{entry_id}/media", response_model=EntryDetailResponse)
+async def upload_entry_media(
+    entry_id: UUID, request: Request, response: Response, file: UploadFile = File(...), alt: str | None = Form(None), revision: int = Form(ge=0),
+    session: AuthenticatedSession = Depends(require_authenticated_session),
+) -> EntryDetailResponse:
+    """Attach one validated image and generated WebP preview to an entry."""
+    _ = session
+    mark_auth_response_uncacheable(response)
+    try:
+        validate_image_upload_metadata(file)
+        content = await file.read()
+        detail = get_entry_service(request).attach_image(entry_id, content=content, alt=alt, expected_revision=revision, created_at=datetime.now(ZoneInfo(get_settings(request).timezone)))
+        return entry_detail_to_response(detail)
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
+    finally:
+        await file.close()
+
+
+def validate_image_upload_metadata(file: UploadFile) -> None:
+    """Require an image MIME and filename extension before decoding its bytes."""
+
+    suffix = (file.filename or "").lower().rsplit(".", maxsplit=1)
+    normalized_suffix = f".{suffix[-1]}" if len(suffix) == 2 else ""
+    if file.content_type not in IMAGE_UPLOAD_TYPES or normalized_suffix not in IMAGE_UPLOAD_EXTENSIONS:
+        raise service_http_error(
+            EntryServiceError("invalid_request", "use a JPEG, PNG, or WebP image file")
+        )
 
 
 @router.get("/{entry_id}", response_model=EntryDetailResponse)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import io
 import re
 import shutil
 import tempfile
@@ -10,6 +11,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
+
+from PIL import Image, UnidentifiedImageError
 
 from serein.storage.entry import (
     DiaryEntry,
@@ -23,6 +26,9 @@ from serein.storage.entry import (
 
 
 CONTENT_EXCERPT_MAX_CHARS = 120
+MAX_IMAGE_BYTES = 20 * 1024 * 1024
+MAX_IMAGE_PIXELS = 40_000_000
+IMAGE_FORMATS = {"JPEG": ("jpg", "image/jpeg"), "PNG": ("png", "image/png"), "WEBP": ("webp", "image/webp")}
 
 
 @dataclass(frozen=True)
@@ -174,6 +180,100 @@ def update_entry(
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
     return read_entry(entry.path)
+
+
+def attach_image(
+    data_dir: Path,
+    entry_id: UUID,
+    *,
+    content: bytes,
+    alt: str | None,
+    expected_revision: int,
+    created_at: datetime | None = None,
+) -> DiaryEntry:
+    """Validate one image, create a WebP preview, then atomically add it to manifest facts."""
+
+    if not content or len(content) > MAX_IMAGE_BYTES:
+        raise EntryValidationError("image file size is invalid")
+    entry = find_entry_by_id(data_dir, entry_id)
+    if entry.metadata.deleted_at is not None:
+        raise EntryValidationError("entry is already deleted")
+    current_revision = entry.metadata.revision or 0
+    if expected_revision != current_revision:
+        raise EntryValidationError("entry revision does not match current revision")
+    try:
+        with Image.open(io.BytesIO(content)) as source:
+            source.verify()
+        with Image.open(io.BytesIO(content)) as source:
+            source.load()
+            if source.format not in IMAGE_FORMATS:
+                raise EntryValidationError("unsupported image format; use JPEG, PNG, or WebP")
+            if source.width * source.height > MAX_IMAGE_PIXELS:
+                raise EntryValidationError("image dimensions are too large")
+            image_format = source.format
+            preview = source.convert("RGB")
+    except UnidentifiedImageError as error:
+        raise EntryValidationError("uploaded file is not a valid image") from error
+    media_id = uuid4()
+    extension, _ = IMAGE_FORMATS[image_format]
+    original_relative = f"media/original/{media_id}.{extension}"
+    preview_relative = f"media/preview/{media_id}.webp"
+    temp_dir = Path(tempfile.mkdtemp(prefix=".tmp-media-", dir=entry.path))
+    original_path = entry.path / original_relative
+    preview_path = entry.path / preview_relative
+    files_bound = False
+    try:
+        original_temp = temp_dir / f"original.{extension}"
+        preview_temp = temp_dir / "preview.webp"
+        original_temp.write_bytes(content)
+        preview.save(preview_temp, format="WEBP", quality=82, method=6)
+        timestamp = normalize_created_at(created_at)
+        manifest = entry.media_manifest.model_dump(mode="json", exclude_none=True)
+        manifest["media"].append({"id": str(media_id), "kind": "image", "original": original_relative, "preview": preview_relative, "alt": (alt or "").strip() or None, "created_at": timestamp.isoformat()})
+        parse_media_manifest(manifest)
+        snapshot_current_entry_facts(entry, current_revision, timestamp)
+        original_path.parent.mkdir(parents=True, exist_ok=True)
+        preview_path.parent.mkdir(parents=True, exist_ok=True)
+        original_temp.replace(original_path)
+        preview_temp.replace(preview_path)
+        files_bound = True
+        metadata = entry.metadata.model_dump(mode="json", exclude_none=True)
+        metadata.update({"schema_version": 2, "updated_at": timestamp.isoformat(), "revision": current_revision + 1})
+        write_json_file_atomic(entry.path / "metadata.json", metadata)
+        write_json_file_atomic(entry.path / "media-manifest.json", manifest)
+    except Exception:
+        if files_bound:
+            original_path.unlink(missing_ok=True)
+            preview_path.unlink(missing_ok=True)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    return read_entry(entry.path)
+
+
+def snapshot_current_entry_facts(entry: DiaryEntry, revision: int, timestamp: datetime) -> None:
+    """Copy current text and manifest facts into the next immutable history slot."""
+
+    history_dir = entry.path / "history"
+    snapshot_name = (
+        f"{revision:06d}-initial"
+        if revision == 0
+        else f"{revision:06d}-{timestamp.strftime('%Y%m%d%H%M%S')}-{uuid4()}"
+    )
+    snapshot_dir = history_dir / snapshot_name
+    if snapshot_dir.exists():
+        if snapshot_dir.is_symlink() or not snapshot_dir.is_dir():
+            raise EntryValidationError("history snapshot path is unsafe")
+        return
+    temp_history = Path(tempfile.mkdtemp(prefix=".tmp-history-", dir=entry.path))
+    try:
+        for name in ("metadata.json", "content.md", "media-manifest.json"):
+            shutil.copy2(entry.path / name, temp_history / name)
+        history_dir.mkdir(exist_ok=True)
+        temp_history.replace(snapshot_dir)
+    except Exception:
+        shutil.rmtree(temp_history, ignore_errors=True)
+        raise
 
 
 def list_entry_history(data_dir: Path, entry_id: UUID) -> tuple[EntryHistoryVersion, ...]:

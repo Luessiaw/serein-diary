@@ -9,8 +9,11 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 from uuid import UUID
 
+from PIL import Image
+
 from serein.storage.entry import EntryValidationError
 from serein.storage.repository import (
+    attach_image,
     create_entry,
     get_entry_history_version,
     list_entry_history,
@@ -174,6 +177,52 @@ class StorageWriteTests(TestCase):
             with self.assertRaisesRegex(EntryValidationError, "history revision not found"):
                 get_entry_history_version(root, ENTRY_ID, 2)
 
+    def test_attach_image_writes_original_webp_preview_and_manifest(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            entry = create_entry(root, content="entry\n", created_at=CREATED_AT, entry_id=ENTRY_ID)
+            image_bytes = create_png_bytes()
+
+            attached = attach_image(root, ENTRY_ID, content=image_bytes, alt="  evening  ", expected_revision=0, created_at=CREATED_AT)
+
+            item = attached.media_manifest.media[0]
+            self.assertEqual(item.kind, "image")
+            self.assertEqual(item.alt, "evening")
+            self.assertTrue((entry.path / item.original).is_file())
+            self.assertEqual((entry.path / item.original).read_bytes(), image_bytes)
+            self.assertTrue((entry.path / item.preview).is_file())
+            self.assertEqual(attached.metadata.revision, 1)
+            self.assertEqual((entry.path / "history" / "000000-initial" / "media-manifest.json").is_file(), True)
+            with Image.open(entry.path / item.preview) as preview:
+                self.assertEqual(preview.format, "WEBP")
+
+    def test_attach_image_rejects_non_image_before_writing_facts(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            entry = create_entry(root, content="entry\n", created_at=CREATED_AT, entry_id=ENTRY_ID)
+
+            with self.assertRaisesRegex(EntryValidationError, "not a valid image"):
+                attach_image(root, ENTRY_ID, content=b"not an image", alt=None, expected_revision=0, created_at=CREATED_AT)
+
+            self.assertEqual(read_json(entry.path / "media-manifest.json")["media"], [])
+
+    def test_attach_image_rejects_stale_revision_without_creating_media(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            entry = create_entry(root, content="entry\n", created_at=CREATED_AT, entry_id=ENTRY_ID)
+            attach_image(root, ENTRY_ID, content=create_png_bytes(), alt=None, expected_revision=0, created_at=CREATED_AT)
+
+            with self.assertRaisesRegex(EntryValidationError, "revision"):
+                attach_image(root, ENTRY_ID, content=create_png_bytes(), alt=None, expected_revision=0, created_at=CREATED_AT)
+
+            self.assertEqual(len(read_json(entry.path / "media-manifest.json")["media"]), 1)
+
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def create_png_bytes() -> bytes:
+    stream = __import__("io").BytesIO()
+    Image.new("RGB", (6, 4), "#789abc").save(stream, format="PNG")
+    return stream.getvalue()

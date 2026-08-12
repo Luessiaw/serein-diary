@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from datetime import date
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest import TestCase
 from uuid import UUID
 
-from fastapi import HTTPException, Response
+from fastapi import HTTPException, Response, UploadFile
+from PIL import Image
+from starlette.datastructures import Headers
 
 from serein.api.auth import NO_STORE_HEADER
 from serein.api.auth import AuthenticatedSession, require_authenticated_session
@@ -28,6 +31,7 @@ from serein.api.entries import (
     list_entry_history_endpoint,
     rebuild_entry_index,
     update_entry_endpoint,
+    upload_entry_media,
 )
 from serein.config import Settings
 
@@ -511,6 +515,23 @@ class EntriesApiTests(TestCase):
         self.assertIn("-after", version.content_diff)
         self.assertIn("+latest", version.content_diff)
 
+    def test_upload_image_creates_preview_and_requires_current_revision(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            request = self.make_request(Path(data_dir))
+            session = self.make_session()
+            created = create_entry_endpoint(EntryCreateRequest(content="entry\n"), request, Response(), session)
+            uploaded = __import__("asyncio").run(upload_entry_media(
+                entry_id=created.id, request=request, response=Response(), file=create_png_upload(), alt=None, revision=0, session=session,
+            ))
+            with self.assertRaises(HTTPException) as context:
+                __import__("asyncio").run(upload_entry_media(
+                    entry_id=created.id, request=request, response=Response(), file=create_png_upload(), alt=None, revision=0, session=session,
+                ))
+
+        self.assertEqual(uploaded.revision, 1)
+        self.assertEqual(uploaded.media_count, 1)
+        self.assertEqual(context.exception.status_code, 409)
+
     def test_invalid_cursor_returns_stable_error(self) -> None:
         with TemporaryDirectory() as data_dir:
             request = self.make_request(Path(data_dir))
@@ -540,3 +561,10 @@ class EntriesApiTests(TestCase):
 
         self.assertEqual(context.exception.status_code, 404)
         self.assertEqual(context.exception.detail["error"]["code"], "entry_not_found")
+
+
+def create_png_upload() -> UploadFile:
+    stream = BytesIO()
+    Image.new("RGB", (6, 4), "#789abc").save(stream, format="PNG")
+    stream.seek(0)
+    return UploadFile(file=stream, filename="photo.png", headers=Headers({"content-type": "image/png"}))
