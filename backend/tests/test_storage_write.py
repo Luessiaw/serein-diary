@@ -10,7 +10,7 @@ from unittest import TestCase
 from uuid import UUID
 
 from serein.storage.entry import EntryValidationError
-from serein.storage.repository import create_entry, mark_entry_deleted, scan_entry_summaries
+from serein.storage.repository import create_entry, mark_entry_deleted, scan_entry_summaries, update_entry
 
 
 ENTRY_ID = UUID("77777777-7777-4777-8777-777777777777")
@@ -107,6 +107,50 @@ class StorageWriteTests(TestCase):
 
             with self.assertRaisesRegex(EntryValidationError, "already deleted"):
                 mark_entry_deleted(root, ENTRY_ID, deleted_at=datetime.now(timezone.utc))
+
+    def test_update_entry_upgrades_v1_snapshots_and_changes_display_date(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            original = create_entry(
+                root, title="Before", content="before\n", created_at=CREATED_AT, entry_id=ENTRY_ID
+            )
+            changed_at = datetime.fromisoformat("2026-06-24T09:30:00+08:00")
+
+            updated = update_entry(
+                root,
+                ENTRY_ID,
+                title="After",
+                content="after\n",
+                created_at=changed_at,
+                expected_revision=0,
+                updated_at=changed_at,
+            )
+
+            snapshot = original.path / "history" / "000000-initial"
+            self.assertEqual(updated.metadata.schema_version, 2)
+            self.assertEqual(updated.metadata.revision, 1)
+            self.assertEqual(updated.metadata.created_at, changed_at)
+            self.assertEqual(updated.content, "after\n")
+            self.assertEqual((snapshot / "content.md").read_text(encoding="utf-8"), "before\n")
+            self.assertEqual(read_json(snapshot / "metadata.json")["schema_version"], 1)
+            self.assertEqual(scan_entry_summaries(root)[0].created_at, changed_at)
+
+    def test_update_entry_rejects_stale_revision_without_overwriting_facts(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            create_entry(root, content="before\n", created_at=CREATED_AT, entry_id=ENTRY_ID)
+            update_entry(
+                root, ENTRY_ID, content="after\n", title=None,
+                created_at=CREATED_AT, expected_revision=0, updated_at=CREATED_AT,
+            )
+
+            with self.assertRaisesRegex(EntryValidationError, "revision"):
+                update_entry(
+                    root, ENTRY_ID, content="stale\n", title=None,
+                    created_at=CREATED_AT, expected_revision=0, updated_at=CREATED_AT,
+                )
+
+            self.assertEqual((root / "entries" / f"202606230014-{ENTRY_ID}" / "content.md").read_text(encoding="utf-8"), "after\n")
 
 
 def read_json(path: Path) -> dict:

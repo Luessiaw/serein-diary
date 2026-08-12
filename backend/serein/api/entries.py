@@ -56,6 +56,15 @@ class EntryCreateRequest(BaseModel):
     content: str = Field(min_length=1)
 
 
+class EntryUpdateRequest(BaseModel):
+    """Request for one revision-checked v2 entry edit."""
+
+    title: str | None = None
+    content: str = Field(min_length=1)
+    created_at: datetime
+    revision: int = Field(ge=0)
+
+
 class PageInfoResponse(BaseModel):
     """Pagination metadata for the continuous diary stream."""
 
@@ -77,6 +86,8 @@ class EntrySummaryResponse(BaseModel):
     comment_count: int
     media_count: int
     deleted: bool
+    revision: int | None
+    updated_at: datetime | None
 
 
 class CommentResponse(BaseModel):
@@ -272,6 +283,32 @@ def rebuild_entry_index(
         raise service_http_error(error) from error
 
 
+@router.patch("/{entry_id}", response_model=EntryDetailResponse)
+def update_entry_endpoint(
+    entry_id: UUID,
+    payload: EntryUpdateRequest,
+    request: Request,
+    response: Response,
+    session: AuthenticatedSession = Depends(require_authenticated_session),
+) -> EntryDetailResponse:
+    """Edit one entry permanently while retaining its preceding facts."""
+
+    _ = session
+    mark_auth_response_uncacheable(response)
+    try:
+        detail = get_entry_service(request).update_entry(
+            entry_id,
+            title=payload.title,
+            content=normalize_create_content(payload.content),
+            created_at=payload.created_at,
+            expected_revision=payload.revision,
+            updated_at=datetime.now(ZoneInfo(get_settings(request).timezone)),
+        )
+        return entry_detail_to_response(detail)
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
+
+
 @router.get("/{entry_id}/media/{media_id}")
 def get_entry_media(
     entry_id: UUID,
@@ -409,6 +446,8 @@ def entry_summary_to_response(item: EntrySummaryItem) -> EntrySummaryResponse:
         comment_count=item.comment_count,
         media_count=item.media_count,
         deleted=item.deleted,
+        revision=None,
+        updated_at=None,
     )
 
 
@@ -423,6 +462,8 @@ def entry_detail_to_response(detail: EntryDetailItem) -> EntryDetailResponse:
         comment_count=len(entry.comments.comments),
         media_count=len(entry.media_manifest.media),
         deleted=entry.metadata.deleted_at is not None,
+        revision=entry.metadata.revision,
+        updated_at=entry.metadata.updated_at,
         content=entry.content,
         comments=[
             CommentResponse(
@@ -472,6 +513,7 @@ def service_http_error(error: EntryServiceError) -> HTTPException:
         "entry_not_found": status.HTTP_404_NOT_FOUND,
         "media_not_found": status.HTTP_404_NOT_FOUND,
         "entry_deleted": status.HTTP_409_CONFLICT,
+        "revision_conflict": status.HTTP_409_CONFLICT,
     }
     return HTTPException(
         status_code=status_code_by_error.get(error.code, status.HTTP_500_INTERNAL_SERVER_ERROR),

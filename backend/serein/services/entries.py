@@ -24,6 +24,7 @@ from serein.storage.repository import (
     create_entry_summary,
     find_entry_by_id,
     mark_entry_deleted,
+    update_entry,
 )
 
 
@@ -240,6 +241,37 @@ class EntryService:
                 self.data_dir,
                 entry_id,
                 deleted_at=deleted_at,
+            )
+            self.refresh_entry_index(entry)
+        except EntryValidationError as error:
+            raise map_storage_error(error) from error
+
+        return EntryDetailItem(
+            entry=entry,
+            cursor=encode_entry_cursor(entry.metadata.created_at, entry.metadata.id),
+        )
+
+    def update_entry(
+        self,
+        entry_id: UUID,
+        *,
+        content: str,
+        title: str | None,
+        created_at: datetime,
+        expected_revision: int,
+        updated_at: datetime | None = None,
+    ) -> EntryDetailItem:
+        """Persist an edit, retain its predecessor, and refresh its index row."""
+
+        try:
+            entry = update_entry(
+                self.data_dir,
+                entry_id,
+                content=content,
+                title=title,
+                created_at=created_at,
+                expected_revision=expected_revision,
+                updated_at=updated_at,
             )
             self.refresh_entry_index(entry)
         except EntryValidationError as error:
@@ -473,4 +505,6 @@ def map_storage_error(error: EntryValidationError) -> EntryServiceError:
         return EntryServiceError("entry_not_found", "Entry not found")
     if "already deleted" in message:
         return EntryServiceError("entry_deleted", "Entry is already deleted")
+    if "revision does not match" in message:
+        return EntryServiceError("revision_conflict", "Entry has changed; reload before saving")
     return EntryServiceError("storage_contract_error", message)

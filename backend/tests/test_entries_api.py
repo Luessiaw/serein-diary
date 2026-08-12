@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -15,6 +16,7 @@ from serein.api.auth import NO_STORE_HEADER
 from serein.api.auth import AuthenticatedSession, require_authenticated_session
 from serein.api.entries import (
     EntryCreateRequest,
+    EntryUpdateRequest,
     create_entry_endpoint,
     delete_entry,
     get_entry,
@@ -23,6 +25,7 @@ from serein.api.entries import (
     list_entry_dates,
     list_entries,
     rebuild_entry_index,
+    update_entry_endpoint,
 )
 from serein.config import Settings
 
@@ -447,6 +450,35 @@ class EntriesApiTests(TestCase):
             context.exception.detail["error"]["message"],
             "content must not be blank",
         )
+
+    def test_update_changes_date_and_rejects_stale_revision(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            request = self.make_request(Path(data_dir))
+            created = create_entry_endpoint(
+                EntryCreateRequest(content="before\n"), request, Response(), self.make_session()
+            )
+            changed_at = datetime.fromisoformat("2026-06-24T09:30:00+08:00")
+            updated = update_entry_endpoint(
+                created.id,
+                EntryUpdateRequest(content="after\n", created_at=changed_at, revision=0),
+                request,
+                Response(),
+                self.make_session(),
+            )
+            with self.assertRaises(HTTPException) as context:
+                update_entry_endpoint(
+                    created.id,
+                    EntryUpdateRequest(content="stale\n", created_at=changed_at, revision=0),
+                    request,
+                    Response(),
+                    self.make_session(),
+                )
+
+        self.assertEqual(updated.content, "after\n")
+        self.assertEqual(updated.created_at, changed_at)
+        self.assertEqual(updated.revision, 1)
+        self.assertEqual(context.exception.status_code, 409)
+        self.assertEqual(context.exception.detail["error"]["code"], "revision_conflict")
 
     def test_invalid_cursor_returns_stable_error(self) -> None:
         with TemporaryDirectory() as data_dir:

@@ -54,16 +54,23 @@ class EntryContractTests(TestCase):
             with self.assertRaisesRegex(EntryValidationError, "date"):
                 read_entry(entry_dir)
 
-    def test_rejects_updated_at_and_revision(self) -> None:
+    def test_v1_rejects_v2_fields_but_v2_accepts_them_and_date_change(self) -> None:
         with TemporaryDirectory() as data_dir:
             entry_dir = create_entry_fixture(Path(data_dir))
             metadata = read_json(entry_dir / "metadata.json")
-            metadata["updated_at"] = CREATED_AT
+            metadata["updated_at"] = "2026-06-24T00:14:23+08:00"
             metadata["revision"] = 1
             write_json(entry_dir / "metadata.json", metadata)
 
             with self.assertRaisesRegex(EntryValidationError, "updated_at"):
                 read_entry(entry_dir)
+
+            metadata["schema_version"] = 2
+            metadata["created_at"] = "2026-06-24T00:14:23+08:00"
+            write_json(entry_dir / "metadata.json", metadata)
+            entry = read_entry(entry_dir)
+
+        self.assertEqual(entry.metadata.revision, 1)
 
     def test_rejects_invalid_entry_directory_name(self) -> None:
         with TemporaryDirectory() as data_dir:

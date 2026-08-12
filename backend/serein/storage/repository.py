@@ -87,6 +87,79 @@ def mark_entry_deleted(
     return read_entry(entry.path)
 
 
+def update_entry(
+    data_dir: Path,
+    entry_id: UUID,
+    *,
+    content: str,
+    title: str | None,
+    created_at: datetime,
+    expected_revision: int,
+    updated_at: datetime | None = None,
+) -> DiaryEntry:
+    """Atomically update a v2 entry after snapshotting its current facts."""
+
+    if not content.strip():
+        raise EntryValidationError("content.md must not be blank")
+    if "\r" in content:
+        raise EntryValidationError("content.md must use LF line endings")
+    created_at = normalize_created_at(created_at)
+    updated_at = normalize_created_at(updated_at)
+    entry = find_entry_by_id(data_dir, entry_id)
+    if entry.metadata.deleted_at is not None:
+        raise EntryValidationError("entry is already deleted")
+    current_revision = entry.metadata.revision or 0
+    if expected_revision != current_revision:
+        raise EntryValidationError("entry revision does not match current revision")
+
+    history_dir = entry.path / "history"
+    snapshot_name = (
+        f"{current_revision:06d}-initial"
+        if current_revision == 0
+        else f"{current_revision:06d}-{updated_at.strftime('%Y%m%d%H%M%S')}-{uuid4()}"
+    )
+    snapshot_dir = history_dir / snapshot_name
+    temp_history = Path(tempfile.mkdtemp(prefix=".tmp-history-", dir=entry.path))
+    try:
+        for name in ("metadata.json", "content.md", "media-manifest.json"):
+            shutil.copy2(entry.path / name, temp_history / name)
+        history_dir.mkdir(exist_ok=True)
+        temp_history.replace(snapshot_dir)
+    except Exception:
+        shutil.rmtree(temp_history, ignore_errors=True)
+        raise
+
+    metadata = entry.metadata.model_dump(mode="json", exclude_none=True)
+    metadata.update({
+        "schema_version": 2,
+        "created_at": created_at.isoformat(),
+        "updated_at": updated_at.isoformat(),
+        "revision": current_revision + 1,
+    })
+    normalized_title = (title or "").strip()
+    if normalized_title:
+        metadata["title"] = normalized_title
+    else:
+        metadata.pop("title", None)
+
+    temp_dir = Path(tempfile.mkdtemp(prefix=".tmp-update-", dir=entry.path))
+    try:
+        write_json_file(temp_dir / "metadata.json", metadata)
+        (temp_dir / "content.md").write_text(content, encoding="utf-8", newline="\n")
+        original_metadata = (entry.path / "metadata.json").read_bytes()
+        original_content = (entry.path / "content.md").read_bytes()
+        for name in ("metadata.json", "content.md"):
+            (temp_dir / name).replace(entry.path / name)
+    except Exception:
+        if "original_metadata" in locals():
+            (entry.path / "metadata.json").write_bytes(original_metadata)
+        if "original_content" in locals():
+            (entry.path / "content.md").write_bytes(original_content)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+    return read_entry(entry.path)
+
+
 def scan_entry_summaries(data_dir: Path) -> list[EntrySummary]:
     """Scan DIARY_DATA_DIR/entries and return entry summaries sorted by time."""
 

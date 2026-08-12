@@ -10,7 +10,14 @@ from pathlib import Path, PurePosixPath
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 
 ENTRY_DIR_NAME_PATTERN = re.compile(
@@ -42,15 +49,17 @@ class Metadata(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: Literal[1]
+    schema_version: Literal[1, 2]
     id: UUID
     created_at: datetime
     title: str | None = None
     location: dict | None = None
     fields: dict | None = None
     deleted_at: datetime | None = None
+    updated_at: datetime | None = None
+    revision: int | None = None
 
-    @field_validator("created_at", "deleted_at")
+    @field_validator("created_at", "deleted_at", "updated_at")
     @classmethod
     def require_timezone(cls, value: datetime | None) -> datetime | None:
         if value is not None and value.utcoffset() is None:
@@ -65,6 +74,22 @@ class Metadata(BaseModel):
 
         stripped = value.strip()
         return stripped or None
+
+    @field_validator("revision")
+    @classmethod
+    def validate_revision(cls, value: int | None) -> int | None:
+        if value is not None and value < 1:
+            raise ValueError("must be at least 1")
+        return value
+
+    @model_validator(mode="after")
+    def validate_schema_version_fields(self) -> "Metadata":
+        has_v2_fields = self.updated_at is not None or self.revision is not None
+        if self.schema_version == 1 and has_v2_fields:
+            raise ValueError("updated_at and revision require schema_version 2")
+        if self.schema_version == 2 and (self.updated_at is None or self.revision is None):
+            raise ValueError("schema_version 2 requires updated_at and revision")
+        return self
 
 
 class QuoteAnchor(BaseModel):
@@ -252,7 +277,7 @@ def parse_metadata(value: object) -> Metadata:
         return Metadata.model_validate(value)
     except ValidationError as error:
         raise EntryValidationError(
-            "metadata.json does not match the v1 contract: "
+            "metadata.json does not match the supported contract: "
             + summarize_validation_error(error)
         ) from error
 
@@ -281,13 +306,13 @@ def validate_directory_identity(
     identity: EntryDirectoryIdentity,
     metadata: Metadata,
 ) -> None:
-    """Validate directory UUID and minute prefix against metadata."""
+    """Validate UUID; v1 alone binds its prefix to current created_at."""
 
     if identity.entry_id != metadata.id:
         raise EntryValidationError("entry directory UUID does not match metadata.id")
 
     created_minute = metadata.created_at.strftime("%Y%m%d%H%M")
-    if identity.minute_prefix != created_minute:
+    if metadata.schema_version == 1 and identity.minute_prefix != created_minute:
         raise EntryValidationError(
             "entry directory minute prefix does not match metadata.created_at"
         )
