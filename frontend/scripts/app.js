@@ -572,6 +572,9 @@
     const header = document.createElement("div");
     const actions = document.createElement("div");
     const toolbar = document.createElement("div");
+    const mediaInput = document.createElement("input");
+    const mediaLabel = document.createElement("label");
+    const mediaPreview = document.createElement("div");
     const cancel = document.createElement("button");
     const draftStatus = document.createElement("span");
     const save = document.createElement("button");
@@ -603,6 +606,98 @@
     toolbar.className = "tiptap-toolbar";
     toolbar.setAttribute("aria-label", "Tiptap formatting toolbar");
     toolbar.hidden = content instanceof HTMLTextAreaElement;
+    mediaInput.className = "new-entry-media-input";
+    mediaInput.type = "file";
+    mediaInput.accept = "image/jpeg,image/png,image/webp";
+    mediaInput.multiple = true;
+    mediaInput.id = `new-entry-media-${createMockUuid()}`;
+    mediaLabel.className = "new-entry-media-add";
+    mediaLabel.htmlFor = mediaInput.id;
+    mediaLabel.textContent = "";
+    mediaLabel.setAttribute("aria-label", "添加图片");
+    mediaLabel.title = "添加图片";
+    mediaPreview.className = "new-entry-media-preview";
+    mediaPreview.setAttribute("aria-live", "polite");
+    let selectedMedia = [];
+    let draggedMediaIndex = null;
+    let dropTargetIndex = null;
+    let lastDroppedMediaIndex = null;
+    const showDropTarget = () => {
+      mediaPreview.querySelectorAll(".is-drop-before").forEach((node) => node.classList.remove("is-drop-before"));
+      const target = dropTargetIndex === selectedMedia.length
+        ? mediaLabel
+        : mediaPreview.querySelector(`[data-media-index="${dropTargetIndex}"]`);
+      target?.classList.add("is-drop-before");
+    };
+    const renderMediaPreview = () => {
+      mediaPreview.replaceChildren();
+      selectedMedia.forEach((file, index) => {
+        const tile = document.createElement("div");
+        const image = document.createElement("img");
+        const remove = document.createElement("button");
+        tile.className = "new-entry-media-tile";
+        if (index === dropTargetIndex) tile.classList.add("is-drop-before");
+        if (index === lastDroppedMediaIndex) tile.classList.add("is-reordered");
+        tile.draggable = true;
+        tile.dataset.mediaIndex = String(index);
+        image.alt = file.name;
+        image.src = URL.createObjectURL(file);
+        image.addEventListener("load", () => URL.revokeObjectURL(image.src), { once: true });
+        remove.type = "button";
+        remove.className = "new-entry-media-remove";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", `移除 ${file.name}`);
+        remove.addEventListener("click", () => { selectedMedia.splice(index, 1); renderMediaPreview(); });
+        tile.addEventListener("dragstart", (event) => {
+          draggedMediaIndex = index;
+          tile.classList.add("is-dragging");
+          event.dataTransfer.effectAllowed = "move";
+        });
+        tile.addEventListener("dragend", () => { draggedMediaIndex = null; dropTargetIndex = null; showDropTarget(); });
+        tile.addEventListener("dragover", (event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          const bounds = tile.getBoundingClientRect();
+          const nextTarget = event.clientX < bounds.left + bounds.width / 2 ? index : index + 1;
+          if (dropTargetIndex !== nextTarget) { dropTargetIndex = nextTarget; showDropTarget(); }
+        });
+        tile.addEventListener("drop", (event) => {
+          event.preventDefault();
+          if (draggedMediaIndex === null || dropTargetIndex === null) return;
+          const [moved] = selectedMedia.splice(draggedMediaIndex, 1);
+          const insertionIndex = dropTargetIndex > draggedMediaIndex ? dropTargetIndex - 1 : dropTargetIndex;
+          selectedMedia.splice(insertionIndex, 0, moved);
+          lastDroppedMediaIndex = insertionIndex;
+          window.setTimeout(() => { lastDroppedMediaIndex = null; renderMediaPreview(); }, 420);
+          renderMediaPreview();
+        });
+        tile.append(image, remove);
+        mediaPreview.append(tile);
+      });
+      mediaLabel.ondragover = (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        if (dropTargetIndex !== selectedMedia.length) { dropTargetIndex = selectedMedia.length; showDropTarget(); }
+      };
+      mediaLabel.ondrop = (event) => {
+        event.preventDefault();
+        if (draggedMediaIndex === null) return;
+        const [moved] = selectedMedia.splice(draggedMediaIndex, 1);
+        selectedMedia.push(moved);
+        lastDroppedMediaIndex = selectedMedia.length - 1;
+        window.setTimeout(() => { lastDroppedMediaIndex = null; renderMediaPreview(); }, 420);
+        renderMediaPreview();
+      };
+      mediaPreview.append(mediaLabel);
+    };
+    mediaInput.addEventListener("change", () => {
+      const incoming = Array.from(mediaInput.files || []);
+      const valid = incoming.filter((file) => /^(image\/jpeg|image\/png|image\/webp)$/u.test(file.type));
+      selectedMedia = [...selectedMedia, ...valid];
+      if (valid.length !== incoming.length) message.textContent = "仅支持 JPEG、PNG 和 WebP 图片。";
+      mediaInput.value = "";
+      renderMediaPreview();
+    });
     cancel.className = "new-entry-cancel";
     cancel.type = "button";
     cancel.textContent = "×";
@@ -624,6 +719,8 @@
     cancel.addEventListener("click", () => {
       form.reset();
       contentControl.clear();
+      selectedMedia = [];
+      renderMediaPreview();
       message.textContent = "已清空未保存内容。";
       title.focus({ preventScroll: true });
     });
@@ -637,6 +734,8 @@
         form,
         cancel,
         save,
+        mediaInput,
+        getSelectedMedia: () => selectedMedia,
       });
     });
 
@@ -656,12 +755,17 @@
         message.textContent = "正在保存……";
         let shouldRestoreSavingState = true;
         try {
-          const created = await dataAdapter.createEntry({
+          let created = await dataAdapter.createEntry({
             title: titleValue,
             content: rawBody,
           });
+          for (const file of controls.getSelectedMedia()) {
+            created = await dataAdapter.uploadMedia(created.id, { file, revision: created.revision ?? 0 });
+          }
           form.reset();
           contentControl.clear();
+          selectedMedia = [];
+          renderMediaPreview();
           insertCreatedEntryIntoFeed(created);
           invalidateSidebarCalendarDates();
           draftCreatedAt = createLocalTimestamp();
@@ -686,7 +790,8 @@
 
     actions.append(draftStatus, cancel, save);
     header.append(date, title);
-    form.append(header, toolbar, content, message, actions);
+    renderMediaPreview();
+    form.append(header, toolbar, content, mediaInput, mediaPreview, message, actions);
     body.append(form);
     area.append(body);
     if (focusNewEntry) {
