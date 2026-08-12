@@ -1,0 +1,49 @@
+# Serein 朋友圈式图文日记与 v2 可编辑契约
+
+## 决策
+
+Serein 改为私人的“文字 + 若干图片”记录流。条目永久可编辑，包括显示日期；每次保存均保留可恢复的历史版本。这不是社交网络：不加入头像、好友、点赞、公开分享或算法排序。
+
+## 浏览体验
+
+- 首页按条目 `created_at` 倒序显示；月度分隔仅用于定位。
+- 每张卡片包含日期时间、可选标题、正文、最多九张图片，以及低调的编辑、删除和历史入口。
+- 文字超过展示阈值时可展开；图片采用 1 张自适应、2--4 张双列、5--9 张三列网格。
+- 图片数量不设上限：预览始终最多九格；超过九张时，第九格覆盖 +N，其中 N 为未显示图片数，点击后仍可进入完整图片序列。
+- 图片点击后在无障碍对话框中查看大图，支持关闭、上一张和下一张。
+- 保留日历、日期窗口、分页和“回到此刻”；日历跳转定位到该日期第一条卡片。
+
+## v1 兼容与 v2 事实文件
+
+现有 v1 条目继续按原结构读取，并视为历史版本为零的只读记录。不会批量重写 v1 数据。首次编辑某条 v1 条目时，服务端将原始 `metadata.json`、`content.md` 和 `media-manifest.json` 先写入不可变快照，随后才原子写入当前状态。
+
+```text
+history/
+  000000-initial/
+    metadata.json
+    content.md
+    media-manifest.json
+  000001-<edited-at>-<uuid>/
+    metadata.json
+    content.md
+    media-manifest.json
+```
+
+根级三份文件仍是当前事实源；`history/` 是不可变历史事实。每次编辑先把修改前文件写入临时快照目录，完成校验后原子改名，再原子替换根级当前状态。快照不复制二进制媒体；历史 manifest 只引用同一条目内、以稳定媒体 ID 标识的媒体。删除媒体不得物理删除曾被历史 manifest 引用的文件。
+
+`metadata.json` 升级为 schema_version 2，新增 `updated_at` 与 `revision`。`created_at` 仍是列表排序、界面分组和日历日期的唯一时间事实；编辑日期即更新 `created_at`。条目目录名的旧时间前缀保持不变，UUID 继续是权威身份；v2 不再要求目录时间前缀和当前 `created_at` 一致。索引使用当前 metadata 的 `created_at` 重建。
+
+## API 与并发
+
+- `PATCH /api/v1/entries/{id}` 接收标题、Markdown 正文、`created_at` 和有序媒体 ID，要求当前 `revision`；不匹配返回 `409 revision_conflict`。
+- `GET /api/v1/entries/{id}/history` 返回不含日记正文的版本摘要。
+- `GET /api/v1/entries/{id}/history/{revision}` 返回指定历史版本。
+- `POST /api/v1/entries/{id}/history/{revision}/restore` 将指定版本作为一次新编辑提交，而不是覆盖历史。
+
+新增、编辑、恢复和删除完成后均更新 SQLite 衍生索引，并使前端日期缓存失效。
+
+## 媒体、迁移与回滚
+
+先上传至条目外受控临时区，完成校验与预览生成后在创建或 PATCH 中绑定到条目。首期支持 JPEG、PNG、WebP 与 HEIC；保存原图与 WebP 预览。流只请求预览，查看器再请求原图。
+
+上线前先执行只读 dry-run，备份 `DIARY_DATA_DIR`。v1 条目不迁移也可正常显示；只有编辑过的条目会产生 v2 文件。部署新版本前的备份可用于完整回滚。任何迁移脚本不得打印正文、图片路径或私有媒体内容。

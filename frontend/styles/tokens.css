@@ -191,7 +191,7 @@
   --load-control-padding-block: var(--space-2);
   --spinner-size: 0.9rem;
   --new-entry-min-height: 55vh;
-  --new-entry-bottom-space: 28vh;
+  --new-entry-bottom-space: 100dvh;
 
   /*
    * 日历跳转窗口
