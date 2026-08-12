@@ -11,7 +11,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from serein.storage.entry import DiaryEntry, EntryValidationError, read_entry, read_json_file
+from serein.storage.entry import (
+    DiaryEntry,
+    EntryValidationError,
+    parse_media_manifest,
+    parse_metadata,
+    read_content_file,
+    read_entry,
+    read_json_file,
+)
 
 
 CONTENT_EXCERPT_MAX_CHARS = 120
@@ -29,6 +37,14 @@ class EntrySummary:
     comment_count: int
     media_count: int
     deleted: bool
+
+
+@dataclass(frozen=True)
+class EntryHistoryVersion:
+    """One immutable predecessor snapshot, without comments or media bytes."""
+
+    revision: int
+    entry: DiaryEntry
 
 
 def create_entry(
@@ -158,6 +174,62 @@ def update_entry(
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise
     return read_entry(entry.path)
+
+
+def list_entry_history(data_dir: Path, entry_id: UUID) -> tuple[EntryHistoryVersion, ...]:
+    """Read valid immutable snapshots in ascending revision order."""
+
+    entry = find_entry_by_id(data_dir, entry_id)
+    history_dir = entry.path / "history"
+    if not history_dir.exists():
+        return ()
+    if history_dir.is_symlink() or not history_dir.is_dir():
+        raise EntryValidationError("history must be a directory inside the entry")
+
+    versions = []
+    for snapshot_dir in sorted(history_dir.iterdir(), key=lambda path: path.name):
+        if snapshot_dir.is_symlink() or not snapshot_dir.is_dir():
+            raise EntryValidationError("history contains an unsafe snapshot")
+        versions.append(read_history_snapshot(entry, snapshot_dir))
+    return tuple(versions)
+
+
+def get_entry_history_version(
+    data_dir: Path, entry_id: UUID, revision: int
+) -> EntryHistoryVersion:
+    """Read one predecessor snapshot by the revision it represents."""
+
+    for version in list_entry_history(data_dir, entry_id):
+        if version.revision == revision:
+            return version
+    raise EntryValidationError("history revision not found")
+
+
+def read_history_snapshot(entry: DiaryEntry, snapshot_dir: Path) -> EntryHistoryVersion:
+    """Validate a history snapshot while binding it to the current entry identity."""
+
+    match = re.fullmatch(r"(?P<revision>\d{6})-(?:initial|\d{14}-[0-9a-f-]{36})", snapshot_dir.name)
+    if not match:
+        raise EntryValidationError("history snapshot name is invalid")
+    for name in ("metadata.json", "content.md", "media-manifest.json"):
+        if not (snapshot_dir / name).is_file():
+            raise EntryValidationError("history snapshot is missing required facts")
+    metadata = parse_metadata(read_json_file(snapshot_dir / "metadata.json"))
+    if metadata.id != entry.metadata.id:
+        raise EntryValidationError("history snapshot entry id does not match")
+    content = read_content_file(snapshot_dir / "content.md")
+    manifest = parse_media_manifest(read_json_file(snapshot_dir / "media-manifest.json"))
+    revision = int(match.group("revision"))
+    return EntryHistoryVersion(
+        revision=revision,
+        entry=DiaryEntry(
+            path=snapshot_dir,
+            metadata=metadata,
+            content=content,
+            comments=entry.comments,
+            media_manifest=manifest,
+        ),
+    )
 
 
 def scan_entry_summaries(data_dir: Path) -> list[EntrySummary]:

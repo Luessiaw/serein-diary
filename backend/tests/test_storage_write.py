@@ -10,7 +10,14 @@ from unittest import TestCase
 from uuid import UUID
 
 from serein.storage.entry import EntryValidationError
-from serein.storage.repository import create_entry, mark_entry_deleted, scan_entry_summaries, update_entry
+from serein.storage.repository import (
+    create_entry,
+    get_entry_history_version,
+    list_entry_history,
+    mark_entry_deleted,
+    scan_entry_summaries,
+    update_entry,
+)
 
 
 ENTRY_ID = UUID("77777777-7777-4777-8777-777777777777")
@@ -151,6 +158,21 @@ class StorageWriteTests(TestCase):
                 )
 
             self.assertEqual((root / "entries" / f"202606230014-{ENTRY_ID}" / "content.md").read_text(encoding="utf-8"), "after\n")
+
+    def test_history_versions_are_read_only_predecessor_snapshots(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            create_entry(root, content="before\n", created_at=CREATED_AT, entry_id=ENTRY_ID)
+            update_entry(root, ENTRY_ID, content="after\n", title=None, created_at=CREATED_AT, expected_revision=0, updated_at=CREATED_AT)
+            update_entry(root, ENTRY_ID, content="latest\n", title="Latest", created_at=CREATED_AT, expected_revision=1, updated_at=CREATED_AT)
+
+            versions = list_entry_history(root, ENTRY_ID)
+
+            self.assertEqual([item.revision for item in versions], [0, 1])
+            self.assertEqual([item.entry.content for item in versions], ["before\n", "after\n"])
+            self.assertEqual(get_entry_history_version(root, ENTRY_ID, 1).entry.metadata.revision, 1)
+            with self.assertRaisesRegex(EntryValidationError, "history revision not found"):
+                get_entry_history_version(root, ENTRY_ID, 2)
 
 
 def read_json(path: Path) -> dict:

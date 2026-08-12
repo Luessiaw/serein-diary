@@ -24,6 +24,7 @@ from serein.services.entries import (
     EntryDetailItem,
     EntryDateCount,
     EntryIndexRefreshResult,
+    EntryHistoryItem,
     EntryPage,
     EntryService,
     EntryServiceError,
@@ -115,6 +116,24 @@ class EntryDetailResponse(EntrySummaryResponse):
     content: str
     comments: list[CommentResponse]
     media: list[MediaItemResponse]
+
+
+class EntryHistoryResponse(BaseModel):
+    """One read-only version snapshot, including its text change record."""
+
+    revision: int
+    created_at: datetime
+    updated_at: datetime | None
+    title: str | None
+    content: str
+    content_diff: str
+    media_count: int
+
+
+class EntryHistoryListResponse(BaseModel):
+    """Ordered immutable version history for one entry."""
+
+    versions: list[EntryHistoryResponse]
 
 
 class EntryListResponse(BaseModel):
@@ -309,6 +328,43 @@ def update_entry_endpoint(
         raise service_http_error(error) from error
 
 
+@router.get("/{entry_id}/history", response_model=EntryHistoryListResponse)
+def list_entry_history_endpoint(
+    entry_id: UUID,
+    response: Response,
+    request: Request,
+    session: AuthenticatedSession = Depends(require_authenticated_session),
+) -> EntryHistoryListResponse:
+    """List immutable predecessor snapshots and their text change records."""
+
+    _ = session
+    mark_auth_response_uncacheable(response)
+    try:
+        return EntryHistoryListResponse(
+            versions=[history_item_to_response(item) for item in get_entry_service(request).list_entry_history(entry_id)]
+        )
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
+
+
+@router.get("/{entry_id}/history/{revision}", response_model=EntryHistoryResponse)
+def get_entry_history_endpoint(
+    entry_id: UUID,
+    revision: int,
+    response: Response,
+    request: Request,
+    session: AuthenticatedSession = Depends(require_authenticated_session),
+) -> EntryHistoryResponse:
+    """Read one immutable predecessor snapshot with a git-style text diff."""
+
+    _ = session
+    mark_auth_response_uncacheable(response)
+    try:
+        return history_item_to_response(get_entry_service(request).get_entry_history(entry_id, revision))
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
+
+
 @router.get("/{entry_id}/media/{media_id}")
 def get_entry_media(
     entry_id: UUID,
@@ -487,6 +543,21 @@ def entry_detail_to_response(detail: EntryDetailItem) -> EntryDetailResponse:
     )
 
 
+def history_item_to_response(item: EntryHistoryItem) -> EntryHistoryResponse:
+    """Convert one immutable history item to its authenticated API response."""
+
+    entry = item.entry
+    return EntryHistoryResponse(
+        revision=item.revision,
+        created_at=entry.metadata.created_at,
+        updated_at=entry.metadata.updated_at,
+        title=entry.metadata.title,
+        content=entry.content,
+        content_diff=item.content_diff,
+        media_count=len(entry.media_manifest.media),
+    )
+
+
 def normalize_create_content(content: str) -> str:
     """Reject blank submitted content before reaching storage."""
 
@@ -514,6 +585,7 @@ def service_http_error(error: EntryServiceError) -> HTTPException:
         "media_not_found": status.HTTP_404_NOT_FOUND,
         "entry_deleted": status.HTTP_409_CONFLICT,
         "revision_conflict": status.HTTP_409_CONFLICT,
+        "history_revision_not_found": status.HTTP_404_NOT_FOUND,
     }
     return HTTPException(
         status_code=status_code_by_error.get(error.code, status.HTTP_500_INTERNAL_SERVER_ERROR),

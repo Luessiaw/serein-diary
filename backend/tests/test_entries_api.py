@@ -20,10 +20,12 @@ from serein.api.entries import (
     create_entry_endpoint,
     delete_entry,
     get_entry,
+    get_entry_history_endpoint,
     get_entry_media,
     get_entry_window,
     list_entry_dates,
     list_entries,
+    list_entry_history_endpoint,
     rebuild_entry_index,
     update_entry_endpoint,
 )
@@ -479,6 +481,35 @@ class EntriesApiTests(TestCase):
         self.assertEqual(updated.revision, 1)
         self.assertEqual(context.exception.status_code, 409)
         self.assertEqual(context.exception.detail["error"]["code"], "revision_conflict")
+
+    def test_history_endpoints_return_immutable_snapshots_and_diffs(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            request = self.make_request(Path(data_dir))
+            session = self.make_session()
+            created = create_entry_endpoint(EntryCreateRequest(content="before\n"), request, Response(), session)
+            first = update_entry_endpoint(
+                created.id,
+                EntryUpdateRequest(content="after\n", created_at=created.created_at, revision=0),
+                request,
+                Response(),
+                session,
+            )
+            update_entry_endpoint(
+                created.id,
+                EntryUpdateRequest(content="latest\n", created_at=first.created_at, revision=1),
+                request,
+                Response(),
+                session,
+            )
+            response = Response()
+            history = list_entry_history_endpoint(created.id, response, request, session)
+            version = get_entry_history_endpoint(created.id, 1, Response(), request, session)
+
+        self.assertEqual(response.headers["cache-control"], NO_STORE_HEADER)
+        self.assertEqual([item.revision for item in history.versions], [0, 1])
+        self.assertEqual([item.content for item in history.versions], ["before\n", "after\n"])
+        self.assertIn("-after", version.content_diff)
+        self.assertIn("+latest", version.content_diff)
 
     def test_invalid_cursor_returns_stable_error(self) -> None:
         with TemporaryDirectory() as data_dir:

@@ -6,6 +6,7 @@ import base64
 import binascii
 from dataclasses import dataclass
 from datetime import date, datetime
+from difflib import unified_diff
 from pathlib import Path
 from uuid import UUID
 
@@ -23,6 +24,8 @@ from serein.storage.repository import (
     create_entry,
     create_entry_summary,
     find_entry_by_id,
+    get_entry_history_version,
+    list_entry_history,
     mark_entry_deleted,
     update_entry,
 )
@@ -65,6 +68,15 @@ class EntryDetailItem:
 
     entry: DiaryEntry
     cursor: str
+
+
+@dataclass(frozen=True)
+class EntryHistoryItem:
+    """One read-only predecessor snapshot and its safe textual change record."""
+
+    revision: int
+    entry: DiaryEntry
+    content_diff: str
 
 
 @dataclass(frozen=True)
@@ -280,6 +292,45 @@ class EntryService:
         return EntryDetailItem(
             entry=entry,
             cursor=encode_entry_cursor(entry.metadata.created_at, entry.metadata.id),
+        )
+
+    def list_entry_history(self, entry_id: UUID) -> tuple[EntryHistoryItem, ...]:
+        """List immutable snapshots, including a compact diff from the preceding state."""
+
+        try:
+            versions = list_entry_history(self.data_dir, entry_id)
+            current = find_entry_by_id(self.data_dir, entry_id)
+        except EntryValidationError as error:
+            raise map_storage_error(error) from error
+        return tuple(
+            EntryHistoryItem(
+                revision=version.revision,
+                entry=version.entry,
+                content_diff=create_history_diff(
+                    version.entry.content,
+                    versions[index + 1].entry.content if index + 1 < len(versions) else current.content,
+                ),
+            )
+            for index, version in enumerate(versions)
+        )
+
+    def get_entry_history(self, entry_id: UUID, revision: int) -> EntryHistoryItem:
+        """Read a single immutable snapshot and compare it with its predecessor."""
+
+        try:
+            versions = list_entry_history(self.data_dir, entry_id)
+            version = get_entry_history_version(self.data_dir, entry_id, revision)
+            current = find_entry_by_id(self.data_dir, entry_id)
+        except EntryValidationError as error:
+            raise map_storage_error(error) from error
+        index = next(index for index, item in enumerate(versions) if item.revision == revision)
+        return EntryHistoryItem(
+            revision=revision,
+            entry=version.entry,
+            content_diff=create_history_diff(
+                version.entry.content,
+                versions[index + 1].entry.content if index + 1 < len(versions) else current.content,
+            ),
         )
 
     def list_entry_dates(
@@ -507,4 +558,19 @@ def map_storage_error(error: EntryValidationError) -> EntryServiceError:
         return EntryServiceError("entry_deleted", "Entry is already deleted")
     if "revision does not match" in message:
         return EntryServiceError("revision_conflict", "Entry has changed; reload before saving")
+    if "history revision not found" in message:
+        return EntryServiceError("history_revision_not_found", "History revision not found")
     return EntryServiceError("storage_contract_error", message)
+
+
+def create_history_diff(before: str, after: str) -> str:
+    """Return a deterministic git-style unified diff without filesystem facts."""
+
+    return "".join(
+        unified_diff(
+            before.splitlines(keepends=True),
+            after.splitlines(keepends=True),
+            fromfile="previous",
+            tofile="revision",
+        )
+    )

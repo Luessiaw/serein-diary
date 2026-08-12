@@ -3904,9 +3904,10 @@
     );
     header.className = "entry-header";
     content.className = "entry-content";
-    appendMarkdownBlocks(content, data.content, {
+    appendMarkdownBlocks(content, stripManagedImageTokens(data.content), {
       entryId: metadata.id,
       mediaById: createEntryMediaMap(sample),
+      renderImages: false,
     });
 
     header.append(date);
@@ -3919,6 +3920,7 @@
     entry.append(body);
     body.append(header);
     body.append(content);
+    appendEntryImageGallery(body, metadata.id, createEntryImageMedia(sample));
 
     return entry;
   }
@@ -3985,6 +3987,134 @@
     const items = sample.data.mediaManifest?.media || sample.data.media_manifest?.media || [];
 
     return new Map(items.map((item) => [String(item.id), item]));
+  }
+
+  function createEntryImageMedia(sample) {
+    const items = sample.data.mediaManifest?.media || sample.data.media_manifest?.media || [];
+
+    return items.filter((item) => item.kind === "image");
+  }
+
+  function stripManagedImageTokens(markdown) {
+    return String(markdown || "").replace(/!\[[^\]]*\]\(media:[^)]+\)/gu, "").replace(/\n{3,}/gu, "\n\n").trim();
+  }
+
+  function appendEntryImageGallery(container, entryId, mediaItems) {
+    if (mediaItems.length === 0) {
+      return;
+    }
+
+    const gallery = document.createElement("div");
+
+    gallery.className = "entry-image-gallery";
+    gallery.setAttribute("aria-label", `本条日记的 ${mediaItems.length} 张图片`);
+    mediaItems.slice(0, 3).forEach((media, index) => {
+      const button = document.createElement("button");
+      const image = document.createElement("img");
+      const remaining = mediaItems.length - 2;
+
+      button.className = "entry-image-tile";
+      button.type = "button";
+      button.setAttribute("aria-label", `查看第 ${index + 1} 张图片`);
+      image.alt = media.alt || `第 ${index + 1} 张图片`;
+      image.loading = "lazy";
+      image.decoding = "async";
+      image.src = getEntryMediaPreviewUrl(entryId, media);
+      button.append(image);
+
+      if (index === 2 && mediaItems.length > 3) {
+        button.classList.add("has-more-images");
+        button.dataset.moreImages = `+${remaining}`;
+        button.setAttribute("aria-label", `查看全部 ${mediaItems.length} 张图片`);
+      }
+
+      button.addEventListener("click", () => openEntryImageViewer(entryId, mediaItems, index));
+      gallery.append(button);
+    });
+    container.append(gallery);
+  }
+
+  function getEntryMediaPreviewUrl(entryId, media) {
+    if (dataAdapter.source === "mock") {
+      return createMockGalleryImage(media.id);
+    }
+    return dataAdapter.getMediaUrl(entryId, media.id);
+  }
+
+  function createMockGalleryImage(mediaId) {
+    const colors = ["879f95", "7c95a8", "b08f85", "8da08a", "8682a1", "b1a174"];
+    const seed = String(mediaId).split("").reduce((total, character) => total + character.charCodeAt(0), 0);
+    const color = colors[seed % colors.length];
+
+    return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#${color}"/><circle cx="${90 + seed % 220}" cy="160" r="96" fill="#fff4"/></svg>`)}`;
+  }
+
+  function openEntryImageViewer(entryId, mediaItems, initialIndex) {
+    const dialog = document.createElement("dialog");
+    const shell = document.createElement("div");
+    const top = document.createElement("div");
+    const position = document.createElement("span");
+    const close = document.createElement("button");
+    const stage = document.createElement("div");
+    const previous = document.createElement("button");
+    const image = document.createElement("img");
+    const next = document.createElement("button");
+    let index = initialIndex;
+
+    dialog.className = "entry-image-viewer";
+    dialog.setAttribute("aria-label", "图片查看器");
+    shell.className = "entry-image-viewer-shell";
+    top.className = "entry-image-viewer-top";
+    close.type = "button";
+    close.textContent = "关闭 ×";
+    close.setAttribute("aria-label", "关闭图片查看器");
+    previous.type = "button";
+    previous.textContent = "‹";
+    previous.setAttribute("aria-label", "上一张图片");
+    next.type = "button";
+    next.textContent = "›";
+    next.setAttribute("aria-label", "下一张图片");
+    image.alt = "";
+    image.decoding = "async";
+    stage.className = "entry-image-viewer-stage";
+    top.append(position, close);
+    stage.append(previous, image, next);
+    shell.append(top, stage);
+    dialog.append(shell);
+
+    const render = () => {
+      const media = mediaItems[index];
+
+      position.textContent = `${index + 1} / ${mediaItems.length}`;
+      image.alt = media.alt || `第 ${index + 1} 张图片`;
+      image.src = getEntryMediaPreviewUrl(entryId, media);
+      previous.disabled = index === 0;
+      next.disabled = index === mediaItems.length - 1;
+    };
+    previous.addEventListener("click", () => {
+      if (index > 0) {
+        index -= 1;
+        render();
+      }
+    });
+    next.addEventListener("click", () => {
+      if (index < mediaItems.length - 1) {
+        index += 1;
+        render();
+      }
+    });
+    close.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    dialog.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") {
+        previous.click();
+      } else if (event.key === "ArrowRight") {
+        next.click();
+      }
+    });
+    document.body.append(dialog);
+    render();
+    dialog.showModal();
   }
 
   function appendMarkdownBlocks(container, markdown, options = {}) {
@@ -4261,6 +4391,9 @@
     }
 
     if (token.type === "image") {
+      if (options.renderImages === false) {
+        return;
+      }
       appendMarkdownImage(container, token.match[1], token.match[2], options);
       return;
     }

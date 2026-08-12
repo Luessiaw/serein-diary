@@ -5,8 +5,9 @@
   const DEFAULT_PAGE_LIMIT = 30;
 
   function createDataAdapter(options = {}) {
+    const querySource = new URLSearchParams(window.location.search).get("data-source");
     const source = normalizeDataSource(
-      options.source || readMetaContent("serein-data-source") || "backend",
+      options.source || querySource || readMetaContent("serein-data-source") || "backend",
     );
     const apiClient = options.apiClient || window.SereinApi.createApiClient(options);
 

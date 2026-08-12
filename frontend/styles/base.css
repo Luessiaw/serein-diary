@@ -1244,6 +1244,72 @@ body[data-sidebar-open="true"] .app-sidebar {
   font-size: 0.82em;
 }
 
+/* 图文流仅改变 v1 条目内部的图片呈现；年/月/日时间轴和滚动机制保持不变。 */
+.entry-image-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+  inline-size: min(100%, 24rem);
+  margin-block-start: var(--space-3);
+}
+
+.entry-image-tile {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-subtle);
+  padding: 0;
+  background: color-mix(in srgb, var(--color-line) 70%, var(--color-page));
+  cursor: zoom-in;
+}
+
+.entry-image-tile img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.entry-image-tile.has-more-images::after {
+  content: attr(data-more-images);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgb(0 0 0 / 0.52);
+  font-family: var(--font-ui);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.entry-image-tile:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-1);
+}
+
+.entry-image-viewer {
+  inline-size: min(100vw, 58rem);
+  max-inline-size: none;
+  block-size: 100dvh;
+  max-block-size: none;
+  margin: 0 auto;
+  border: 0;
+  padding: 0;
+  color: #fff;
+  background: rgb(0 0 0 / 0.94);
+}
+
+.entry-image-viewer::backdrop { background: rgb(0 0 0 / 0.64); }
+.entry-image-viewer-shell { display: grid; grid-template-rows: auto 1fr; block-size: 100%; }
+.entry-image-viewer-top { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4); color: #d9d9d6; font-family: var(--font-ui); font-size: .82rem; }
+.entry-image-viewer button { border: 0; padding: var(--space-2); color: inherit; background: transparent; cursor: pointer; font: inherit; }
+.entry-image-viewer-stage { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr) 3.5rem; align-items: center; min-block-size: 0; }
+.entry-image-viewer-stage img { max-inline-size: 100%; max-block-size: calc(100dvh - 5rem); justify-self: center; object-fit: contain; }
+.entry-image-viewer-stage button { font-size: 2rem; }
+.entry-image-viewer-stage button:disabled { cursor: default; opacity: .28; }
+
 .new-entry {
   display: grid;
   grid-template-columns:
@@ -1562,7 +1628,20 @@ body[data-sidebar-open="true"] .app-sidebar {
   .diary-feed {
     inline-size: min(100%, calc(var(--timeline-grid-width) + 2 * var(--page-gutter)));
     margin-inline: auto;
-    background: var(--color-workspace);
+    /*
+     * 年份组之间仍保留垂直节奏，但中央阅读纸带不能在跨年 gap 中断开。
+     * 年份内容本身也会画同一纸带；此处负责填补相邻年份之间的空隙。
+     */
+    background:
+      linear-gradient(
+        to right,
+        var(--color-workspace) 0,
+        var(--color-workspace) calc(50% - var(--reading-paper-width) / 2),
+        var(--color-page) calc(50% - var(--reading-paper-width) / 2),
+        var(--color-page) calc(50% + var(--reading-paper-width) / 2),
+        var(--color-workspace) calc(50% + var(--reading-paper-width) / 2),
+        var(--color-workspace) 100%
+      );
   }
 
   .diary-year > .diary-group-summary,

@@ -258,4 +258,45 @@ window.SereinMockEntries = [
       mediaManifest: { schema_version: 1, media: [] },
     },
   },
+  {
+    ui: { mode: "reading" },
+    data: {
+      metadata: {
+        schema_version: 1,
+        id: "f1a11000-0000-4000-8000-000000000001",
+        created_at: "2026-08-12T18:40:00+08:00",
+        title: "傍晚的散步",
+      },
+      content: "下班后沿着河边走了一会儿。风把热气吹散，水面开始有一点点亮。",
+      comments: { schema_version: 1, comments: [] },
+      mediaManifest: {
+        schema_version: 1,
+        media: Array.from({ length: 12 }, (_, index) => ({
+          id: `f1a11000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+          kind: "image",
+          alt: `傍晚散步 ${index + 1}`,
+        })),
+      },
+    },
+  },
+  {
+    ui: { mode: "reading" },
+    data: {
+      metadata: {
+        schema_version: 1,
+        id: "f1a11000-0000-4000-8000-000000000002",
+        created_at: "2026-08-11T09:20:00+08:00",
+      },
+      content: "今天的第一杯咖啡。",
+      comments: { schema_version: 1, comments: [] },
+      mediaManifest: {
+        schema_version: 1,
+        media: Array.from({ length: 3 }, (_, index) => ({
+          id: `f1a11000-0000-4000-8001-${String(index + 1).padStart(12, "0")}`,
+          kind: "image",
+          alt: `咖啡 ${index + 1}`,
+        })),
+      },
+    },
+  },
 ];
