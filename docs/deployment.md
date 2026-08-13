@@ -17,6 +17,13 @@ docker compose up -d --build
 Compose 会自动读取同目录下的 `.env`。如果没有 `.env`，配置仍可解析，但 API 会因
 默认密码或默认 session secret 不安全而拒绝启动；这是预期的安全保护。
 
+### 受限网络下构建
+
+若服务器 Docker daemon 通过本机反向代理访问网络，可在保持该隧道在线时构建。Compose
+默认将构建阶段使用 `http://127.0.0.1:17897`，并采用 host build network，使构建容器
+能访问宿主机代理；如代理地址不同，可通过 `DIARY_BUILD_HTTP_PROXY`、
+`DIARY_BUILD_HTTPS_PROXY` 和 `DIARY_BUILD_NO_PROXY` 覆盖。代理地址不写入镜像。
+
 该示例仅将 `web` 绑定到 `127.0.0.1:8088`。在宿主机打开
 `http://127.0.0.1:8088` 可访问静态前端；访问
 `http://127.0.0.1:8088/api/v1/health` 可验证 API 代理。`api` 服务只在

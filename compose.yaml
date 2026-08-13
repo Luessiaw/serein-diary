@@ -2,6 +2,11 @@ services:
   api:
     build:
       context: ./backend
+      network: host
+      args:
+        HTTP_PROXY: ${DIARY_BUILD_HTTP_PROXY:-http://127.0.0.1:17897}
+        HTTPS_PROXY: ${DIARY_BUILD_HTTPS_PROXY:-http://127.0.0.1:17897}
+        NO_PROXY: ${DIARY_BUILD_NO_PROXY:-localhost,127.0.0.1}
     user: "${DIARY_API_UID:-1000}:${DIARY_API_GID:-1000}"
     environment:
       DIARY_DATA_DIR: /data

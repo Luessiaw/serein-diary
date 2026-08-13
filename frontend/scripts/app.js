@@ -526,6 +526,7 @@
           schema_version: 1,
           id: entry.id,
           created_at: entry.created_at,
+          ...(entry.revision ? { revision: entry.revision, updated_at: entry.updated_at } : {}),
           ...(entry.title ? { title: entry.title } : {}),
           ...(entry.deleted ? { deleted_at: entry.deleted_at || true } : {}),
         },
@@ -2660,36 +2661,14 @@
           setPageName(value);
         },
       }),
-      createSidebarSelectSetting({
+      createSidebarToggleSetting({
         id: "serein-setting-layout-debug",
         label: "布局调试",
         description: "显示页面各组件的边框，用于检查排版。",
-        value: isLayoutDebugModeEnabled() ? "on" : "off",
-        options: [
-          { value: "off", label: "关闭" },
-          { value: "on", label: "开启" },
-        ],
+        checked: isLayoutDebugModeEnabled(),
         settingName: "layout-debug",
-        onChange(value) {
-          setLayoutDebugMode(value === "on");
-        },
-      }),
-      createSidebarSelectSetting({
-        id: "serein-setting-editor-mode",
-        label: "编辑器模式",
-        description: isTiptapExperimentAvailable()
-          ? "切换原生文本框和 Tiptap 实验控件。"
-          : "正式写作固定使用离线 Textarea。",
-        value: isTiptapExperimentEnabled() ? "tiptap" : "textarea",
-        disabled: !isTiptapExperimentAvailable(),
-        options: [
-          { value: "textarea", label: "Textarea" },
-          { value: "tiptap", label: "Tiptap demo", disabled: !isTiptapExperimentAvailable() },
-        ],
-        settingName: "editor-mode",
-        onChange(value) {
-          setTiptapExperimentEnabled(value === "tiptap");
-          renderFeed({ focusNewEntry: true, scrollToEnd: true });
+        onChange(checked) {
+          setLayoutDebugMode(checked);
         },
       }),
       createSidebarActionSetting({
@@ -2755,6 +2734,33 @@
     });
 
     heading.append(createSidebarSettingLabel(config), select);
+    row.append(heading);
+
+    return row;
+  }
+
+  function createSidebarToggleSetting(config) {
+    const row = document.createElement("div");
+    const heading = document.createElement("div");
+    const input = document.createElement("input");
+    const control = document.createElement("label");
+    const thumb = document.createElement("span");
+
+    row.className = "sidebar-setting-row";
+    heading.className = "sidebar-setting-heading";
+    input.className = "sidebar-setting-toggle-input";
+    input.id = config.id;
+    input.type = "checkbox";
+    input.checked = Boolean(config.checked);
+    input.dataset.setting = config.settingName;
+    input.setAttribute("aria-label", config.label);
+    control.className = "sidebar-setting-toggle";
+    control.htmlFor = config.id;
+    thumb.className = "sidebar-setting-toggle-thumb";
+    control.append(thumb);
+    input.addEventListener("change", () => config.onChange(input.checked));
+
+    heading.append(createSidebarSettingLabel(config), input, control);
     row.append(heading);
 
     return row;
@@ -3993,6 +3999,7 @@
     const entry = document.createElement("article");
     const date = document.createElement("time");
     const body = document.createElement("div");
+    const reading = document.createElement("div");
     const header = document.createElement("div");
     const content = document.createElement("div");
     const { data, ui } = sample;
@@ -4013,6 +4020,7 @@
     entry.dataset.entryDate = calendarDate;
     entry.dataset.entryMode = ui.mode;
     body.className = "entry-body";
+    reading.className = "entry-reading";
     date.className = "entry-date";
     date.dateTime = metadata.created_at;
     appendEntryDate(
@@ -4029,7 +4037,6 @@
       renderImages: false,
     });
 
-    header.append(date);
     if (metadata.title) {
       const title = document.createElement("h2");
       title.className = "entry-title";
@@ -4037,11 +4044,135 @@
       header.append(title);
     }
     entry.append(body);
-    body.append(header);
-    body.append(content);
-    appendEntryImageGallery(body, metadata.id, createEntryImageMedia(sample));
+    body.append(date, reading);
+    reading.append(header, content);
+    appendEntryImageGallery(reading, metadata.id, createEntryImageMedia(sample));
+    if (isBackendDataSource()) {
+      const edit = document.createElement("button");
+      edit.className = "entry-edit-button";
+      edit.type = "button";
+      edit.setAttribute("aria-label", "编辑这篇日记");
+      edit.title = "编辑";
+      edit.addEventListener("click", () => openEntryEditor(sample));
+      reading.append(edit);
+    }
 
     return entry;
+  }
+
+  function openEntryEditor(sample) {
+    const { metadata } = sample.data;
+    const dialog = document.createElement("dialog");
+    const form = document.createElement("form");
+    const title = document.createElement("input");
+    const date = document.createElement("input");
+    const content = document.createElement("textarea");
+    const message = document.createElement("p");
+    const actions = document.createElement("div");
+    const leavePrompt = document.createElement("div");
+    const leaveMessage = document.createElement("p");
+    const leaveActions = document.createElement("div");
+    const keepEditing = document.createElement("button");
+    const discard = document.createElement("button");
+    const saveAndLeave = document.createElement("button");
+    const cancel = document.createElement("button");
+    const save = document.createElement("button");
+
+    dialog.className = "entry-editor-dialog";
+    dialog.setAttribute("aria-label", "编辑日记");
+    form.className = "entry-editor-form";
+    title.className = "entry-editor-title";
+    title.placeholder = "标题";
+    title.value = metadata.title || "";
+    date.type = "datetime-local";
+    date.value = metadata.created_at.slice(0, 16);
+    content.className = "entry-editor-content";
+    content.value = sample.data.content;
+    content.rows = 8;
+    message.className = "entry-editor-message";
+    message.setAttribute("role", "status");
+    cancel.type = "button";
+    cancel.textContent = "取消";
+    save.type = "submit";
+    save.textContent = "保存";
+    actions.className = "entry-editor-actions";
+    actions.append(cancel, save);
+    leavePrompt.className = "entry-editor-leave-prompt";
+    leavePrompt.hidden = true;
+    leaveMessage.textContent = "这篇日记尚未保存。";
+    leaveActions.className = "entry-editor-leave-actions";
+    keepEditing.type = "button";
+    keepEditing.textContent = "继续编辑";
+    discard.type = "button";
+    discard.textContent = "直接退出";
+    saveAndLeave.type = "button";
+    saveAndLeave.textContent = "保存后退出";
+    leaveActions.append(keepEditing, discard, saveAndLeave);
+    leavePrompt.append(leaveMessage, leaveActions);
+    form.append(title, date, content, message, actions, leavePrompt);
+    dialog.append(form);
+    const initialValue = () => JSON.stringify([title.value, date.value, content.value]);
+    const pristineValue = initialValue();
+    const isDirty = () => initialValue() !== pristineValue;
+    const requestClose = () => {
+      if (!isDirty()) {
+        dialog.close();
+        return;
+      }
+      leavePrompt.hidden = false;
+      keepEditing.focus();
+    };
+    cancel.addEventListener("click", requestClose);
+    keepEditing.addEventListener("click", () => {
+      leavePrompt.hidden = true;
+      title.focus();
+    });
+    discard.addEventListener("click", () => dialog.close());
+    saveAndLeave.addEventListener("click", () => void saveEdit());
+    dialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      requestClose();
+    });
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) {
+        requestClose();
+      }
+    });
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void saveEdit();
+    });
+    async function saveEdit() {
+      if (!content.value.trim()) {
+        message.textContent = "正文不能为空。";
+        return;
+      }
+      save.disabled = true;
+      cancel.disabled = true;
+      message.textContent = "正在保存……";
+      try {
+        const zoneSuffix = metadata.created_at.slice(19);
+        const updated = await dataAdapter.updateEntry(metadata.id, {
+          title: title.value.trim() || null,
+          content: content.value,
+          created_at: `${date.value}:00${zoneSuffix}`,
+          revision: metadata.revision || 0,
+        });
+        mergeFeedSamples([apiEntryToSample(updated)]);
+        invalidateSidebarCalendarDates();
+        pendingSavedEntryId = updated.id;
+        dialog.close();
+        renderFeed({ scrollToEntryId: updated.id });
+      } catch (error) {
+        message.textContent = `保存失败：${createDataErrorMessage(error)}`;
+        save.disabled = false;
+        cancel.disabled = false;
+      }
+    }
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+    title.focus();
   }
 
   function groupItemsByDate(items) {
@@ -4088,11 +4219,6 @@
     day.textContent = date.slice(-2);
 
     container.append(day);
-
-    if (entriesOnDate <= 1) {
-      return;
-    }
-
     time.className = "entry-time";
     time.textContent = createdAt.slice(11, 16);
     container.append(time);

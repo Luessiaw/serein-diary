@@ -65,6 +65,13 @@
           }),
         });
       },
+      updateEntry(entryId, payload) {
+        return apiClient.requestJson(`/entries/${encodeURIComponent(entryId)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload || {}),
+        });
+      },
       deleteEntry(entryId) {
         return apiClient.requestJson(`/entries/${encodeURIComponent(entryId)}`, {
           method: "DELETE",
