@@ -804,11 +804,11 @@
     }
 
     actions.append(draftStatus, cancel, save);
-    header.append(date, title);
+    header.append(title);
     renderMediaPreview();
     form.append(header, toolbar, content, mediaInput, mediaPreview, message, actions);
     body.append(form);
-    area.append(body);
+    area.append(date, body);
     if (focusNewEntry) {
       requestAnimationFrame(() => {
         contentControl.resize();
@@ -4780,6 +4780,7 @@
   function registerLayoutDebugTools() {
     window.SereinDebugLayout = {
       inspect: inspectLayout,
+      dumpReport: dumpLayoutDebugReport,
       setDebugMode: setLayoutDebugMode,
       toggleDebugMode: toggleLayoutDebugMode,
     };
@@ -4811,7 +4812,11 @@
     }
 
     if (select) {
-      select.value = nextEnabled ? "on" : "off";
+      if (select instanceof HTMLInputElement && select.type === "checkbox") {
+        select.checked = nextEnabled;
+      } else {
+        select.value = nextEnabled ? "on" : "off";
+      }
     }
 
     return nextEnabled;
@@ -4850,6 +4855,8 @@
     const entry = entries[entryIndex];
     const date = entry?.querySelector(".entry-date");
     const body = entry?.querySelector(".entry-body");
+    const reading = entry?.querySelector(".entry-reading");
+    const edit = entry?.querySelector(".entry-edit-button");
 
     if (!feed || !year || !month || !entry || !date || !body) {
       console.warn("[Serein layout] Missing layout nodes.", {
@@ -4863,7 +4870,9 @@
       return null;
     }
 
-    const entryColumns = parseGridColumns(getComputedStyle(entry).gridTemplateColumns);
+    const rootStyles = getComputedStyle(document.documentElement);
+    const entryStyles = getComputedStyle(entry);
+    const entryColumns = parseGridColumns(entryStyles.gridTemplateColumns);
     const entryRect = getRect(entry);
     const predicted = predictEntryColumns(entryRect.left, entryColumns);
     const viewportCenter = window.innerWidth / 2;
@@ -4884,6 +4893,8 @@
       ["entry", entryRect],
       ["date", getRect(date)],
       ["body", bodyRect],
+      ["reading", getRect(reading)],
+      ["edit", getRect(edit)],
       ["predicted paper", predicted.paper],
       ["predicted right placeholder", predicted.rightPlaceholder],
     ].map(([name, rect]) => ({
@@ -4895,11 +4906,30 @@
     }));
 
     const columns = {
-      paper: round(entryColumns[0] || 0),
-      rightPlaceholder: round(entryColumns[1] || 0),
+      paperInsetStart: round(entryColumns[0] || 0),
+      date: round(entryColumns[1] || 0),
+      dateGap: round(entryColumns[2] || 0),
+      paper: round(entryColumns[3] || 0),
+      paperInsetEnd: round(entryColumns[4] || 0),
+      rightPlaceholder: round(entryColumns[5] || 0),
       entryColumnSum: round(entryColumns.reduce((sum, value) => sum + value, 0)),
       entryActualWidth: round(entryRect.width),
     };
+
+    const tokens = Object.fromEntries([
+      "--year-control-width",
+      "--month-control-width",
+      "--date-control-width",
+      "--date-content-gap",
+      "--reading-width",
+      "--reading-paper-inline-padding-start",
+      "--reading-paper-inline-padding-end",
+      "--reading-paper-width",
+      "--timeline-left-width",
+      "--timeline-right-width",
+      "--timeline-grid-width",
+      "--entry-edit-button-inline-inset",
+    ].map((name) => [name, rootStyles.getPropertyValue(name).trim()]));
 
     const centers = {
       viewportCenter: round(viewportCenter),
@@ -4911,9 +4941,21 @@
 
     const result = {
       entryIndex,
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scrollLeft: Math.round(app.scrollLeft),
+        scrollTop: Math.round(app.scrollTop),
+      },
       boxes,
       columns,
       centers,
+      tokens,
+      computed: {
+        entryGridTemplateColumns: entryStyles.gridTemplateColumns,
+        entryInlineSize: entryStyles.inlineSize,
+        entryOverflowX: entryStyles.overflowX,
+      },
     };
 
     console.group("[Serein layout]");
@@ -4923,6 +4965,19 @@
     console.groupEnd();
 
     return result;
+  }
+
+  function dumpLayoutDebugReport(options = {}) {
+    const report = {
+      generatedAt: new Date().toISOString(),
+      layout: inspectLayout(options),
+      note: "Safe to share: this report only contains viewport dimensions, CSS layout measurements, and public visual tokens. It excludes diary text, media URLs, sessions, and private paths.",
+    };
+
+    const text = JSON.stringify(report, null, 2);
+
+    console.log(text);
+    return text;
   }
 
   function getRect(element) {
@@ -4946,10 +5001,10 @@
   }
 
   function predictEntryColumns(left, columns) {
-    const [paper = 0, rightPlaceholder = 0] = columns;
-    const paperLeft = left;
+    const [paperInsetStart = 0, date = 0, dateGap = 0, paper = 0, paperInsetEnd = 0, rightPlaceholder = 0] = columns;
+    const paperLeft = left + paperInsetStart + date + dateGap;
     const paperRight = paperLeft + paper;
-    const placeholderLeft = paperRight;
+    const placeholderLeft = paperRight + paperInsetEnd;
     const placeholderRight = placeholderLeft + rightPlaceholder;
 
     return {

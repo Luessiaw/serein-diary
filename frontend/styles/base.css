@@ -20,16 +20,23 @@ body {
 }
 
 .diary-scroll-region {
-  --timeline-left-width: calc(
+  --timeline-label-rail-width: calc(
     var(--year-control-width)
     + var(--year-month-inline-gap)
     + var(--month-control-width)
     + var(--month-date-inline-gap)
   );
   --reading-paper-width: calc(
-    var(--reading-width)
-    + var(--reading-paper-inline-padding)
-    + var(--reading-paper-inline-padding)
+    var(--reading-paper-inline-padding-start)
+    + var(--date-control-width)
+    + var(--date-content-gap)
+    + var(--reading-width)
+    + var(--reading-paper-inline-padding-end)
+  );
+  /* 宽屏时两侧随窗口等量伸缩，保证固定白色纸带始终居中。 */
+  --timeline-left-width: max(
+    var(--timeline-label-rail-width),
+    calc((100vw - var(--reading-paper-width)) / 2)
   );
   --timeline-right-width: var(--timeline-left-width);
   --timeline-grid-width: calc(var(--timeline-left-width) + var(--reading-paper-width) + var(--timeline-right-width));
@@ -1086,17 +1093,14 @@ body[data-sidebar-open="true"] .app-sidebar {
 .diary-entry {
   display: grid;
   grid-template-columns:
+    var(--reading-paper-inline-padding-start)
     var(--date-control-width)
     var(--date-content-gap)
-    var(--reading-paper-width)
-    var(--timeline-right-width);
+    var(--reading-width)
+    var(--reading-paper-inline-padding-end)
+    minmax(0, 1fr);
   align-items: start;
-  inline-size: calc(
-    var(--date-control-width)
-    + var(--date-content-gap)
-    var(--reading-paper-width)
-    + var(--timeline-right-width)
-  );
+  inline-size: 100%;
   min-inline-size: 0;
 }
 
@@ -1109,7 +1113,7 @@ body[data-sidebar-open="true"] .app-sidebar {
 }
 
 .entry-date {
-  grid-column: 1;
+  grid-column: 2;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1132,9 +1136,8 @@ body[data-sidebar-open="true"] .app-sidebar {
 }
 
 .entry-body {
-  grid-column: 3;
+  grid-column: 4;
   min-inline-size: 0;
-  padding-inline: var(--entry-body-inline-padding);
   padding-block-start: var(--entry-body-padding-block-start);
 }
 
@@ -1383,12 +1386,13 @@ body[data-sidebar-open="true"] .app-sidebar {
 .new-entry {
   display: grid;
   grid-template-columns:
-    var(--reading-paper-width)
-    var(--timeline-right-width);
-  inline-size: calc(
-    var(--reading-paper-width)
-    + var(--timeline-right-width)
-  );
+    var(--reading-paper-inline-padding-start)
+    var(--date-control-width)
+    var(--date-content-gap)
+    var(--reading-width)
+    var(--reading-paper-inline-padding-end)
+    minmax(0, 1fr);
+  inline-size: 100%;
   align-items: start;
   min-block-size: var(--new-entry-min-height);
   margin-block-end: var(--new-entry-bottom-space);
@@ -1397,27 +1401,23 @@ body[data-sidebar-open="true"] .app-sidebar {
 
 .new-entry-date {
   margin: 0;
-  inline-size: var(--new-entry-label-width);
   white-space: nowrap;
 }
 
-/* “此刻”的日期属于表单标题，而不是阅读条目的左侧日期轨道。 */
 .new-entry-body {
   display: block;
-  grid-column: 1;
+  grid-column: 4;
 }
 
 .new-entry-date {
-  position: static;
-  z-index: auto;
-  background: transparent;
+  grid-column: 2;
 }
 
 .new-entry-header {
   grid-area: title;
   display: flex;
   align-items: baseline;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .new-entry-cancel,
@@ -1724,16 +1724,7 @@ body[data-sidebar-open="true"] .app-sidebar {
 
 @media (min-width: 72rem) {
   .diary-scroll-region {
-    background: var(--color-workspace);
-  }
-
-  .diary-feed {
-    inline-size: min(100%, calc(var(--timeline-grid-width) + 2 * var(--page-gutter)));
-    margin-inline: auto;
-    /*
-     * 年份组之间仍保留垂直节奏，但中央阅读纸带不能在跨年 gap 中断开。
-     * 年份内容本身也会画同一纸带；此处负责填补相邻年份之间的空隙。
-     */
+    /* 唯一的主界面白色背景：固定于滚动区域，加载控件不会切断纸带。 */
     background:
       linear-gradient(
         to right,
@@ -1746,6 +1737,12 @@ body[data-sidebar-open="true"] .app-sidebar {
       );
   }
 
+  .diary-feed {
+    inline-size: 100%;
+    margin-inline: 0;
+    background: transparent;
+  }
+
   .diary-year > .diary-group-summary,
   .diary-month > .diary-group-summary {
     color: color-mix(in srgb, var(--color-page) 76%, transparent);
@@ -1753,35 +1750,50 @@ body[data-sidebar-open="true"] .app-sidebar {
   }
 
   .diary-year > .diary-group-content {
-    background:
-      linear-gradient(
-        to right,
-        transparent 0,
-        transparent calc(var(--month-control-width) + var(--month-date-inline-gap)),
-        var(--color-page) calc(var(--month-control-width) + var(--month-date-inline-gap)),
-        var(--color-page) calc(
-          var(--month-control-width)
-          + var(--month-date-inline-gap)
-          + var(--reading-paper-width)
-        ),
-        transparent calc(
-          var(--month-control-width)
-          + var(--month-date-inline-gap)
-          + var(--reading-paper-width)
-        ),
-        transparent 100%
-      );
+    background: transparent;
   }
 
   .diary-month > .diary-group-content {
-    background:
-      linear-gradient(
-        to right,
-        var(--color-page) 0,
-        var(--color-page) var(--reading-paper-width),
-        transparent var(--reading-paper-width),
-        transparent 100%
-      );
+    background: transparent;
+  }
+
+  /* 年、月标签均以固定中间纸带为基准，置于纸带外侧。 */
+  .diary-year {
+    grid-template-columns:
+      minmax(0, calc((100% - var(--reading-paper-width)) / 2))
+      var(--reading-paper-width);
+    inline-size: 100%;
+  }
+
+  .diary-year > .diary-group-summary {
+    grid-column: 1;
+    justify-self: end;
+    margin-inline-end: calc(
+      var(--month-control-width)
+      + var(--month-date-inline-gap)
+      + var(--year-month-inline-gap)
+    );
+  }
+
+  .diary-year > .diary-group-content {
+    grid-column: 2;
+    inline-size: var(--reading-paper-width);
+  }
+
+  .diary-month {
+    grid-template-columns: 0 0 minmax(0, 1fr);
+  }
+
+  .diary-month > .diary-group-summary {
+    grid-column: 1;
+    justify-self: end;
+    margin-inline-end: var(--month-date-inline-gap);
+    transform: none;
+  }
+
+  .diary-month > .diary-group-content {
+    grid-column: 3;
+    inline-size: 100%;
   }
 
 }

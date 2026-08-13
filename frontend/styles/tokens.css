@@ -78,20 +78,22 @@
   /*
    * 阅读布局
    *
-   * `--reading-width` 控制正文文字列宽度，`--reading-paper-inline-padding`
-   * 控制正文两侧的浅色纸面页边距。主体宽度由正文纸带宽度和左侧时间轴区域
+   * `--reading-width` 控制正文文字列宽度。中间白色滚动区由左边距、日期标签、
+   * 标签至正文间隔、正文及右边距五段组成；左右边距可分别调整。主体宽度由正文
+   * 纸带宽度和左侧时间轴区域
    * 自动计算：main-width = paper-width + 2 * left-width；右侧隐形占位
    * 宽度等于 left-width，用于让正文纸带位于主体中央。
    */
   --reading-width: 40rem;
   --year-control-width: 4.5rem;
   --month-control-width: 3rem;
-  --date-control-width: 3.5rem;
+  --date-control-width: 4rem;
   --date-control-inline-padding-start: var(--space-3);
-  --year-month-inline-gap: var(--space-3);
-  --month-date-inline-gap: var(--space-3);
-  --date-content-gap: 2rem;
-  --reading-paper-inline-padding: 5rem;
+  --year-month-inline-gap: var(--space-1);
+  --month-date-inline-gap: var(--space-1);
+  --date-content-gap: 1rem;
+  --reading-paper-inline-padding-start: 1rem;
+  --reading-paper-inline-padding-end: 5rem;
   --page-gutter: clamp(1rem, 4vw, 3rem);
   --feed-gap: var(--space-3);
   --feed-padding-block: var(--space-6);
@@ -153,13 +155,9 @@
   );
   --title-gap: 0;
   --paragraph-gap: var(--space-2);
-  --entry-date-column-width: 3.25rem;
-  --entry-date-content-gap: var(--space-3);
-  --entry-body-inline-padding: var(--space-3);
   --entry-edit-button-size: 1.65rem;
   --entry-edit-icon-size: 0.78rem;
   --entry-edit-button-inline-inset: var(--space-2);
-  --new-entry-label-width: 4rem;
   --new-entry-media-gap: var(--space-2);
   --radius-subtle: 0.5rem;
 
