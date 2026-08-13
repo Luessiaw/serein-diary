@@ -87,6 +87,7 @@
   --year-control-width: 4.5rem;
   --month-control-width: 3rem;
   --date-control-width: 3.5rem;
+  --date-control-inline-padding-start: var(--space-3);
   --year-month-inline-gap: var(--space-3);
   --month-date-inline-gap: var(--space-3);
   --date-content-gap: 2rem;
@@ -154,9 +155,11 @@
   --paragraph-gap: var(--space-2);
   --entry-date-column-width: 3.25rem;
   --entry-date-content-gap: var(--space-3);
-  --entry-body-inline-padding: var(--space-2);
+  --entry-body-inline-padding: var(--space-3);
   --entry-edit-button-size: 1.65rem;
   --entry-edit-icon-size: 0.78rem;
+  --entry-edit-button-inline-inset: var(--space-2);
+  --new-entry-label-width: 4rem;
   --new-entry-media-gap: var(--space-2);
   --radius-subtle: 0.5rem;
 

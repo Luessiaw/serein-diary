@@ -292,7 +292,7 @@ body {
 .diary-entry::after,
 .new-entry::after {
   content: "";
-  grid-column: 2;
+  grid-column: 4;
   justify-self: stretch;
   inline-size: 100%;
   min-block-size: var(--debug-layout-placeholder-min-height);
@@ -1086,10 +1086,14 @@ body[data-sidebar-open="true"] .app-sidebar {
 .diary-entry {
   display: grid;
   grid-template-columns:
+    var(--date-control-width)
+    var(--date-content-gap)
     var(--reading-paper-width)
     var(--timeline-right-width);
   align-items: start;
   inline-size: calc(
+    var(--date-control-width)
+    + var(--date-content-gap)
     var(--reading-paper-width)
     + var(--timeline-right-width)
   );
@@ -1100,16 +1104,26 @@ body[data-sidebar-open="true"] .app-sidebar {
   margin-block-end: var(--space-3);
 }
 
+.entry-header:empty {
+  display: none;
+}
+
 .entry-date {
+  grid-column: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
+  position: sticky;
+  inset-block-start: var(--sticky-group-label-top);
+  z-index: var(--sticky-date-label-z-index);
   color: var(--color-date);
+  background: var(--sticky-group-label-background);
   font-family: var(--font-date);
   font-size: var(--font-size-date);
   letter-spacing: var(--letter-spacing-date);
   line-height: 1;
+  padding-inline-start: var(--date-control-inline-padding-start);
 }
 
 .entry-time {
@@ -1118,10 +1132,7 @@ body[data-sidebar-open="true"] .app-sidebar {
 }
 
 .entry-body {
-  display: grid;
-  grid-template-columns: var(--entry-date-column-width) minmax(0, 1fr);
-  column-gap: var(--entry-date-content-gap);
-  grid-column: 1;
+  grid-column: 3;
   min-inline-size: 0;
   padding-inline: var(--entry-body-inline-padding);
   padding-block-start: var(--entry-body-padding-block-start);
@@ -1146,7 +1157,7 @@ body[data-sidebar-open="true"] .app-sidebar {
   margin: 0;
 }
 
-.entry-edit-button { position: absolute; inset-inline-end: 0; inset-block-end: 0; inline-size: var(--entry-edit-button-size); block-size: var(--entry-edit-button-size); border: 0; border-radius: 999px; padding: 0; color: var(--color-muted); background: transparent url("../assets/pencil-muted.png") center / var(--entry-edit-icon-size) no-repeat; cursor: pointer; }
+.entry-edit-button { position: absolute; inset-inline-end: var(--entry-edit-button-inline-inset); inset-block-end: 0; inline-size: var(--entry-edit-button-size); block-size: var(--entry-edit-button-size); border: 0; border-radius: 999px; padding: 0; color: var(--color-muted); background: transparent url("../assets/pencil-muted.png") center / var(--entry-edit-icon-size) no-repeat; cursor: pointer; }
 .entry-edit-button:hover { background-color: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .entry-edit-button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--space-1); }
 .entry-editor-dialog { inline-size: min(100% - 2 * var(--space-4), 38rem); border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: var(--space-4); color: var(--color-ink); background: var(--color-page); box-shadow: 0 1rem 3rem rgb(0 0 0 / .16); }
@@ -1155,7 +1166,7 @@ body[data-sidebar-open="true"] .app-sidebar {
 .entry-editor-title,.entry-editor-content,.entry-editor-form input[type="datetime-local"] { inline-size: 100%; border: 0; border-block-end: 1px solid var(--color-line); border-radius: 0; padding: var(--space-1) 0; color: inherit; background: transparent; font: inherit; }
 .entry-editor-title { font-family: var(--font-title); font-size: var(--font-size-title); }.entry-editor-content { resize: vertical; line-height: var(--line-height-reading); }
 .entry-editor-message { min-block-size: 1.4em; margin: 0; color: var(--color-muted); font: .78rem var(--font-ui); }.entry-editor-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }.entry-editor-actions button { border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: .3rem .65rem; color: var(--color-ink); background: transparent; cursor: pointer; font: .8rem var(--font-ui); }.entry-editor-actions button[type="submit"] { color: var(--color-accent); }
-.entry-editor-leave-prompt { display: grid; gap: var(--space-2); border-block-start: 1px solid var(--color-line); padding-block-start: var(--space-3); }.entry-editor-leave-prompt p { margin: 0; font: .86rem var(--font-ui); }.entry-editor-leave-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }.entry-editor-leave-actions button { border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: .3rem .65rem; color: var(--color-ink); background: transparent; cursor: pointer; font: .8rem var(--font-ui); }.entry-editor-leave-actions button:last-child { color: var(--color-accent); }
+.entry-editor-leave-dialog { inline-size: min(100% - 2 * var(--space-4), 26rem); border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: var(--space-4); color: var(--color-ink); background: var(--color-page); box-shadow: 0 1rem 3rem rgb(0 0 0 / .16); }.entry-editor-leave-dialog::backdrop { background: rgb(0 0 0 / .42); }.entry-editor-leave-dialog p { margin: 0 0 var(--space-3); font: .9rem var(--font-ui); }.entry-editor-leave-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }.entry-editor-leave-actions button { border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: .3rem .65rem; color: var(--color-ink); background: transparent; cursor: pointer; font: .8rem var(--font-ui); }.entry-editor-leave-actions button:last-child { color: var(--color-accent); }
 
 .diary-entry.is-newly-saved .entry-body {
   animation: saved-entry-flash 1.4s ease-out;
@@ -1386,6 +1397,20 @@ body[data-sidebar-open="true"] .app-sidebar {
 
 .new-entry-date {
   margin: 0;
+  inline-size: var(--new-entry-label-width);
+  white-space: nowrap;
+}
+
+/* “此刻”的日期属于表单标题，而不是阅读条目的左侧日期轨道。 */
+.new-entry-body {
+  display: block;
+  grid-column: 1;
+}
+
+.new-entry-date {
+  position: static;
+  z-index: auto;
+  background: transparent;
 }
 
 .new-entry-header {

@@ -782,7 +782,7 @@
           selectedMedia = [];
           renderMediaPreview();
           insertCreatedEntryIntoFeed(created);
-          invalidateSidebarCalendarDates();
+          refreshSidebarCalendarDates();
           draftCreatedAt = createLocalTimestamp();
           pendingNewEntryMessage = "已保存。";
           pendingSavedEntryId = created.id;
@@ -844,6 +844,15 @@
     sidebarCalendarDateState.status = "idle";
     sidebarCalendarDateState.dates = [];
     sidebarCalendarDateState.errorMessage = "";
+  }
+
+  function refreshSidebarCalendarDates() {
+    invalidateSidebarCalendarDates();
+    const calendar = document.querySelector(".sidebar-calendar");
+
+    if (calendar) {
+      void ensureSidebarCalendarDates(calendar, { force: true });
+    }
   }
 
   function setNewEntrySavingState(controls, saving) {
@@ -4043,8 +4052,8 @@
       title.textContent = metadata.title;
       header.append(title);
     }
-    entry.append(body);
-    body.append(date, reading);
+    entry.append(date, body);
+    body.append(reading);
     reading.append(header, content);
     appendEntryImageGallery(reading, metadata.id, createEntryImageMedia(sample));
     if (isBackendDataSource()) {
@@ -4069,10 +4078,9 @@
     const content = document.createElement("textarea");
     const message = document.createElement("p");
     const actions = document.createElement("div");
-    const leavePrompt = document.createElement("div");
+    const leaveDialog = document.createElement("dialog");
     const leaveMessage = document.createElement("p");
     const leaveActions = document.createElement("div");
-    const keepEditing = document.createElement("button");
     const discard = document.createElement("button");
     const saveAndLeave = document.createElement("button");
     const cancel = document.createElement("button");
@@ -4097,19 +4105,17 @@
     save.textContent = "保存";
     actions.className = "entry-editor-actions";
     actions.append(cancel, save);
-    leavePrompt.className = "entry-editor-leave-prompt";
-    leavePrompt.hidden = true;
+    leaveDialog.className = "entry-editor-leave-dialog";
+    leaveDialog.setAttribute("aria-label", "未保存的修改");
     leaveMessage.textContent = "这篇日记尚未保存。";
     leaveActions.className = "entry-editor-leave-actions";
-    keepEditing.type = "button";
-    keepEditing.textContent = "继续编辑";
     discard.type = "button";
     discard.textContent = "直接退出";
     saveAndLeave.type = "button";
     saveAndLeave.textContent = "保存后退出";
-    leaveActions.append(keepEditing, discard, saveAndLeave);
-    leavePrompt.append(leaveMessage, leaveActions);
-    form.append(title, date, content, message, actions, leavePrompt);
+    leaveActions.append(discard, saveAndLeave);
+    leaveDialog.append(leaveMessage, leaveActions);
+    form.append(title, date, content, message, actions);
     dialog.append(form);
     const initialValue = () => JSON.stringify([title.value, date.value, content.value]);
     const pristineValue = initialValue();
@@ -4119,24 +4125,33 @@
         dialog.close();
         return;
       }
-      leavePrompt.hidden = false;
-      keepEditing.focus();
+      if (!leaveDialog.open) {
+        leaveDialog.showModal();
+      }
     };
     cancel.addEventListener("click", requestClose);
-    keepEditing.addEventListener("click", () => {
-      leavePrompt.hidden = true;
-      title.focus();
+    discard.addEventListener("click", () => {
+      leaveDialog.close();
+      dialog.close();
     });
-    discard.addEventListener("click", () => dialog.close());
-    saveAndLeave.addEventListener("click", () => void saveEdit());
+    saveAndLeave.addEventListener("click", () => {
+      leaveDialog.close();
+      void saveEdit();
+    });
+    leaveDialog.addEventListener("cancel", (event) => event.preventDefault());
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();
       requestClose();
     });
+    let backdropPointerStarted = false;
+    dialog.addEventListener("pointerdown", (event) => {
+      backdropPointerStarted = event.target === dialog;
+    });
     dialog.addEventListener("click", (event) => {
-      if (event.target === dialog) {
+      if (backdropPointerStarted && event.target === dialog) {
         requestClose();
       }
+      backdropPointerStarted = false;
     });
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -4159,7 +4174,7 @@
           revision: metadata.revision || 0,
         });
         mergeFeedSamples([apiEntryToSample(updated)]);
-        invalidateSidebarCalendarDates();
+        refreshSidebarCalendarDates();
         pendingSavedEntryId = updated.id;
         dialog.close();
         renderFeed({ scrollToEntryId: updated.id });
@@ -4169,8 +4184,12 @@
         cancel.disabled = false;
       }
     }
-    dialog.addEventListener("close", () => dialog.remove(), { once: true });
-    document.body.append(dialog);
+    dialog.addEventListener("close", () => {
+      leaveDialog.close();
+      leaveDialog.remove();
+      dialog.remove();
+    }, { once: true });
+    document.body.append(dialog, leaveDialog);
     dialog.showModal();
     title.focus();
   }
@@ -4219,9 +4238,12 @@
     day.textContent = date.slice(-2);
 
     container.append(day);
-    time.className = "entry-time";
-    time.textContent = createdAt.slice(11, 16);
-    container.append(time);
+
+    if (entriesOnDate > 1) {
+      time.className = "entry-time";
+      time.textContent = createdAt.slice(11, 16);
+      container.append(time);
+    }
   }
 
   function getCalendarDate(createdAt) {
