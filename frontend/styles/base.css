@@ -1144,7 +1144,6 @@ body[data-sidebar-open="true"] .app-sidebar {
 .entry-reading {
   position: relative;
   min-inline-size: 0;
-  padding-block-end: calc(var(--entry-edit-button-size) + var(--space-2));
 }
 
 .entry-title {
@@ -1160,9 +1159,6 @@ body[data-sidebar-open="true"] .app-sidebar {
   margin: 0;
 }
 
-.entry-edit-button { position: absolute; inset-inline-end: var(--entry-edit-button-inline-inset); inset-block-end: 0; inline-size: var(--entry-edit-button-size); block-size: var(--entry-edit-button-size); border: 0; border-radius: 999px; padding: 0; color: var(--color-muted); background: transparent url("../assets/pencil-muted.png") center / var(--entry-edit-icon-size) no-repeat; cursor: pointer; }
-.entry-edit-button:hover { background-color: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-.entry-edit-button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: var(--space-1); }
 .entry-editor-dialog { inline-size: min(100% - 2 * var(--space-4), 38rem); border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: var(--space-4); color: var(--color-ink); background: var(--color-page); box-shadow: 0 1rem 3rem rgb(0 0 0 / .16); }
 .entry-editor-dialog::backdrop { background: rgb(0 0 0 / .3); }
 .entry-editor-form { display: grid; gap: var(--space-3); }
@@ -1170,6 +1166,15 @@ body[data-sidebar-open="true"] .app-sidebar {
 .entry-editor-title { font-family: var(--font-title); font-size: var(--font-size-title); }.entry-editor-content { resize: vertical; line-height: var(--line-height-reading); }
 .entry-editor-message { min-block-size: 1.4em; margin: 0; color: var(--color-muted); font: .78rem var(--font-ui); }.entry-editor-actions { display: flex; justify-content: flex-end; gap: var(--space-2); }.entry-editor-actions button { border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: .3rem .65rem; color: var(--color-ink); background: transparent; cursor: pointer; font: .8rem var(--font-ui); }.entry-editor-actions button[type="submit"] { color: var(--color-accent); }
 .entry-editor-leave-dialog { inline-size: min(100% - 2 * var(--space-4), 26rem); border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: var(--space-4); color: var(--color-ink); background: var(--color-page); box-shadow: 0 1rem 3rem rgb(0 0 0 / .16); }.entry-editor-leave-dialog::backdrop { background: rgb(0 0 0 / .42); }.entry-editor-leave-dialog p { margin: 0 0 var(--space-3); font: .9rem var(--font-ui); }.entry-editor-leave-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }.entry-editor-leave-actions button { border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: .3rem .65rem; color: var(--color-ink); background: transparent; cursor: pointer; font: .8rem var(--font-ui); }.entry-editor-leave-actions button:last-child { color: var(--color-accent); }
+.entry-context-menu { position: fixed; z-index: 30; display: grid; min-inline-size: 8rem; overflow: hidden; border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: var(--space-1); background: var(--color-page); box-shadow: 0 .7rem 1.8rem rgb(0 0 0 / .16); }
+.entry-context-menu button, .entry-actions-list button { border: 0; border-radius: calc(var(--radius-subtle) - .15rem); padding: .45rem var(--space-2); color: var(--color-ink); background: transparent; cursor: pointer; font: .85rem var(--font-ui); text-align: start; }
+.entry-context-menu button:hover, .entry-context-menu button:focus-visible, .entry-actions-list button:hover, .entry-actions-list button:focus-visible { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 10%, transparent); outline: 0; }
+.entry-context-menu button.is-danger, .entry-actions-list button.is-danger { color: var(--color-danger); }
+.entry-actions-dialog, .entry-history-dialog { inline-size: min(100% - 2 * var(--space-4), 34rem); border: 1px solid var(--color-line); border-radius: var(--radius-subtle); padding: var(--space-4); color: var(--color-ink); background: var(--color-page); box-shadow: 0 1rem 3rem rgb(0 0 0 / .16); }
+.entry-actions-dialog::backdrop, .entry-history-dialog::backdrop { background: rgb(0 0 0 / .3); }
+.entry-actions-dialog > p, .entry-history-dialog h2 { margin: 0 0 var(--space-3); font: 600 .95rem var(--font-ui); }
+.entry-actions-list { display: grid; gap: var(--space-1); }.entry-actions-list button { padding: var(--space-2); }
+.entry-history-status { margin: 0; color: var(--color-muted); font: .85rem var(--font-ui); }.entry-history-list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }.entry-history-list li { border-block-start: 1px solid var(--color-line); padding-block-start: var(--space-2); }.entry-history-list p { margin: 0 0 var(--space-2); color: var(--color-muted); font: .78rem var(--font-ui); }.entry-history-list pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--color-ink); font: .78rem/1.5 var(--font-ui); }
 
 .diary-entry.is-newly-saved .entry-body {
   animation: saved-entry-flash 1.4s ease-out;

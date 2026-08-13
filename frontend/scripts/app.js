@@ -4057,16 +4057,186 @@
     reading.append(header, content);
     appendEntryImageGallery(reading, metadata.id, createEntryImageMedia(sample));
     if (isBackendDataSource()) {
-      const edit = document.createElement("button");
-      edit.className = "entry-edit-button";
-      edit.type = "button";
-      edit.setAttribute("aria-label", "编辑这篇日记");
-      edit.title = "编辑";
-      edit.addEventListener("click", () => openEntryEditor(sample));
-      reading.append(edit);
+      registerEntryActions(entry, sample);
     }
 
     return entry;
+  }
+
+  function registerEntryActions(entry, sample) {
+    entry.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      openEntryContextMenu(sample, event.clientX, event.clientY);
+    });
+
+    let longPressTimer = null;
+    let pointerStart = null;
+    const clearLongPress = () => {
+      if (longPressTimer !== null) {
+        window.clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      pointerStart = null;
+    };
+
+    entry.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" || event.button !== 0) {
+        return;
+      }
+      pointerStart = { x: event.clientX, y: event.clientY };
+      longPressTimer = window.setTimeout(() => {
+        longPressTimer = null;
+        pointerStart = null;
+        openEntryActionsDialog(sample);
+      }, 560);
+    });
+    entry.addEventListener("pointermove", (event) => {
+      if (!pointerStart) {
+        return;
+      }
+      if (Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 10) {
+        clearLongPress();
+      }
+    });
+    entry.addEventListener("pointerup", clearLongPress);
+    entry.addEventListener("pointercancel", clearLongPress);
+  }
+
+  function getEntryActions(sample) {
+    const revision = Number(sample.data.metadata.revision || 0);
+    return [
+      { label: "编辑", run: () => openEntryEditor(sample) },
+      { label: "删除", danger: true, run: () => void deleteEntryWithConfirmation(sample) },
+      ...(revision > 0 ? [{ label: "修改历史", run: () => void openEntryHistory(sample) }] : []),
+    ];
+  }
+
+  function openEntryContextMenu(sample, clientX, clientY) {
+    document.querySelector(".entry-context-menu")?.remove();
+    const menu = document.createElement("div");
+    const actions = getEntryActions(sample);
+    menu.className = "entry-context-menu";
+    menu.setAttribute("role", "menu");
+    menu.setAttribute("aria-label", "日记操作");
+    actions.forEach((action) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = action.label;
+      button.setAttribute("role", "menuitem");
+      if (action.danger) {
+        button.classList.add("is-danger");
+      }
+      button.addEventListener("click", () => {
+        menu.remove();
+        action.run();
+      });
+      menu.append(button);
+    });
+    const closeMenu = (event) => {
+      if (menu.contains(event.target)) {
+        return;
+      }
+      menu.remove();
+      document.removeEventListener("pointerdown", closeMenu, true);
+    };
+    document.addEventListener("pointerdown", closeMenu, true);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        menu.remove();
+      }
+    }, { once: true });
+    document.body.append(menu);
+    const rect = menu.getBoundingClientRect();
+    menu.style.left = `${Math.min(clientX, window.innerWidth - rect.width - 8)}px`;
+    menu.style.top = `${Math.min(clientY, window.innerHeight - rect.height - 8)}px`;
+    menu.querySelector("button")?.focus();
+  }
+
+  function openEntryActionsDialog(sample) {
+    const dialog = document.createElement("dialog");
+    const title = document.createElement("p");
+    const actions = document.createElement("div");
+    dialog.className = "entry-actions-dialog";
+    dialog.setAttribute("aria-label", "日记操作");
+    title.textContent = "日记操作";
+    actions.className = "entry-actions-list";
+    getEntryActions(sample).forEach((action) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = action.label;
+      if (action.danger) {
+        button.classList.add("is-danger");
+      }
+      button.addEventListener("click", () => {
+        dialog.close();
+        action.run();
+      });
+      actions.append(button);
+    });
+    dialog.append(title, actions);
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
+  async function deleteEntryWithConfirmation(sample) {
+    const { metadata } = sample.data;
+    if (!window.confirm("删除后将不再显示在日记中，是否继续？")) {
+      return;
+    }
+    try {
+      await dataAdapter.deleteEntry(metadata.id);
+      feedState.entries = feedState.entries.filter((entry) => entry.data.metadata.id !== metadata.id);
+      refreshSidebarCalendarDates();
+      renderFeed();
+    } catch (error) {
+      window.alert(`删除失败：${createDataErrorMessage(error)}`);
+    }
+  }
+
+  async function openEntryHistory(sample) {
+    const { metadata } = sample.data;
+    const dialog = document.createElement("dialog");
+    const title = document.createElement("h2");
+    const status = document.createElement("p");
+    const versions = document.createElement("ol");
+    dialog.className = "entry-history-dialog";
+    dialog.setAttribute("aria-label", "修改历史");
+    title.textContent = "修改历史";
+    status.className = "entry-history-status";
+    status.textContent = "正在读取修改记录…";
+    versions.className = "entry-history-list";
+    dialog.append(title, status, versions);
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+    try {
+      const result = await dataAdapter.listEntryHistory(metadata.id);
+      const history = result.versions || [];
+      status.remove();
+      history.forEach((version) => {
+        const item = document.createElement("li");
+        const heading = document.createElement("p");
+        const diff = document.createElement("pre");
+        heading.textContent = `修订 ${version.revision} · ${formatHistoryTimestamp(version.updated_at || version.created_at)}`;
+        const facts = document.createElement("p");
+        facts.textContent = `当时日期：${formatHistoryTimestamp(version.created_at)}${version.title ? ` · 标题：${version.title}` : ""}`;
+        diff.textContent = version.content_diff || "本次修改未改变正文。";
+        item.append(heading, facts, diff);
+        versions.append(item);
+      });
+      if (!history.length) {
+        status.textContent = "没有可读取的修改记录。";
+        dialog.append(status);
+      }
+    } catch (error) {
+      status.textContent = `读取失败：${createDataErrorMessage(error)}`;
+    }
+  }
+
+  function formatHistoryTimestamp(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
   }
 
   function openEntryEditor(sample) {

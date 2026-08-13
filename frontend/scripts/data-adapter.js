@@ -77,6 +77,14 @@
           method: "DELETE",
         });
       },
+      listEntryHistory(entryId) {
+        return apiClient.requestJson(`/entries/${encodeURIComponent(entryId)}/history`);
+      },
+      getEntryHistory(entryId, revision) {
+        return apiClient.requestJson(
+          `/entries/${encodeURIComponent(entryId)}/history/${encodeURIComponent(revision)}`,
+        );
+      },
       getEntryDates(options = {}) {
         const params = createSearchParams({
           from: options.from,
@@ -261,6 +269,12 @@
         }
         sample.data.metadata.deleted_at = createLocalTimestamp();
         return mockSampleToDetail(sample);
+      },
+      async listEntryHistory() {
+        return { versions: [] };
+      },
+      async getEntryHistory() {
+        throw createMockError("history_revision_not_found", "History revision not found", 404);
       },
       async getEntryDates(options = {}) {
         const includeDeleted = Boolean(options.includeDeleted);
