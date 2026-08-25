@@ -201,6 +201,17 @@
   --new-entry-bottom-space: 100dvh;
 
   /*
+   * 长文写作焦点带
+   *
+   * 短文保持自然增长；光标首次越过下边界后，页面开始自动跟随，并把光标
+   * 调整到目标位置。三个比例均相对于当前真实可见视口计算，移动端软键盘
+   * 打开时会自动使用 visualViewport 的可见高度。
+   */
+  --typing-focus-band-start-ratio: 0.55;
+  --typing-focus-target-ratio: 0.60;
+  --typing-focus-band-end-ratio: 0.65;
+
+  /*
    * 日历跳转窗口
    *
    * 点击日历日期后，前端会请求目标日期前后的一段日记窗口，而不是从当前

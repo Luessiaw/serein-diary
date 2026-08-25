@@ -291,6 +291,29 @@ SereinEditorExperiment.setTiptapEnabled(true)
 backend 数据源下，P5B 正式写作固定使用离线 `Textarea`；此时本地 Tiptap 偏好会被忽略，
 设置项保持为 Textarea，页面不会加载 `esm.sh` 或 Tiptap CDN。
 
+## 长文写作焦点带
+
+正式 Textarea 使用独立的 `SereinTypingFocus` controller 处理长文页面跟随，输入框
+自动增高本身不再读写外层滚动位置。短文阶段保持自然增长；光标首次越过当前可见
+视口的 65% 后进入跟随状态，之后仅在离开 55%--65% 焦点带时，把光标调整回 60%。
+
+焦点带以 `.diary-scroll-region` 和 `visualViewport` 的实际交集为准，因此移动端软键盘
+出现后不会继续使用被键盘遮住的布局视口。输入法组合期间只调整 Textarea 高度，等
+组合提交后再跟随。用户使用滚轮、触摸或翻页键浏览上文时会暂停；下一次正文输入
+恢复，单纯点击正文或使用方向键移动选区不会强制滚动。
+
+三个比例集中在 `tokens.css`：
+
+```css
+--typing-focus-band-start-ratio: 0.55;
+--typing-focus-target-ratio: 0.60;
+--typing-focus-band-end-ratio: 0.65;
+```
+
+Console 中可用 `SereinTypingDebug.inspect()` 查看 controller 是否已进入跟随、是否因
+手动浏览暂停，以及最近一次光标、可见视口、焦点带和滚动增量。报告只包含几何与
+输入长度，不包含正文。
+
 颜色约定：
 
 - 灰色：年份容器和年份文字。

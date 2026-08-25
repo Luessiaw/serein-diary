@@ -186,6 +186,7 @@
     actions.append(retry, submit);
     card.append(title, passwordWrap, actions, status);
     shell.append(card);
+    destroyActiveNewEntryContentControl();
     app.replaceChildren(shell);
 
     if (!isChecking) {
@@ -265,10 +266,14 @@
     loading.setAttribute("aria-live", "polite");
     loading.innerHTML = '<span class="load-control-spinner" aria-hidden="true"></span><span class="load-control-message">正在读取日记……</span>';
     feed.append(loading);
+    destroyActiveNewEntryContentControl();
     app.replaceChildren(feed);
   }
 
   function renderFeed(options = {}) {
+    const previousContentControl = activeNewEntryContentControl;
+
+    activeNewEntryContentControl = null;
     const {
       focusNewEntry = false,
       scrollToEnd = false,
@@ -321,6 +326,7 @@
       layers.push(createFeedTransitionOverlay());
     }
 
+    previousContentControl?.destroy?.();
     app.replaceChildren(...layers);
     updateReturnToLatestButtonVisibility();
 
@@ -873,23 +879,30 @@
     return createTiptapContentControl(content, message, toolbar);
   }
 
+  function destroyActiveNewEntryContentControl() {
+    activeNewEntryContentControl?.destroy?.();
+    activeNewEntryContentControl = null;
+  }
+
   function createTextareaContentControl(content) {
-    let caretAnchor = null;
+    const typingFocus = window.SereinTypingFocus.createController({
+      textarea: content,
+      scrollContainer: app,
+      focusBand: {
+        startRatio: settings.typingFocusBandStartRatio,
+        targetRatio: settings.typingFocusTargetRatio,
+        endRatio: settings.typingFocusBandEndRatio,
+      },
+      resize() {
+        resizeContentInput(content);
+      },
+      onDebug: debugTyping,
+    });
 
     return {
       kind: "textarea",
       mount() {
-        content.addEventListener("beforeinput", (event) => {
-          caretAnchor = createTextareaCaretAnchor(content, event.inputType);
-        });
-        content.addEventListener("input", (event) => {
-          resizeContentInput(content, {
-            caretAnchor,
-            inputType: event.inputType,
-            preserveScroll: true,
-          });
-          caretAnchor = null;
-        });
+        typingFocus.mount();
       },
       readMarkdown() {
         return content.value;
@@ -897,6 +910,7 @@
       clear() {
         content.value = "";
         resizeContentInput(content);
+        typingFocus.reset();
       },
       setDisabled(disabled) {
         content.disabled = Boolean(disabled);
@@ -907,6 +921,12 @@
       resize() {
         resizeContentInput(content);
       },
+      destroy() {
+        typingFocus.destroy();
+      },
+      inspectTypingFocus() {
+        return typingFocus.inspect();
+      },
     };
   }
 
@@ -914,6 +934,7 @@
     const state = {
       editor: null,
       loadError: null,
+      destroyed: false,
     };
 
     return {
@@ -960,6 +981,10 @@
       resize() {
         // Tiptap grows with content through normal document flow.
       },
+      destroy() {
+        state.destroyed = true;
+        state.editor?.destroy();
+      },
     };
   }
 
@@ -970,6 +995,10 @@
         import("https://esm.sh/@tiptap/starter-kit@2.11.7"),
         import("https://esm.sh/@tiptap/extension-placeholder@2.11.7"),
       ]);
+
+      if (state.destroyed) {
+        return;
+      }
 
       state.editor = new Editor({
         element,
@@ -2038,14 +2067,6 @@
     requestAnimationFrame(updateReturnToLatestButtonVisibility);
   }
 
-  function setAppScrollTopWithoutSmooth(top) {
-    const previousBehavior = app.style.scrollBehavior;
-
-    app.style.scrollBehavior = "auto";
-    app.scrollTop = Math.max(0, top);
-    app.style.scrollBehavior = previousBehavior;
-  }
-
   function simulateLoadingDelay() {
     return wait(settings.simulatedDelayMs);
   }
@@ -2218,6 +2239,7 @@
       inputValueLength: input && "value" in input ? input.value.length : null,
       selectionStart: input && "selectionStart" in input ? input.selectionStart : null,
       selectionEnd: input && "selectionEnd" in input ? input.selectionEnd : null,
+      writingFocus: activeNewEntryContentControl?.inspectTypingFocus?.() || null,
     };
   }
 
@@ -3732,7 +3754,16 @@
       windowTrimMaxEntries: readIntegerToken(styles, "--window-trim-max-entries", 120),
       windowTrimKeepBefore: readNonNegativeIntegerToken(styles, "--window-trim-keep-before", 48),
       windowTrimKeepAfter: readNonNegativeIntegerToken(styles, "--window-trim-keep-after", 48),
+      typingFocusBandStartRatio: readRatioToken(styles, "--typing-focus-band-start-ratio", 0.55),
+      typingFocusTargetRatio: readRatioToken(styles, "--typing-focus-target-ratio", 0.60),
+      typingFocusBandEndRatio: readRatioToken(styles, "--typing-focus-band-end-ratio", 0.65),
     };
+  }
+
+  function readRatioToken(styles, name, fallback) {
+    const value = Number.parseFloat(styles.getPropertyValue(name));
+
+    return Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : fallback;
   }
 
   function readIntegerToken(styles, name, fallback) {
@@ -3776,162 +3807,9 @@
     };
   }
 
-  function resizeContentInput(content, options = {}) {
-    const { caretAnchor = null, inputType = "", preserveScroll = false } = options;
-    const shouldPreserveScroll = preserveScroll && document.activeElement === content;
-    const previousScrollTop = app.scrollTop;
-    const previousBlockSize = content.getBoundingClientRect().height;
-    const nextScrollHeight = content.scrollHeight;
-    const mayShrink = String(inputType).startsWith("delete");
-    const shouldMeasureFromAuto = !shouldPreserveScroll || mayShrink || nextScrollHeight < previousBlockSize - 1;
-
-    debugTyping("resize input started", {
-      inputType,
-      caretAnchorTop: caretAnchor?.top ?? null,
-      preserveScroll,
-      shouldPreserveScroll,
-      previousBlockSize: Math.round(previousBlockSize),
-      nextScrollHeight: Math.round(nextScrollHeight),
-      mayShrink,
-      shouldMeasureFromAuto,
-    });
-
-    if (shouldMeasureFromAuto) {
-      content.style.blockSize = "auto";
-    }
-
-    const nextBlockSize = content.scrollHeight;
-    content.style.blockSize = `${nextBlockSize}px`;
-
-    if (shouldPreserveScroll) {
-      const caretShift = calculateTextareaCaretShift(content, caretAnchor);
-      const targetScrollTop = previousScrollTop + caretShift;
-
-      debugTyping("resize scroll target resolved", {
-        caretShift: Math.round(caretShift),
-        previousScrollTop: Math.round(previousScrollTop),
-        targetScrollTop: Math.round(targetScrollTop),
-      });
-
-      restoreTypingScrollPosition(content, targetScrollTop, "immediate");
-      window.queueMicrotask(() => {
-        restoreTypingScrollPosition(content, targetScrollTop, "microtask");
-      });
-      requestAnimationFrame(() => {
-        restoreTypingScrollPosition(content, targetScrollTop, "animation-frame-1");
-        requestAnimationFrame(() => {
-          restoreTypingScrollPosition(content, targetScrollTop, "animation-frame-2");
-        });
-      });
-    }
-  }
-
-  function createTextareaCaretAnchor(content, inputType = "") {
-    if (document.activeElement !== content) {
-      return null;
-    }
-
-    return {
-      inputType,
-      selectionStart: content.selectionStart,
-      top: measureTextareaCaretTop(content),
-    };
-  }
-
-  function calculateTextareaCaretShift(content, caretAnchor) {
-    if (!caretAnchor || !Number.isFinite(caretAnchor.top)) {
-      return 0;
-    }
-
-    const nextCaretTop = measureTextareaCaretTop(content);
-
-    if (!Number.isFinite(nextCaretTop)) {
-      return 0;
-    }
-
-    const shift = Math.max(0, nextCaretTop - caretAnchor.top);
-
-    debugTyping("caret shift measured", {
-      inputType: caretAnchor.inputType,
-      previousCaretTop: Math.round(caretAnchor.top),
-      nextCaretTop: Math.round(nextCaretTop),
-      caretShift: Math.round(shift),
-      previousSelectionStart: caretAnchor.selectionStart,
-      nextSelectionStart: content.selectionStart,
-    });
-
-    return shift;
-  }
-
-  function measureTextareaCaretTop(content) {
-    const selectionStart = content.selectionStart;
-
-    if (!Number.isFinite(selectionStart)) {
-      return null;
-    }
-
-    const styles = window.getComputedStyle(content);
-    const mirror = document.createElement("div");
-    const marker = document.createElement("span");
-    const mirrorProperties = [
-      "borderBlockEndWidth",
-      "borderBlockStartWidth",
-      "borderInlineEndWidth",
-      "borderInlineStartWidth",
-      "boxSizing",
-      "fontFamily",
-      "fontSize",
-      "fontStyle",
-      "fontWeight",
-      "letterSpacing",
-      "lineHeight",
-      "paddingBlockEnd",
-      "paddingBlockStart",
-      "paddingInlineEnd",
-      "paddingInlineStart",
-      "textTransform",
-      "whiteSpace",
-      "wordBreak",
-      "wordSpacing",
-    ];
-
-    mirrorProperties.forEach((property) => {
-      mirror.style[property] = styles[property];
-    });
-    mirror.style.position = "fixed";
-    mirror.style.insetBlockStart = "-9999px";
-    mirror.style.insetInlineStart = "0";
-    mirror.style.visibility = "hidden";
-    mirror.style.overflowWrap = styles.overflowWrap || "break-word";
-    mirror.style.whiteSpace = "pre-wrap";
-    mirror.style.inlineSize = `${content.clientWidth}px`;
-
-    mirror.textContent = content.value.slice(0, selectionStart);
-    marker.textContent = "\u200b";
-    mirror.append(marker);
-    document.body.append(mirror);
-
-    const top = marker.getBoundingClientRect().top - mirror.getBoundingClientRect().top;
-
-    mirror.remove();
-    return top;
-  }
-
-  function restoreTypingScrollPosition(content, scrollTop, phase) {
-    if (document.activeElement !== content) {
-      debugTyping("resize scroll restore skipped", { phase, reason: "content-not-focused" });
-      return;
-    }
-
-    const before = app.scrollTop;
-
-    setAppScrollTopWithoutSmooth(scrollTop);
-    debugTyping("resize scroll restored", {
-      phase,
-      before: Math.round(before),
-      after: Math.round(app.scrollTop),
-      target: Math.round(scrollTop),
-    });
+  function resizeContentInput(content) {
+    content.style.blockSize = "auto";
+    content.style.blockSize = `${content.scrollHeight}px`;
   }
 
   function createMockUuid() {

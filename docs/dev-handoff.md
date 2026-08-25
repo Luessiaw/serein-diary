@@ -142,6 +142,10 @@ await SereinDataAdapter.rebuildIndex()
 ```
 
 - P5B 正式写作只使用离线 Textarea。
+- Textarea 高度调整与页面跟随已分离：`SereinTypingFocus` 在光标首次越过可见视口
+  65% 后启用 55%--65% 焦点带，并以 60% 为回落位置。
+- 手动滚动会暂停焦点跟随，下一次非输入法组合输入恢复；移动端以
+  `visualViewport` 排除软键盘遮挡区域。
 - Tiptap demo 只保留在 `mock` 数据源中；backend 模式忽略 Tiptap 偏好，不加载 `esm.sh`。
 - 保存成功后：
   - 后端返回的 `EntryDetail` 转为阅读态 sample。
@@ -164,6 +168,21 @@ SereinDebugLoad.dumpReport()
 ```
 
 用于滚动、分页、窗口状态、保存后插入等排查。报告不包含正文、密码、Cookie、session 或私有路径。
+
+长文写作焦点带排查：
+
+```js
+SereinTypingDebug.inspect()
+SereinTypingDebug.setEnabled(true)
+SereinTypingDebug.dumpReport()
+```
+
+报告会记录真实可见视口、焦点带、光标高度、暂停/组合输入状态和最近一次滚动量，
+但不会记录日记正文。纯几何决策测试可在装有 Node.js 的环境运行：
+
+```bash
+node --test frontend/tests/typing-focus.test.js
+```
 
 索引重建排查：
 
