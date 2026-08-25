@@ -580,7 +580,7 @@
     const actions = document.createElement("div");
     const toolbar = document.createElement("div");
     const mediaInput = document.createElement("input");
-    const mediaLabel = document.createElement("label");
+    const mediaLabel = document.createElement("button");
     const mediaPreview = document.createElement("div");
     const cancel = document.createElement("button");
     const draftStatus = document.createElement("span");
@@ -619,13 +619,14 @@
     mediaInput.multiple = true;
     mediaInput.id = `new-entry-media-${createMockUuid()}`;
     mediaLabel.className = "new-entry-media-add";
-    mediaLabel.htmlFor = mediaInput.id;
+    mediaLabel.type = "button";
     mediaLabel.textContent = "";
     mediaLabel.setAttribute("aria-label", "添加图片");
     mediaLabel.title = "添加图片";
     mediaPreview.className = "new-entry-media-preview";
     mediaPreview.setAttribute("aria-live", "polite");
     let selectedMedia = [];
+    let pendingCreatedEntry = null;
     let draggedMediaIndex = null;
     let dropTargetIndex = null;
     let lastDroppedMediaIndex = null;
@@ -639,7 +640,7 @@
     };
     const renderMediaPreview = () => {
       mediaPreview.replaceChildren();
-      selectedMedia.forEach((file, index) => {
+      selectedMedia.forEach((item, index) => {
         const tile = document.createElement("div");
         const image = document.createElement("img");
         const remove = document.createElement("button");
@@ -648,13 +649,15 @@
         if (index === lastDroppedMediaIndex) tile.classList.add("is-reordered");
         tile.draggable = false;
         tile.dataset.mediaIndex = String(index);
-        image.alt = file.name;
-        image.src = URL.createObjectURL(file);
-        image.addEventListener("load", () => URL.revokeObjectURL(image.src), { once: true });
+        image.alt = item.name;
+        image.src = createQueuedMediaPreviewUrl(item);
+        if (item.source === "local") {
+          image.addEventListener("load", () => URL.revokeObjectURL(image.src), { once: true });
+        }
         remove.type = "button";
         remove.className = "new-entry-media-remove";
         remove.textContent = "×";
-        remove.setAttribute("aria-label", `移除 ${file.name}`);
+        remove.setAttribute("aria-label", `移除 ${item.name}`);
         remove.addEventListener("click", (event) => { event.stopPropagation(); selectedMedia.splice(index, 1); renderMediaPreview(); });
         tile.addEventListener("click", () => {
           if (tile.dataset.reorderEnabled === "true") return;
@@ -714,10 +717,23 @@
     mediaInput.addEventListener("change", () => {
       const incoming = Array.from(mediaInput.files || []);
       const valid = incoming.filter((file) => /^(image\/jpeg|image\/png|image\/webp)$/u.test(file.type));
-      selectedMedia = [...selectedMedia, ...valid];
+      selectedMedia = [...selectedMedia, ...window.SereinMediaQueue.localItems(valid)];
       if (valid.length !== incoming.length) message.textContent = "仅支持 JPEG、PNG 和 WebP 图片。";
       mediaInput.value = "";
       renderMediaPreview();
+    });
+    mediaLabel.addEventListener("click", () => {
+      openMediaSourceChooser({
+        onLocal: () => mediaInput.click(),
+        onImmich: async () => {
+          const existingIds = new Set(
+            selectedMedia.filter((item) => item.source === "immich").map((item) => item.assetId),
+          );
+          const picked = await openImmichPicker(existingIds);
+          selectedMedia = window.SereinMediaQueue.appendImmichUnique(selectedMedia, picked);
+          renderMediaPreview();
+        },
+      });
     });
     cancel.className = "new-entry-cancel";
     cancel.type = "button";
@@ -738,9 +754,14 @@
     contentControl.mount();
 
     cancel.addEventListener("click", () => {
+      if (pendingCreatedEntry) {
+        insertCreatedEntryIntoFeed(pendingCreatedEntry);
+        refreshSidebarCalendarDates();
+      }
       form.reset();
       contentControl.clear();
       selectedMedia = [];
+      pendingCreatedEntry = null;
       renderMediaPreview();
       message.textContent = "已清空未保存内容。";
       title.focus({ preventScroll: true });
@@ -776,16 +797,33 @@
         message.textContent = "正在保存……";
         let shouldRestoreSavingState = true;
         try {
-          let created = await dataAdapter.createEntry({
+          let created = pendingCreatedEntry || await dataAdapter.createEntry({
             title: titleValue,
             content: rawBody,
           });
-          for (const file of controls.getSelectedMedia()) {
-            created = await dataAdapter.uploadMedia(created.id, { file, revision: created.revision ?? 0 });
+          pendingCreatedEntry = created;
+          while (selectedMedia.length) {
+            const operation = window.SereinMediaQueue.nextOperation(selectedMedia, 20);
+            if (operation.source === "local") {
+              const first = operation.items[0];
+              created = await dataAdapter.uploadMedia(created.id, {
+                file: first.file,
+                revision: created.revision ?? 0,
+              });
+            } else {
+              created = await dataAdapter.importImmichMedia(created.id, {
+                items: operation.items.map((item) => ({ asset_id: item.assetId, alt: item.alt || null })),
+                revision: created.revision ?? 0,
+              });
+            }
+            selectedMedia.splice(0, operation.count);
+            pendingCreatedEntry = created;
+            renderMediaPreview();
           }
           form.reset();
           contentControl.clear();
           selectedMedia = [];
+          pendingCreatedEntry = null;
           renderMediaPreview();
           insertCreatedEntryIntoFeed(created);
           refreshSidebarCalendarDates();
@@ -795,7 +833,9 @@
           renderFeed({ scrollToEntryId: created.id });
           shouldRestoreSavingState = false;
         } catch (error) {
-          message.textContent = `保存失败：${createDataErrorMessage(error)}`;
+          message.textContent = pendingCreatedEntry
+            ? `文字已保存，剩余 ${selectedMedia.length} 张图片未完成：${createDataErrorMessage(error)}。可再次保存重试。`
+            : `保存失败：${createDataErrorMessage(error)}`;
           contentControl.focus();
         } finally {
           if (shouldRestoreSavingState) {
@@ -4364,7 +4404,188 @@
     return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#${color}"/><circle cx="${90 + seed % 220}" cy="160" r="96" fill="#fff4"/></svg>`)}`;
   }
 
-  function openQueuedImageViewer(files, initialIndex) {
+  function createQueuedMediaPreviewUrl(item) {
+    return item.source === "local"
+      ? URL.createObjectURL(item.file)
+      : dataAdapter.getImmichThumbnailUrl(item.assetId);
+  }
+
+  function openMediaSourceChooser({ onLocal, onImmich }) {
+    const dialog = document.createElement("dialog");
+    const title = document.createElement("h2");
+    const actions = document.createElement("div");
+    const local = document.createElement("button");
+    const immich = document.createElement("button");
+    const cancel = document.createElement("button");
+    dialog.className = "media-source-dialog";
+    title.textContent = "添加图片";
+    actions.className = "media-source-actions";
+    local.type = immich.type = cancel.type = "button";
+    local.textContent = "从本机选择";
+    immich.textContent = "从 Immich 选择";
+    cancel.textContent = "取消";
+    local.addEventListener("click", () => { dialog.close(); onLocal(); });
+    immich.addEventListener("click", () => {
+      dialog.close();
+      void onImmich().catch((error) => window.alert(`无法打开 Immich：${createDataErrorMessage(error)}`));
+    });
+    cancel.addEventListener("click", () => dialog.close());
+    actions.append(local, immich, cancel);
+    dialog.append(title, actions);
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
+  async function openImmichPicker(existingIds = new Set()) {
+    const status = await dataAdapter.getImmichStatus();
+    if (status.status !== "available") {
+      const reason = status.status === "disabled" ? "尚未启用" : "当前不可用";
+      throw new Error(`Immich ${reason}${status.error_code ? `（${status.error_code}）` : ""}`);
+    }
+    const albumResult = await dataAdapter.listImmichAlbums();
+    return new Promise((resolve) => {
+      const dialog = document.createElement("dialog");
+      const shell = document.createElement("div");
+      const title = document.createElement("h2");
+      const filters = document.createElement("form");
+      const query = document.createElement("input");
+      const after = document.createElement("input");
+      const before = document.createElement("input");
+      const album = document.createElement("select");
+      const search = document.createElement("button");
+      const statusLine = document.createElement("p");
+      const grid = document.createElement("div");
+      const footer = document.createElement("div");
+      const more = document.createElement("button");
+      const selectedCount = document.createElement("span");
+      const cancel = document.createElement("button");
+      const confirm = document.createElement("button");
+      const selected = new Map();
+      let cursor = null;
+      let settled = false;
+
+      dialog.className = "immich-picker-dialog";
+      dialog.setAttribute("aria-label", "从 Immich 选择图片");
+      shell.className = "immich-picker-shell";
+      title.textContent = `从 Immich 选择 · v${status.version || "3"}`;
+      filters.className = "immich-picker-filters";
+      query.type = "search";
+      query.placeholder = "语义搜索，例如：雨后的树";
+      query.setAttribute("aria-label", "搜索 Immich 照片");
+      after.type = before.type = "date";
+      after.setAttribute("aria-label", "开始日期");
+      before.setAttribute("aria-label", "结束日期");
+      album.setAttribute("aria-label", "相册");
+      album.append(new Option("全部相册", ""));
+      (albumResult.albums || []).forEach((item) => {
+        album.append(new Option(`${item.name}（${item.asset_count}）`, item.id));
+      });
+      search.type = "submit";
+      search.textContent = "搜索";
+      statusLine.className = "immich-picker-status";
+      statusLine.setAttribute("role", "status");
+      grid.className = "immich-picker-grid";
+      footer.className = "immich-picker-footer";
+      more.type = cancel.type = confirm.type = "button";
+      more.textContent = "加载更多";
+      cancel.textContent = "取消";
+      confirm.textContent = "加入日记";
+      more.hidden = true;
+
+      const updateSelection = () => {
+        selectedCount.textContent = `已选择 ${selected.size} 张`;
+        confirm.disabled = selected.size === 0;
+      };
+      const appendItems = (items) => {
+        items.forEach((item) => {
+          const button = document.createElement("button");
+          const image = document.createElement("img");
+          const label = document.createElement("span");
+          button.type = "button";
+          button.className = "immich-picker-tile";
+          button.dataset.assetId = item.id;
+          image.loading = "lazy";
+          image.decoding = "async";
+          image.src = dataAdapter.getImmichThumbnailUrl(item.id);
+          image.alt = item.alt || "Immich 图片";
+          label.textContent = item.taken_at ? String(item.taken_at).slice(0, 10) : "";
+          if (existingIds.has(item.id)) {
+            button.disabled = true;
+            button.classList.add("is-existing");
+            label.textContent = "已在队列中";
+          } else {
+            button.addEventListener("click", () => {
+              if (selected.has(item.id)) {
+                selected.delete(item.id);
+                button.classList.remove("is-selected");
+              } else {
+                selected.set(item.id, item);
+                button.classList.add("is-selected");
+              }
+              updateSelection();
+            });
+          }
+          button.append(image, label);
+          grid.append(button);
+        });
+      };
+      const load = async ({ append = false } = {}) => {
+        search.disabled = true;
+        more.disabled = true;
+        statusLine.textContent = "正在读取 Immich……";
+        try {
+          const result = await dataAdapter.searchImmich({
+            query: query.value.trim() || null,
+            taken_after: after.value || null,
+            taken_before: before.value || null,
+            album_id: album.value || null,
+            cursor: append ? cursor : null,
+            limit: 60,
+          });
+          if (!append) grid.replaceChildren();
+          appendItems(result.items || []);
+          cursor = result.next_cursor || null;
+          more.hidden = !cursor;
+          statusLine.textContent = grid.childElementCount
+            ? `已显示 ${grid.childElementCount} 张`
+            : "没有符合条件的照片。";
+        } catch (error) {
+          statusLine.textContent = `读取失败：${createDataErrorMessage(error)}`;
+        } finally {
+          search.disabled = false;
+          more.disabled = false;
+        }
+      };
+      filters.addEventListener("submit", (event) => { event.preventDefault(); void load(); });
+      more.addEventListener("click", () => void load({ append: true }));
+      cancel.addEventListener("click", () => dialog.close());
+      confirm.addEventListener("click", () => {
+        settled = true;
+        resolve([...selected.values()].map((item) => ({
+          source: "immich",
+          assetId: item.id,
+          name: item.alt || "Immich 图片",
+          alt: item.alt || null,
+        })));
+        dialog.close();
+      });
+      dialog.addEventListener("close", () => {
+        if (!settled) resolve([]);
+        dialog.remove();
+      }, { once: true });
+      filters.append(query, after, before, album, search);
+      footer.append(more, selectedCount, cancel, confirm);
+      shell.append(title, filters, statusLine, grid, footer);
+      dialog.append(shell);
+      document.body.append(dialog);
+      updateSelection();
+      dialog.showModal();
+      void load();
+    });
+  }
+
+  function openQueuedImageViewer(items, initialIndex) {
     const dialog = document.createElement("dialog");
     const shell = document.createElement("div");
     const top = document.createElement("div");
@@ -4393,18 +4614,19 @@
     shell.append(top, stage);
     dialog.append(shell);
     const render = () => {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(files[index]);
-      image.src = objectUrl;
-      image.alt = files[index].name;
-      position.textContent = `${index + 1} / ${files.length}`;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      const item = items[index];
+      objectUrl = item.source === "local" ? URL.createObjectURL(item.file) : null;
+      image.src = objectUrl || dataAdapter.getImmichThumbnailUrl(item.assetId);
+      image.alt = item.name;
+      position.textContent = `${index + 1} / ${items.length}`;
       previous.disabled = index === 0;
-      next.disabled = index === files.length - 1;
+      next.disabled = index === items.length - 1;
     };
     previous.addEventListener("click", () => { if (index > 0) { index -= 1; render(); } });
-    next.addEventListener("click", () => { if (index < files.length - 1) { index += 1; render(); } });
+    next.addEventListener("click", () => { if (index < items.length - 1) { index += 1; render(); } });
     close.addEventListener("click", () => dialog.close());
-    dialog.addEventListener("close", () => { URL.revokeObjectURL(objectUrl); dialog.remove(); }, { once: true });
+    dialog.addEventListener("close", () => { if (objectUrl) URL.revokeObjectURL(objectUrl); dialog.remove(); }, { once: true });
     dialog.addEventListener("keydown", (event) => { if (event.key === "ArrowLeft") previous.click(); if (event.key === "ArrowRight") next.click(); });
     document.body.append(dialog);
     render();

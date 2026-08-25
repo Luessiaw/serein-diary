@@ -31,7 +31,8 @@ from serein.services.entries import (
     EntrySummaryItem,
     EntryWindow,
 )
-from serein.storage.repository import create_content_excerpt
+from serein.services.immich import ImmichError, get_immich_client
+from serein.storage.repository import ImageAttachment, create_content_excerpt
 
 
 router = APIRouter(prefix="/entries", tags=["entries"])
@@ -65,6 +66,16 @@ class EntryUpdateRequest(BaseModel):
     title: str | None = None
     content: str = Field(min_length=1)
     created_at: datetime
+    revision: int = Field(ge=0)
+
+
+class ImmichImportItemRequest(BaseModel):
+    asset_id: UUID
+    alt: str | None = Field(default=None, max_length=500)
+
+
+class ImmichImportRequest(BaseModel):
+    items: list[ImmichImportItemRequest] = Field(min_length=1, max_length=20)
     revision: int = Field(ge=0)
 
 
@@ -425,6 +436,57 @@ async def upload_entry_media(
         raise service_http_error(error) from error
     finally:
         await file.close()
+
+
+@router.post("/{entry_id}/media/import/immich", response_model=EntryDetailResponse)
+async def import_entry_media_from_immich(
+    entry_id: UUID,
+    payload: ImmichImportRequest,
+    request: Request,
+    response: Response,
+    session: AuthenticatedSession = Depends(require_authenticated_session),
+) -> EntryDetailResponse:
+    """Copy an ordered Immich image batch into the diary fact store."""
+
+    _ = session
+    mark_auth_response_uncacheable(response)
+    asset_ids = [item.asset_id for item in payload.items]
+    if len(set(asset_ids)) != len(asset_ids):
+        raise service_http_error(
+            EntryServiceError("invalid_request", "Immich assets must not be duplicated")
+        )
+    try:
+        entry_service = get_entry_service(request)
+        current = entry_service.get_entry(entry_id)
+        if current.entry.metadata.deleted_at is not None:
+            raise EntryServiceError("entry_deleted", "Entry is already deleted")
+        if (current.entry.metadata.revision or 0) != payload.revision:
+            raise EntryServiceError(
+                "revision_conflict",
+                "Entry has changed; reload before saving",
+            )
+        client = get_immich_client(request)
+        downloaded = [
+            await client.import_image(item.asset_id, item.alt)
+            for item in payload.items
+        ]
+        detail = entry_service.attach_images(
+            entry_id,
+            attachments=tuple(
+                ImageAttachment(content=item.content, alt=item.alt)
+                for item in downloaded
+            ),
+            expected_revision=payload.revision,
+            created_at=datetime.now(ZoneInfo(get_settings(request).timezone)),
+        )
+        return entry_detail_to_response(detail)
+    except ImmichError as error:
+        raise HTTPException(
+            status_code=error.status_code,
+            detail={"error": {"code": error.code, "message": str(error)}},
+        ) from error
+    except EntryServiceError as error:
+        raise service_http_error(error) from error
 
 
 def validate_image_upload_metadata(file: UploadFile) -> None:

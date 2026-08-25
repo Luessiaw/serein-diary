@@ -53,6 +53,14 @@ class EntryHistoryVersion:
     entry: DiaryEntry
 
 
+@dataclass(frozen=True)
+class ImageAttachment:
+    """One already-downloaded image to add to an entry."""
+
+    content: bytes
+    alt: str | None = None
+
+
 def create_entry(
     data_dir: Path,
     content: str,
@@ -191,16 +199,98 @@ def attach_image(
     expected_revision: int,
     created_at: datetime | None = None,
 ) -> DiaryEntry:
-    """Validate one image, create a WebP preview, then atomically add it to manifest facts."""
+    """Attach one image through the atomic multi-image implementation."""
 
-    if not content or len(content) > MAX_IMAGE_BYTES:
-        raise EntryValidationError("image file size is invalid")
+    return attach_images(
+        data_dir,
+        entry_id,
+        attachments=(ImageAttachment(content=content, alt=alt),),
+        expected_revision=expected_revision,
+        created_at=created_at,
+    )
+
+
+def attach_images(
+    data_dir: Path,
+    entry_id: UUID,
+    *,
+    attachments: tuple[ImageAttachment, ...],
+    expected_revision: int,
+    created_at: datetime | None = None,
+) -> DiaryEntry:
+    """Validate and commit a batch of images with one manifest revision."""
+
+    if not attachments:
+        raise EntryValidationError("at least one image is required")
     entry = find_entry_by_id(data_dir, entry_id)
     if entry.metadata.deleted_at is not None:
         raise EntryValidationError("entry is already deleted")
     current_revision = entry.metadata.revision or 0
     if expected_revision != current_revision:
         raise EntryValidationError("entry revision does not match current revision")
+    temp_dir = Path(tempfile.mkdtemp(prefix=".tmp-media-", dir=entry.path))
+    staged: list[tuple[Path, Path, Path, Path]] = []
+    bound_paths: list[Path] = []
+    timestamp = normalize_created_at(created_at)
+    manifest = entry.media_manifest.model_dump(mode="json", exclude_none=True)
+    original_metadata = (entry.path / "metadata.json").read_bytes()
+    original_manifest = (entry.path / "media-manifest.json").read_bytes()
+    try:
+        for attachment in attachments:
+            extension, preview = _validate_image_content(attachment.content)
+            media_id = uuid4()
+            original_relative = f"media/original/{media_id}.{extension}"
+            preview_relative = f"media/preview/{media_id}.webp"
+            original_temp = temp_dir / f"{media_id}.{extension}"
+            preview_temp = temp_dir / f"{media_id}.webp"
+            original_temp.write_bytes(attachment.content)
+            preview.save(preview_temp, format="WEBP", quality=82, method=6)
+            preview.close()
+            staged.append(
+                (
+                    original_temp,
+                    entry.path / original_relative,
+                    preview_temp,
+                    entry.path / preview_relative,
+                )
+            )
+            manifest["media"].append(
+                {
+                    "id": str(media_id),
+                    "kind": "image",
+                    "original": original_relative,
+                    "preview": preview_relative,
+                    "alt": (attachment.alt or "").strip() or None,
+                    "created_at": timestamp.isoformat(),
+                }
+            )
+        parse_media_manifest(manifest)
+        snapshot_current_entry_facts(entry, current_revision, timestamp)
+        for original_temp, original_path, preview_temp, preview_path in staged:
+            original_path.parent.mkdir(parents=True, exist_ok=True)
+            preview_path.parent.mkdir(parents=True, exist_ok=True)
+            original_temp.replace(original_path)
+            bound_paths.append(original_path)
+            preview_temp.replace(preview_path)
+            bound_paths.append(preview_path)
+        metadata = entry.metadata.model_dump(mode="json", exclude_none=True)
+        metadata.update({"schema_version": 2, "updated_at": timestamp.isoformat(), "revision": current_revision + 1})
+        write_json_file_atomic(entry.path / "metadata.json", metadata)
+        write_json_file_atomic(entry.path / "media-manifest.json", manifest)
+    except Exception:
+        for path in bound_paths:
+            path.unlink(missing_ok=True)
+        (entry.path / "metadata.json").write_bytes(original_metadata)
+        (entry.path / "media-manifest.json").write_bytes(original_manifest)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    return read_entry(entry.path)
+
+
+def _validate_image_content(content: bytes) -> tuple[str, Image.Image]:
+    if not content or len(content) > MAX_IMAGE_BYTES:
+        raise EntryValidationError("image file size is invalid")
     try:
         with Image.open(io.BytesIO(content)) as source:
             source.verify()
@@ -210,45 +300,10 @@ def attach_image(
                 raise EntryValidationError("unsupported image format; use JPEG, PNG, or WebP")
             if source.width * source.height > MAX_IMAGE_PIXELS:
                 raise EntryValidationError("image dimensions are too large")
-            image_format = source.format
-            preview = source.convert("RGB")
-    except UnidentifiedImageError as error:
+            extension, _ = IMAGE_FORMATS[source.format]
+            return extension, source.convert("RGB")
+    except (UnidentifiedImageError, OSError) as error:
         raise EntryValidationError("uploaded file is not a valid image") from error
-    media_id = uuid4()
-    extension, _ = IMAGE_FORMATS[image_format]
-    original_relative = f"media/original/{media_id}.{extension}"
-    preview_relative = f"media/preview/{media_id}.webp"
-    temp_dir = Path(tempfile.mkdtemp(prefix=".tmp-media-", dir=entry.path))
-    original_path = entry.path / original_relative
-    preview_path = entry.path / preview_relative
-    files_bound = False
-    try:
-        original_temp = temp_dir / f"original.{extension}"
-        preview_temp = temp_dir / "preview.webp"
-        original_temp.write_bytes(content)
-        preview.save(preview_temp, format="WEBP", quality=82, method=6)
-        timestamp = normalize_created_at(created_at)
-        manifest = entry.media_manifest.model_dump(mode="json", exclude_none=True)
-        manifest["media"].append({"id": str(media_id), "kind": "image", "original": original_relative, "preview": preview_relative, "alt": (alt or "").strip() or None, "created_at": timestamp.isoformat()})
-        parse_media_manifest(manifest)
-        snapshot_current_entry_facts(entry, current_revision, timestamp)
-        original_path.parent.mkdir(parents=True, exist_ok=True)
-        preview_path.parent.mkdir(parents=True, exist_ok=True)
-        original_temp.replace(original_path)
-        preview_temp.replace(preview_path)
-        files_bound = True
-        metadata = entry.metadata.model_dump(mode="json", exclude_none=True)
-        metadata.update({"schema_version": 2, "updated_at": timestamp.isoformat(), "revision": current_revision + 1})
-        write_json_file_atomic(entry.path / "metadata.json", metadata)
-        write_json_file_atomic(entry.path / "media-manifest.json", manifest)
-    except Exception:
-        if files_bound:
-            original_path.unlink(missing_ok=True)
-            preview_path.unlink(missing_ok=True)
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise
-    shutil.rmtree(temp_dir, ignore_errors=True)
-    return read_entry(entry.path)
 
 
 def snapshot_current_entry_facts(entry: DiaryEntry, revision: int, timestamp: datetime) -> None:

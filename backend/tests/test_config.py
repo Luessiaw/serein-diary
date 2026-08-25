@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from tempfile import TemporaryDirectory
+from pathlib import Path
 from unittest import TestCase
 
 from serein.config import (
@@ -10,6 +11,8 @@ from serein.config import (
     DIARY_DATA_DIR_ENV,
     DIARY_SESSION_SECRET_ENV,
     DIARY_TIMEZONE_ENV,
+    DIARY_IMMICH_API_KEY_FILE_ENV,
+    DIARY_IMMICH_ENABLED_ENV,
     ConfigError,
     load_settings,
 )
@@ -84,3 +87,23 @@ class LoadSettingsTests(TestCase):
         self.assertIn("session_secret=<redacted>", settings_repr)
         self.assertNotIn("a private lock-screen password", settings_repr)
         self.assertNotIn("x" * 32, settings_repr)
+
+    def test_loads_immich_key_from_file_without_exposing_it_in_repr(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            key_file = Path(data_dir) / "immich-api-key"
+            key_file.write_text("private-immich-key\n", encoding="utf-8")
+            env = self.make_env(data_dir)
+            env[DIARY_IMMICH_ENABLED_ENV] = "true"
+            env[DIARY_IMMICH_API_KEY_FILE_ENV] = str(key_file)
+            settings = load_settings(env)
+
+        self.assertTrue(settings.immich_enabled)
+        self.assertEqual(settings.immich_api_key, "private-immich-key")
+        self.assertNotIn("private-immich-key", repr(settings))
+
+    def test_enabled_immich_requires_key_file(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            env = self.make_env(data_dir)
+            env[DIARY_IMMICH_ENABLED_ENV] = "true"
+            with self.assertRaisesRegex(ConfigError, DIARY_IMMICH_API_KEY_FILE_ENV):
+                load_settings(env)

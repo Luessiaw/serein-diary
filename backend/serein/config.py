@@ -14,6 +14,9 @@ DIARY_DATA_DIR_ENV = "DIARY_DATA_DIR"
 DIARY_TIMEZONE_ENV = "DIARY_TIMEZONE"
 DIARY_ADMIN_PASSWORD_ENV = "DIARY_ADMIN_PASSWORD"
 DIARY_SESSION_SECRET_ENV = "DIARY_SESSION_SECRET"
+DIARY_IMMICH_ENABLED_ENV = "DIARY_IMMICH_ENABLED"
+DIARY_IMMICH_BASE_URL_ENV = "DIARY_IMMICH_BASE_URL"
+DIARY_IMMICH_API_KEY_FILE_ENV = "DIARY_IMMICH_API_KEY_FILE"
 DEFAULT_TIMEZONE = "UTC"
 MIN_SESSION_SECRET_LENGTH = 32
 UNSAFE_ADMIN_PASSWORDS = {
@@ -44,6 +47,9 @@ class Settings:
     timezone: str
     admin_password: str
     session_secret: str
+    immich_enabled: bool = False
+    immich_base_url: str = "http://immich-api:2283/api"
+    immich_api_key: str | None = None
 
     def __repr__(self) -> str:
         return (
@@ -52,6 +58,9 @@ class Settings:
             f"timezone={self.timezone!r}, "
             "admin_password=<redacted>, "
             "session_secret=<redacted>"
+            f", immich_enabled={self.immich_enabled!r}, "
+            f"immich_base_url={self.immich_base_url!r}, "
+            "immich_api_key=<redacted>"
             ")"
         )
 
@@ -64,12 +73,36 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     timezone = _read_optional(source, DIARY_TIMEZONE_ENV, DEFAULT_TIMEZONE)
     admin_password = _read_required(source, DIARY_ADMIN_PASSWORD_ENV)
     session_secret = _read_required(source, DIARY_SESSION_SECRET_ENV)
+    immich_enabled = _read_bool(source, DIARY_IMMICH_ENABLED_ENV, False)
+    immich_base_url = _read_optional(
+        source,
+        DIARY_IMMICH_BASE_URL_ENV,
+        "http://immich-api:2283/api",
+    ).rstrip("/")
+    immich_api_key = None
+    if immich_enabled:
+        key_file = Path(_read_required(source, DIARY_IMMICH_API_KEY_FILE_ENV))
+        if not key_file.is_absolute() or not key_file.is_file():
+            raise ConfigError(
+                f"{DIARY_IMMICH_API_KEY_FILE_ENV} must point to a readable file."
+            )
+        try:
+            immich_api_key = key_file.read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise ConfigError(
+                f"{DIARY_IMMICH_API_KEY_FILE_ENV} must point to a readable file."
+            ) from exc
+        if not immich_api_key:
+            raise ConfigError(f"{DIARY_IMMICH_API_KEY_FILE_ENV} must not be empty.")
 
     return Settings(
         data_dir=_validate_data_dir(data_dir),
         timezone=_validate_timezone(timezone),
         admin_password=_validate_admin_password(admin_password),
         session_secret=_validate_session_secret(session_secret),
+        immich_enabled=immich_enabled,
+        immich_base_url=immich_base_url,
+        immich_api_key=immich_api_key,
     )
 
 
@@ -82,6 +115,18 @@ def _read_required(env: Mapping[str, str], name: str) -> str:
 
 def _read_optional(env: Mapping[str, str], name: str, default: str) -> str:
     return env.get(name, default).strip() or default
+
+
+def _read_bool(env: Mapping[str, str], name: str, default: bool) -> bool:
+    value = env.get(name)
+    if value is None or not value.strip():
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ConfigError(f"{name} must be true or false.")
 
 
 def _validate_data_dir(value: str) -> Path:

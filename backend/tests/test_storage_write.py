@@ -13,7 +13,9 @@ from PIL import Image
 
 from serein.storage.entry import EntryValidationError
 from serein.storage.repository import (
+    ImageAttachment,
     attach_image,
+    attach_images,
     create_entry,
     get_entry_history_version,
     list_entry_history,
@@ -216,6 +218,46 @@ class StorageWriteTests(TestCase):
                 attach_image(root, ENTRY_ID, content=create_png_bytes(), alt=None, expected_revision=0, created_at=CREATED_AT)
 
             self.assertEqual(len(read_json(entry.path / "media-manifest.json")["media"]), 1)
+
+    def test_attach_images_commits_ordered_batch_with_one_revision(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            entry = create_entry(root, content="entry\n", created_at=CREATED_AT, entry_id=ENTRY_ID)
+
+            attached = attach_images(
+                root,
+                ENTRY_ID,
+                attachments=(
+                    ImageAttachment(create_png_bytes(), "first"),
+                    ImageAttachment(create_png_bytes(), "second"),
+                ),
+                expected_revision=0,
+                created_at=CREATED_AT,
+            )
+
+            self.assertEqual(attached.metadata.revision, 1)
+            self.assertEqual([item.alt for item in attached.media_manifest.media], ["first", "second"])
+            self.assertTrue(all((entry.path / item.original).is_file() for item in attached.media_manifest.media))
+
+    def test_attach_images_rolls_back_entire_invalid_batch(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            entry = create_entry(root, content="entry\n", created_at=CREATED_AT, entry_id=ENTRY_ID)
+
+            with self.assertRaisesRegex(EntryValidationError, "not a valid image"):
+                attach_images(
+                    root,
+                    ENTRY_ID,
+                    attachments=(
+                        ImageAttachment(create_png_bytes(), "valid"),
+                        ImageAttachment(b"not-image", "invalid"),
+                    ),
+                    expected_revision=0,
+                    created_at=CREATED_AT,
+                )
+
+            self.assertEqual(read_json(entry.path / "media-manifest.json")["media"], [])
+            self.assertEqual(list((entry.path / "media" / "original").iterdir()), [])
 
 
 def read_json(path: Path) -> dict:

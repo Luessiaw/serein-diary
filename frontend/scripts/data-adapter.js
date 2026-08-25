@@ -124,6 +124,32 @@
           body: form,
         });
       },
+      getImmichStatus() {
+        return apiClient.requestJson("/integrations/immich/status");
+      },
+      listImmichAlbums() {
+        return apiClient.requestJson("/integrations/immich/albums");
+      },
+      searchImmich(payload = {}) {
+        return apiClient.requestJson("/integrations/immich/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      },
+      importImmichMedia(entryId, payload) {
+        return apiClient.requestJson(
+          `/entries/${encodeURIComponent(entryId)}/media/import/immich`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+        );
+      },
+      getImmichThumbnailUrl(assetId) {
+        return `${apiClient.apiBase}/integrations/immich/assets/${encodeURIComponent(assetId)}/thumbnail`;
+      },
       getMediaUrl(entryId, mediaId) {
         return `${apiClient.apiBase}/entries/${encodeURIComponent(entryId)}/media/${encodeURIComponent(mediaId)}`;
       },
@@ -319,6 +345,21 @@
       },
       async uploadMedia() {
         throw createMockError("not_implemented", "Mock media upload is not implemented", 400);
+      },
+      async getImmichStatus() {
+        return { status: "disabled", version: null, error_code: null };
+      },
+      async listImmichAlbums() {
+        return { albums: [] };
+      },
+      async searchImmich() {
+        return { items: [], next_cursor: null };
+      },
+      async importImmichMedia() {
+        throw createMockError("not_implemented", "Mock Immich import is not implemented", 400);
+      },
+      getImmichThumbnailUrl(assetId) {
+        return `mock-immich:${assetId}`;
       },
       getMediaUrl(entryId, mediaId) {
         return `mock-media:${entryId}:${mediaId}`;

@@ -21,8 +21,10 @@ from serein.storage.index import (
 )
 from serein.storage.repository import (
     EntrySummary,
+    ImageAttachment,
     create_entry,
     attach_image,
+    attach_images,
     create_entry_summary,
     find_entry_by_id,
     get_entry_history_version,
@@ -302,6 +304,32 @@ class EntryService:
         except EntryValidationError as error:
             raise map_storage_error(error) from error
         return EntryDetailItem(entry=entry, cursor=encode_entry_cursor(entry.metadata.created_at, entry.metadata.id))
+
+    def attach_images(
+        self,
+        entry_id: UUID,
+        *,
+        attachments: tuple[ImageAttachment, ...],
+        expected_revision: int,
+        created_at: datetime | None = None,
+    ) -> EntryDetailItem:
+        """Attach a validated image batch and refresh the derived index once."""
+
+        try:
+            entry = attach_images(
+                self.data_dir,
+                entry_id,
+                attachments=attachments,
+                expected_revision=expected_revision,
+                created_at=created_at,
+            )
+            self.refresh_entry_index(entry)
+        except EntryValidationError as error:
+            raise map_storage_error(error) from error
+        return EntryDetailItem(
+            entry=entry,
+            cursor=encode_entry_cursor(entry.metadata.created_at, entry.metadata.id),
+        )
 
     def list_entry_history(self, entry_id: UUID) -> tuple[EntryHistoryItem, ...]:
         """List immutable snapshots, including a compact diff from the preceding state."""

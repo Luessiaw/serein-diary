@@ -416,6 +416,22 @@ adapter.uploadMedia(entryId, { file, alt })
 adapter.getMediaUrl(entryId, mediaId)
 ```
 
+## Immich 选片复制扩展
+
+所有接口继续使用 Serein 锁屏会话；浏览器不持有 Immich API Key：
+
+```text
+GET  /api/v1/integrations/immich/status
+GET  /api/v1/integrations/immich/albums
+POST /api/v1/integrations/immich/search
+GET  /api/v1/integrations/immich/assets/{asset_id}/thumbnail
+POST /api/v1/entries/{entry_id}/media/import/immich
+```
+
+导入请求最多包含 20 个有序图片资产及当前 entry revision。后端先完整下载、验证
+并生成预览，再以单次 revision 写入；失败不得留下部分媒体。manifest 只记录 Serein
+自己的媒体路径，不保存运行时依赖的 Immich URL。
+
 adapter 必须隐藏 mock/backend 差异。组件只接收统一形状：
 
 - `EntrySummary`

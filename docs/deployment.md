@@ -114,3 +114,9 @@ Compose/Caddy 仍只是部署便利措施，而不是前端或后端的运行时
 
 - 静态前端需要能访问同源的 `/api/v1/*`。
 - FastAPI 需要收到有效的 `DIARY_*` 环境变量，并能访问外部数据目录。
+
+## 可选 Immich 选片器
+
+Immich 选片器默认关闭。启用时需要内部 Docker 网络、最小权限 API Key
+文件和三个 `DIARY_IMMICH_*` 配置。完整的密钥权限、网络创建、验证与回退步骤见
+[`immich-integration.md`](immich-integration.md)。不得把 API Key 写入 `.env`、Compose 或聊天记录。

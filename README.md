@@ -23,17 +23,17 @@ Serein 是一款自托管的个人日记应用，名称取自雨后清澈宁静�
 
 ## 当前状态
 
-当前已进入 P5A 真实只读接入的浏览器验收：
+当前已完成真实日记读写与媒体闭环：
 
 - `frontend/` 提供连续日记流、极简锁屏、侧边日历、真实日期统计、日期窗口跳转、
   双向滚动加载、回到此刻和阅读窗口裁剪能力。
-- `backend/` 提供 FastAPI 应用、`DIARY_*` 配置校验、锁屏认证、v1 日记事实文件读取、
-  可重建 SQLite 索引、正式 entries API、日期统计 API 和日期窗口 API。
+- `backend/` 提供 FastAPI 应用、锁屏认证、日记事实文件读写、可重建 SQLite 索引、
+  正式 entries API、本机图片上传，以及可选的 Immich 选片复制接口。
 - `compose.yaml` 与 `deploy/Caddyfile` 提供可选的 Docker Compose + Caddy 示例：
   `web` 发布静态前端，`api` 在内部网络运行，`/api/v1/*` 经 `web` 反向代理。
 
-P5A 仍是只读阶段；真实新建、删除、评论和媒体闭环属于后续 P5B--P5E。
-浏览器验收清单见 [P5A 真实只读接入浏览器验收](docs/p5a-readonly-browser-acceptance.md)。
+Immich 集成只把远端照片作为导入来源；保存后的图片由 Serein 自己管理，不依赖
+Immich 继续在线。配置与部署见 [Immich 选片集成](docs/immich-integration.md)。
 
 ## 后端快速检查
 
