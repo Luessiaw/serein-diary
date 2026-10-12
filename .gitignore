@@ -9,6 +9,6 @@ backend/.venv/
 node_modules/
 dist/
 data/
-prompts/
-AGENTS.md
-tasks.csv
+# Prompts: version the prompt text itself; keep logs and binary captures out.
+prompts/*
+!prompts/*.md

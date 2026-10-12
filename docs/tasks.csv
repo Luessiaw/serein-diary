@@ -1,0 +1,8 @@
+phase_id,phase_name,task_id,task_name,description,dependencies,status,context,acceptance_criteria
+P0,Baseline,P0-T01,Confirm boundaries,Inspect Serein media flow and Immich v3 API/permissions,,done,"2026-08-25: Immich v3.1.0; Serein stores independent media facts","Current routes, limits, topology, and permissions recorded"
+P1,Backend,P1-T01,Add Immich adapter,Implement secret-safe search/albums/thumbnail/download adapter,P0-T01,done,"Uses server-side x-api-key and normalized responses","Adapter tests cover search, format fallback, permission failures"
+P1,Backend,P1-T02,Add atomic import,Stage and commit up to 20 ordered images with one revision,P1-T01,done,"Reuses 20 MiB and 40 MP Serein limits","Invalid batch leaves no media and revision changes once"
+P2,Frontend,P2-T01,Build picker,Add source chooser recent/search/date/album picker and mixed queue,P1-T01,done,"Consecutive Immich items import as ordered batches","Node tests cover grouping and duplicate prevention"
+P3,Deployment,P3-T01,Define private network,Attach only Serein API and immich-server to serein-immich,P1-T01,done,"Compose files validated without printing secrets","Both Compose definitions pass config validation"
+P3,Deployment,P3-T02,Activate credentials,Create least-privilege key file and enable integration,P3-T01,pending,"Requires operator-created Immich API key","Status endpoint reports available without exposing key"
+P4,Acceptance,P4-T01,Verify live import,Import samples from recent search and album then revoke key,P3-T02,pending,"Automated tests pass; live private-photo test awaits key","Imported diary media remains readable after Immich access is removed"
