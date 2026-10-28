@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serein · 视觉与交互参考册</title>
+<style>
+:root { --ink:#26322d; --muted:#6B7169; --faint:#a39e91; --line:#e6e2d9; --paper:#fdfcfa; --bg:#f4f2ec; --accent:#277253; }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans SC", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; line-height:1.75; }
+.wrap { max-width:1280px; margin:0 auto; padding:56px 40px 96px }
+h1 { font-family:"Noto Serif SC", Georgia, serif; font-weight:600; font-size:44px; letter-spacing:.02em; margin:0 0 8px }
+.sub { color:var(--muted); max-width:760px; margin:0 0 36px; font-size:15px }
+nav { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 40px; position:sticky; top:0; padding:12px 0; background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(8px); z-index:10 }
+nav a { font-size:13px; color:var(--muted); text-decoration:none; border:1px solid var(--line); border-radius:999px; padding:5px 14px; background:var(--paper) }
+nav a:hover { color:var(--ink); border-color:#cfc9bb }
+.group { margin:0 0 64px }
+.group h2 { font-family:"Noto Serif SC", Georgia, serif; font-weight:600; font-size:24px; margin:0 0 6px; scroll-margin-top:80px }
+.count { font-family:ui-monospace,monospace; font-size:12px; color:var(--faint); margin-left:12px; font-weight:400 }
+.gdesc { color:var(--muted); font-size:14px; margin:0 0 24px }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(400px, 1fr)); gap:22px }
+.card { background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:20px 20px 14px; display:flex; flex-direction:column }
+.card header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px }
+.card h3 { font-family:"Noto Serif SC", Georgia, serif; font-size:19px; margin:0 0 2px; font-weight:600 }
+.meta { display:flex; flex-wrap:wrap; gap:10px; font-size:11px; color:var(--faint); font-family:ui-monospace,monospace }
+.ext { font-size:12px; color:var(--accent); text-decoration:none; white-space:nowrap }
+.shots { display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px; scrollbar-width:thin }
+.shot { flex:0 0 auto; display:block; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fff; max-height:440px }
+.shot.missing img { display:none }
+.shot.missing::after { content:"图片缺失"; display:grid; place-items:center; width:220px; height:120px; font-size:12px; color:var(--faint) }
+.shot img { display:block; height:400px; width:auto; max-width:100%; object-fit:cover; object-position:top }
+.caps { margin:0 0 10px; padding-left:18px; font-size:12px; color:var(--faint) }
+.takeaway, .learn { font-size:13.5px; margin:0 0 8px; color:#3d4a43 }
+.takeaway b, .learn b { display:inline-block; font-size:11px; letter-spacing:.1em; color:var(--accent); margin-right:8px; font-weight:600 }
+.card footer { margin-top:auto; display:flex; gap:6px; align-items:center; padding-top:10px; border-top:1px solid #f0ece3 }
+.tag { font-size:11px; font-family:ui-monospace,monospace; color:var(--muted); border:1px solid var(--line); border-radius:4px; padding:0 5px }
+.scale { margin-left:auto; font-size:11px; color:var(--faint); letter-spacing:.15em }
+.hint { font-size:12px; color:var(--faint); margin-top:36px; border-top:1px solid var(--line); padding-top:16px }
+@media (max-width:640px) { .wrap { padding:32px 18px 64px } .grid { grid-template-columns:1fr } h1 { font-size:32px } .shot img { height:320px } }
+</style></head><body><div class="wrap">
+<h1>视觉与交互参考册</h1>
+<p class="sub">为 Serein 日记收集的可借鉴案例，共 40 项、55 张图。每张图旁标注“看点”和“对 Serein 的启发”；
+按 Serein 的三条原则（简约 / 流畅 / 模块化）打标签，并用 ● 表示迁移难度（越少越容易落地）。
+图像来源分为三类：App Store 官方商店页截图、本站首页实时截图、以及在真实 Serein 上注入 CSS 的实测截图；原始未裁剪大图放在 <code>docs/reference-shots/shots/</code>。</p>
+<nav><a href="#00-baseline">基准</a><a href="#01-diary-apps">日记 App（最直接可借鉴）</a><a href="#02-note-web-tools">笔记与书写工具（Web/桌面为主）</a><a href="#03-typography-ui">排版与界面细节（实测样张）</a><a href="#04-serein-experiments">Serein 现实效果实验</a></nav>
+<section class="group" id="00-baseline">
+  <h2>基准<span class="count">1 项</span></h2>
+  <p class="gdesc">先看清 Serein 现在的样子，所有建议都以它为参照。</p>
+  <div class="grid"><article class="card" data-id="baseline" data-cat="基准" data-pr="SM">
+  <header><div class="titles"><h3>Serein 现状（基线）</h3>
+    <div class="meta"><span>基准</span><span>Web</span><span>本项目</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/00-baseline/serein-desktop.png"><img loading="lazy" src="reference-shots/00-baseline/serein-desktop.png" alt="Serein 现状（基线）"></a><a class="shot" href="reference-shots/00-baseline/serein-mobile.png"><img loading="lazy" src="reference-shots/00-baseline/serein-mobile.png" alt="Serein 现状（基线）"></a><a class="shot" href="reference-shots/00-baseline/serein-menu-panel.png"><img loading="lazy" src="reference-shots/00-baseline/serein-menu-panel.png" alt="Serein 现状（基线）"></a></div><ul class="caps"><li>桌面端阅读流：深灰工作区 + 白纸带 + 左侧年/月/日三列时间轴</li><li>移动端：年月收起为右上角，日期回到正文上方</li><li>⌘K/菜单面板：日历 + 统计 + 设置</li></ul>
+  <p class="takeaway"><b>看点</b>现在的骨架（连续长文、纸带、时间轴、极简锁屏）是对的；问题集中在外围：工作区色块过重、日期标签存在感偏强、年/月/日分别占位导致时间轴有四层、菜单面板空而松、状态用符号表达。</p>
+  <p class="learn"><b>对 Serein</b>保留：连续长文、单列纸带、折叠年/月、回到此刻。</p>
+  <footer><span class="tag">S</span><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article></div></section><section class="group" id="01-diary-apps">
+  <h2>日记 App（最直接可借鉴）<span class="count">7 项</span></h2>
+  <p class="gdesc">同为“按时间累积的个人记录”，其信息架构与 Serein 最接近。截图来自 App Store 官方商店页。</p>
+  <div class="grid"><article class="card" data-id="dayone" data-cat="日记 App" data-pr="SF">
+  <header><div class="titles"><h3>Day One</h3>
+    <div class="meta"><span>日记 App</span><span>iOS/iPad/Web</span><span>Bloom Built</span></div></div>
+    <a class="ext" href="https://dayoneapp.com/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/01-diary-apps/dayone-overview.png"><img loading="lazy" src="reference-shots/01-diary-apps/dayone-overview.png" alt="Day One"></a><a class="shot" href="reference-shots/01-diary-apps/dayone-calendar-heatmap.png"><img loading="lazy" src="reference-shots/01-diary-apps/dayone-calendar-heatmap.png" alt="Day One"></a><a class="shot" href="reference-shots/01-diary-apps/dayone-media.png"><img loading="lazy" src="reference-shots/01-diary-apps/dayone-media.png" alt="Day One"></a></div><ul class="caps"><li>列表 / 日历 / 媒体 / 地图四视图，顶部用色带承载身份</li><li>日历热力：每天的缩略图拼成月历，密度制造回忆感</li><li>媒体视图：大图网格作为第二个“阅读入口”</li></ul>
+  <p class="takeaway"><b>看点</b>把‘时间’和‘照片’做成两种等价入口；网格只用 2–3 色块，但把颜色留给内容本身；导航固定在顶部一条窄色带，内容区永远全白。</p>
+  <p class="learn"><b>对 Serein</b>月历热力是日记流最值得借鉴的“导航”；照片缩略图统一正方形、圆角很小（4–6px），比 Serein 现在的大圆角更克制。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="journey" data-cat="日记 App" data-pr="S">
+  <header><div class="titles"><h3>Journey</h3>
+    <div class="meta"><span>日记 App</span><span>iOS/Web</span><span>Two App Studio</span></div></div>
+    <a class="ext" href="https://journey.cloud/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/01-diary-apps/journey-entry-detail.png"><img loading="lazy" src="reference-shots/01-diary-apps/journey-entry-detail.png" alt="Journey"></a><a class="shot" href="reference-shots/01-diary-apps/journey-home.png"><img loading="lazy" src="reference-shots/01-diary-apps/journey-home.png" alt="Journey"></a></div><ul class="caps"><li>单条排版：日期、时间、地点、天气一行元信息 + 圆角卡片正文</li><li>首页用插画与吉祥物建立情绪</li></ul>
+  <p class="takeaway"><b>看点</b>单条记录的元信息被压缩成一行小字（日期 • 时间 • 地点 • 天气），正文用很大行距；卡片圆角与阴影都很轻。</p>
+  <p class="learn"><b>对 Serein</b>“一行元信息”可以替代 Serein 现在日期占一列 + 标题占一行 的结构。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="diarium" data-cat="日记 App" data-pr="SF">
+  <header><div class="titles"><h3>Diarium</h3>
+    <div class="meta"><span>日记 App</span><span>多端</span><span>Timo Partl</span></div></div>
+    <a class="ext" href="https://diariumapp.com/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/01-diary-apps/diarium-calendar.png"><img loading="lazy" src="reference-shots/01-diary-apps/diarium-calendar.png" alt="Diarium"></a><a class="shot" href="reference-shots/01-diary-apps/diarium-timeline.png"><img loading="lazy" src="reference-shots/01-diary-apps/diarium-timeline.png" alt="Diarium"></a></div><ul class="caps"><li>月历格子里直接嵌缩略图</li><li>时间线条目：时间在左，正文在右，无卡片边框</li></ul>
+  <p class="takeaway"><b>看点</b>时间线版本用‘左时间 / 右正文’的两列对齐，与 Serein 的纸带思路接近；它把当日照片烘成背景而非独立组件。</p>
+  <p class="learn"><b>对 Serein</b>Serein 的日报也可用“左侧极小时间 + 右侧正文”替代整块日期列。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="moleskine" data-cat="日记 App" data-pr="S">
+  <header><div class="titles"><h3>Moleskine Journal</h3>
+    <div class="meta"><span>日记 App</span><span>iOS</span><span>Moleskine</span></div></div>
+    <a class="ext" href="https://apps.apple.com/us/app/moleskine-journal/id1489704689" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/01-diary-apps/moleskine-today.png"><img loading="lazy" src="reference-shots/01-diary-apps/moleskine-today.png" alt="Moleskine Journal"></a></div><ul class="caps"><li>“TODAY”卡片：一轮日出弧线 + 大号日期数字</li></ul>
+  <p class="takeaway"><b>看点</b>用一张极简的‘今日’头部卡片（线描太阳、温度、心情）把当天的情绪先讲出来，再进入记录。</p>
+  <p class="learn"><b>对 Serein</b>Serein 的新建条目区可以换成一张安静的‘此刻’卡片，比现在裸露的输入框更有仪式感。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●○○</span></footer>
+</article>
+<article class="card" data-id="dailybean" data-cat="日记 App" data-pr="SM">
+  <header><div class="titles"><h3>DailyBean</h3>
+    <div class="meta"><span>日记 App</span><span>iOS</span><span>BlueSignum</span></div></div>
+    <a class="ext" href="https://apps.apple.com/us/app/dailybean-simplest-journal/id1553223828" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/01-diary-apps/dailybean-mood.png"><img loading="lazy" src="reference-shots/01-diary-apps/dailybean-mood.png" alt="DailyBean"></a></div><ul class="caps"><li>纯图标的心情/天气/习惯选择，文字不是必需</li></ul>
+  <p class="takeaway"><b>看点</b>降低书写门槛：把“今天怎么样”拆成少量图标选择，再补一句文字。</p>
+  <p class="learn"><b>对 Serein</b>可选：Serein 可在新建条目旁提供一行“今天”的心情标记，但它不是日记正文，应可隐藏。</p>
+  <footer><span class="tag">S</span><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●○○</span></footer>
+</article>
+<article class="card" data-id="minimalnotes" data-cat="书写 App" data-pr="S">
+  <header><div class="titles"><h3>Minimal · Notes</h3>
+    <div class="meta"><span>书写 App</span><span>iOS</span><span>Timeless</span></div></div>
+    <a class="ext" href="https://apps.apple.com/us/app/minimal-notes/id1442727443" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/01-diary-apps/minimal-notes-reading.png"><img loading="lazy" src="reference-shots/01-diary-apps/minimal-notes-reading.png" alt="Minimal · Notes"></a></div><ul class="caps"><li>深色阅读界面：只有文字，屏幕边缘渐隐</li></ul>
+  <p class="takeaway"><b>看点</b>纯粹到只剩文字的界面，靠字号、行距和边缘渐隐塑造“冥想感”。</p>
+  <p class="learn"><b>对 Serein</b>边缘渐隐（上下 scroll mask）是让长文更安静的低成本手段，Serein 目前没有。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="diaro" data-cat="日记 App" data-pr="SF">
+  <header><div class="titles"><h3>Diaro</h3>
+    <div class="meta"><span>日记 App</span><span>多端</span><span>Piligrim</span></div></div>
+    <a class="ext" href="https://apps.apple.com/us/app/diary-journal-notes-diaro/id882519460" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/01-diary-apps/diaro-entry-list.png"><img loading="lazy" src="reference-shots/01-diary-apps/diaro-entry-list.png" alt="Diaro"></a></div><ul class="caps"><li>条目列表：时间在左、正文在右、图片缩略图在末行</li></ul>
+  <p class="takeaway"><b>看点</b>列表式排版：每条只占 3–4 行，时间竖排在左侧，是“密集但不乱”的范例。</p>
+  <p class="learn"><b>对 Serein</b>如果 Serein 未来需要更快的月视图，这种密度值得借鉴。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article></div></section><section class="group" id="02-note-web-tools">
+  <h2>笔记与书写工具（Web/桌面为主）<span class="count">12 项</span></h2>
+  <p class="gdesc">Serein 是跑在浏览器里的，这些产品的网页端/桌面端交互最可迁移。</p>
+  <div class="grid"><article class="card" data-id="iawriter" data-cat="书写工具" data-pr="SF">
+  <header><div class="titles"><h3>iA Writer</h3>
+    <div class="meta"><span>书写工具</span><span>macOS/iOS/Web</span><span>iA</span></div></div>
+    <a class="ext" href="https://ia.net/writer" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/01-diary-apps/iawriter-focus-mode.png"><img loading="lazy" src="reference-shots/01-diary-apps/iawriter-focus-mode.png" alt="iA Writer"></a><a class="shot" href="reference-shots/02-note-web-tools/ia-writer-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/ia-writer-home.png" alt="iA Writer"></a></div><ul class="caps"><li>聚焦模式：当前句高亮、其余灰化</li><li>单色排版 + 等宽字体 + 大字距</li></ul>
+  <p class="takeaway"><b>看点</b>‘聚焦模式’把非当前句降到 20% 灰；打字机模式让光标固定在屏幕中线。它证明『减少视觉噪音』可以精确到句子级。</p>
+  <p class="learn"><b>对 Serein</b>Serein 正在写的新条目可以套用句级聚焦，而阅读已封存条目时保持全亮——这正好符合它“新建/封存”的状态模型。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="obsidian" data-cat="笔记工具" data-pr="SM">
+  <header><div class="titles"><h3>Obsidian</h3>
+    <div class="meta"><span>笔记工具</span><span>桌面/iOS</span><span>Dynalist</span></div></div>
+    <a class="ext" href="https://obsidian.md/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/obsidian-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/obsidian-home.png" alt="Obsidian"></a><a class="shot" href="reference-shots/02-note-web-tools/obsidian-editor.png"><img loading="lazy" src="reference-shots/02-note-web-tools/obsidian-editor.png" alt="Obsidian"></a></div><ul class="caps"><li>深色主页：大号无衬线标题 + 淡紫强调色</li><li>编辑区：侧栏与正文用同色不同深度区分</li></ul>
+  <p class="takeaway"><b>看点</b>深色界面里用『同色不同明度』而非实线边框来分区；强调色只出现在一个地方（下载按钮 / 链接）。</p>
+  <p class="learn"><b>对 Serein</b>Serein 若做夜间主题，可直接把纸带/工作区的灰阶关系平移过去，不需要重新设计。</p>
+  <footer><span class="tag">S</span><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="craft" data-cat="笔记工具" data-pr="SF">
+  <header><div class="titles"><h3>Craft</h3>
+    <div class="meta"><span>笔记工具</span><span>macOS/iPad/Web</span><span>Craft Docs</span></div></div>
+    <a class="ext" href="https://www.craft.do/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/craft-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/craft-home.png" alt="Craft"></a><a class="shot" href="reference-shots/02-note-web-tools/craft-ipad.png"><img loading="lazy" src="reference-shots/02-note-web-tools/craft-ipad.png" alt="Craft"></a></div><ul class="caps"><li>主页：柔和插画 + 白色文档卡片浮起</li><li>iPad 端：左侧目录 + 白色文档区 + 彩色卡片</li></ul>
+  <p class="takeaway"><b>看点</b>文档区永远是纯白浮在浅色背景上，四角大圆角 + 极淡阴影；彩色交给用户的内容卡片，界面本身几乎无色。</p>
+  <p class="learn"><b>对 Serein</b>这与 Serein 的‘白纸带浮在深灰底上’同构，只是 Craft 的底色是很浅的暖灰。把 --color-workspace 从 #3f4141 提亮即可获得同样的轻盈感。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="heptabase" data-cat="笔记工具" data-pr="S">
+  <header><div class="titles"><h3>Heptabase</h3>
+    <div class="meta"><span>笔记工具</span><span>macOS/Web</span><span>Hepta Platforms</span></div></div>
+    <a class="ext" href="https://heptabase.com/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/heptabase-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/heptabase-home.png" alt="Heptabase"></a><a class="shot" href="reference-shots/02-note-web-tools/heptabase-ipad.png"><img loading="lazy" src="reference-shots/02-note-web-tools/heptabase-ipad.png" alt="Heptabase"></a></div><ul class="caps"><li>灰白主页 + 大量留白 + 单色强调</li><li>卡片式笔记：白卡、极淡边框、无阴影</li></ul>
+  <p class="takeaway"><b>看点</b>用 #e5e7eb 级别的浅灰做分区，卡片只有 1px 边框、无阴影；蓝色只出现在可交互元素上。</p>
+  <p class="learn"><b>对 Serein</b>‘无阴影页面卡’比全局加阴影更容易在中文正文上保持干净。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="logseq" data-cat="大纲笔记" data-pr="S">
+  <header><div class="titles"><h3>Logseq</h3>
+    <div class="meta"><span>大纲笔记</span><span>桌面/Web</span><span>Logseq Inc.</span></div></div>
+    <a class="ext" href="https://logseq.com/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/logseq-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/logseq-home.png" alt="Logseq"></a></div><ul class="caps"><li>冷灰界面 + 青色强调；列表条目是唯一视觉单元</li></ul>
+  <p class="takeaway"><b>看点</b>日记页 = 当天的一组项目符号列表，时间不是“标签”而是“文档”。</p>
+  <p class="learn"><b>对 Serein</b>如果 Serein 想弱化时间轴，可以试试『按天一页』而非『连续流』，但会牺牲它现在的连续长文体验。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●○○</span></footer>
+</article>
+<article class="card" data-id="reflect" data-cat="每日笔记" data-pr="SF">
+  <header><div class="titles"><h3>Reflect</h3>
+    <div class="meta"><span>每日笔记</span><span>macOS/iOS/Web</span><span>Reflect</span></div></div>
+    <a class="ext" href="https://reflect.app/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/reflect-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/reflect-home.png" alt="Reflect"></a></div><ul class="caps"><li>深色细线插画 + 日期作为唯一的主标题</li></ul>
+  <p class="takeaway"><b>看点</b>整个应用的视觉主线只有一条：日期。左侧列表里日期以『Sun, April 2nd, 2023』形式出现，配一抹紫色细条作为当前位置指示。</p>
+  <p class="learn"><b>对 Serein</b>Serein 已是‘日期驱动的连续流’，Reflect 的‘细竖条 + 日期’可以替代现在的三列日期块。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="notioncalendar" data-cat="时间视图" data-pr="S">
+  <header><div class="titles"><h3>Notion Calendar</h3>
+    <div class="meta"><span>时间视图</span><span>macOS/Web</span><span>Notion</span></div></div>
+    <a class="ext" href="https://www.notion.com/product/calendar" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/notion-calendar-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/notion-calendar-home.png" alt="Notion Calendar"></a></div><ul class="caps"><li>周视图：左侧迷你月历 + 主网格，色浅、线细、密度高</li></ul>
+  <p class="takeaway"><b>看点</b>时间是主角时的最佳密度范例：网格线极淡、周末留白、今天用一个小实心标记而非背景填充。</p>
+  <p class="learn"><b>对 Serein</b>Serein 的侧边日历可以直接取它的参数：7 列、行高 ~2rem、月份标签 12px 加宽字距。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="standardnotes" data-cat="笔记工具" data-pr="S">
+  <header><div class="titles"><h3>Standard Notes</h3>
+    <div class="meta"><span>笔记工具</span><span>多端</span><span>Standard Notes / Proton</span></div></div>
+    <a class="ext" href="https://standardnotes.com/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/standard-notes-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/standard-notes-home.png" alt="Standard Notes"></a></div><ul class="caps"><li>强对比的主视觉；产品界面刻意朴素</li></ul>
+  <p class="takeaway"><b>看点</b>营销页很张扬，但产品界面刻意退到最朴素：白底、系统字体、单色。</p>
+  <p class="learn"><b>对 Serein</b>反面参考：Serein 不需要任何品牌色装饰，产品界面本身就该安静。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●○○</span></footer>
+</article>
+<article class="card" data-id="dillinger" data-cat="Markdown 编辑器" data-pr="S">
+  <header><div class="titles"><h3>Dillinger</h3>
+    <div class="meta"><span>Markdown 编辑器</span><span>Web</span><span>开源</span></div></div>
+    <a class="ext" href="https://dillinger.io/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/dillinger-editor.png"><img loading="lazy" src="reference-shots/02-note-web-tools/dillinger-editor.png" alt="Dillinger"></a></div><ul class="caps"><li>左编辑右预览并列；状态栏在底部显示字数</li></ul>
+  <p class="takeaway"><b>看点</b>分屏会让写作界面永久破碎。</p>
+  <p class="learn"><b>对 Serein</b>反面参考：Serein 应避免“编辑/预览”二分，保持所见即所得的单列。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●○○</span></footer>
+</article>
+<article class="card" data-id="simplenote" data-cat="笔记工具" data-pr="S">
+  <header><div class="titles"><h3>Simplenote</h3>
+    <div class="meta"><span>笔记工具</span><span>多端</span><span>Automattic</span></div></div>
+    <a class="ext" href="https://simplenote.com/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/simplenote-ipad.png"><img loading="lazy" src="reference-shots/02-note-web-tools/simplenote-ipad.png" alt="Simplenote"></a></div><ul class="caps"><li>iPad：左侧列表 + 右侧窄栏正文，无任何装饰</li></ul>
+  <p class="takeaway"><b>看点</b>把“简单”做到极致的反例证明：只保留文字和一条细分割线，也能成立。</p>
+  <p class="learn"><b>对 Serein</b>Serein 的正文宽度（--reading-width 40rem）已接近它的窄栏，可以再窄 10%。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="ulysses" data-cat="书写工具" data-pr="M">
+  <header><div class="titles"><h3>Ulysses</h3>
+    <div class="meta"><span>书写工具</span><span>macOS/iPad</span><span>Ulysses GmbH</span></div></div>
+    <a class="ext" href="https://ulysses.app/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/ulysses-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/ulysses-home.png" alt="Ulysses"></a><a class="shot" href="reference-shots/02-note-web-tools/ulysses-ipad.png"><img loading="lazy" src="reference-shots/02-note-web-tools/ulysses-ipad.png" alt="Ulysses"></a></div><ul class="caps"><li>主页：浅灰 + 黄色点缀 + 设备倾斜预览</li><li>三栏：库 / 侧栏 / 编辑器，标题区信息密集</li></ul>
+  <p class="takeaway"><b>看点</b>面向“写作流程”：字数、目标、章节目录被做成侧栏，但正文区域始终是无边框白纸。</p>
+  <p class="learn"><b>对 Serein</b>长日记需要“写作目标/字数”时，可以参考它把统计放进侧栏而不是压到正文上。</p>
+  <footer><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="capacities" data-cat="笔记工具" data-pr="S">
+  <header><div class="titles"><h3>Capacities</h3>
+    <div class="meta"><span>笔记工具</span><span>多端</span><span>Capacities</span></div></div>
+    <a class="ext" href="https://capacities.io/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/02-note-web-tools/capacities-home.png"><img loading="lazy" src="reference-shots/02-note-web-tools/capacities-home.png" alt="Capacities"></a></div><ul class="caps"><li>淡黄底色 + 衬线大标题 + 漂浮的功能卡片</li></ul>
+  <p class="takeaway"><b>看点</b>大面积暖底 + 一个高饱和强调块，很容易显得“贵”，但也容易喧宾夺主。</p>
+  <p class="learn"><b>对 Serein</b>暖底可以借鉴，饱和强调块不建议引入到 Serein 的阅读界面。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●○○</span></footer>
+</article></div></section><section class="group" id="03-typography-ui">
+  <h2>排版与界面细节（实测样张）<span class="count">10 项</span></h2>
+  <p class="gdesc">把“优雅与简洁”拆成可测量的部分：字体、字号、留白、时间表达、状态表达。</p>
+  <div class="grid"><article class="card" data-id="apple" data-cat="排版参考" data-pr="S">
+  <header><div class="titles"><h3>Apple Newsroom / 编辑排版</h3>
+    <div class="meta"><span>排版参考</span><span>Web</span><span>Apple</span></div></div>
+    <a class="ext" href="https://www.apple.com/newsroom/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/apple-newsroom.png"><img loading="lazy" src="reference-shots/03-typography-ui/apple-newsroom.png" alt="Apple Newsroom / 编辑排版"></a></div><ul class="caps"><li>大号标题 + 负字距 + 灰层级：信息量很大仍显干净</li></ul>
+  <p class="takeaway"><b>看点</b>Apple 的姿态：字号拉开层级（12/17/34/60px），每级都有独立的字距（-0.12px 到 -1.2px），颜色只用灰阶与一个强调蓝。</p>
+  <p class="learn"><b>对 Serein</b>中文不适合负字距，但『字号层级 + 灰阶层级』这件事可以完整照搬。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="iatypography" data-cat="排版参考" data-pr="SF">
+  <header><div class="titles"><h3>iA · 排版宣言</h3>
+    <div class="meta"><span>排版参考</span><span>Web</span><span>iA</span></div></div>
+    <a class="ext" href="https://ia.net/" target="_blank" rel="noopener">打开原站 ↗</a></header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/ia-net-home.png"><img loading="lazy" src="reference-shots/03-typography-ui/ia-net-home.png" alt="iA · 排版宣言"></a></div><ul class="caps"><li>高亮当前行、灰化其余行；界面元素全部收敛成一个悬浮按钮组</li></ul>
+  <p class="takeaway"><b>看点</b>把“正在做的事”高亮，其余全部退后——这是 iA 全部哲学。</p>
+  <p class="learn"><b>对 Serein</b>Serein 写作时可以只让新条目全黑，其余条目降到 #b8b3a6 附近（约 55% 亮度）。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="typespec" data-cat="排版参考" data-pr="M">
+  <header><div class="titles"><h3>字体配对实测</h3>
+    <div class="meta"><span>排版参考</span><span>实测</span><span>本项目实测</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/type-pairs-specimen.png"><img loading="lazy" src="reference-shots/03-typography-ui/type-pairs-specimen.png" alt="字体配对实测"></a></div><ul class="caps"><li>6 种衬线/黑体在中英混排下的表现</li></ul>
+  <p class="takeaway"><b>看点</b>Georgia 与 Nimbus Roman 的拉丁字形明显优于 Times New Roman；中文部分在无 Noto Serif SC 时只能回退到黑体。</p>
+  <p class="learn"><b>对 Serein</b>Serein 的 --font-reading 目前首位是 Times New Roman（浏览器里会被替换成较窄的 Times 系），建议改为 Georgia 或自托管衬线模板。</p>
+  <footer><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="scalespec" data-cat="排版参考" data-pr="SM">
+  <header><div class="titles"><h3>字号与行高的节奏</h3>
+    <div class="meta"><span>排版参考</span><span>实测</span><span>本项目实测</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/type-scale-specimen.png"><img loading="lazy" src="reference-shots/03-typography-ui/type-scale-specimen.png" alt="字号与行高的节奏"></a></div><ul class="caps"><li>同一段文字在 5 种字号/行高下的疏密</li></ul>
+  <p class="takeaway"><b>看点</b>Serein 现在 20px/48px（行高 2.4 倍）在中英混排里偏空，汉字之间像被拉开；参考对象普遍在 1.6–1.9 倍。</p>
+  <p class="learn"><b>对 Serein</b>建议正文 17–18px / 行高 1.75–1.9，每段之间 0.8–1.2em。</p>
+  <footer><span class="tag">S</span><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="rhythmspec" data-cat="排版参考" data-pr="S">
+  <header><div class="titles"><h3>段落节奏的三种态度</h3>
+    <div class="meta"><span>排版参考</span><span>实测</span><span>本项目实测</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/rhythm-specimen.png"><img loading="lazy" src="reference-shots/03-typography-ui/rhythm-specimen.png" alt="段落节奏的三种态度"></a></div><ul class="caps"><li>连续散文 / 宽松段距 / 日记体空行</li></ul>
+  <p class="takeaway"><b>看点</b>日记体的空行（句群独立）比段间距更能表达“一天里零散的念头”。</p>
+  <p class="learn"><b>对 Serein</b>新条目写作时可允许“空行即分段”，渲染时不再额外加段间距。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="quietspec" data-cat="排版参考" data-pr="S">
+  <header><div class="titles"><h3>安静的状态表达</h3>
+    <div class="meta"><span>排版参考</span><span>实测</span><span>本项目实测</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/quiet-ui-specimen.png"><img loading="lazy" src="reference-shots/03-typography-ui/quiet-ui-specimen.png" alt="安静的状态表达"></a></div><ul class="caps"><li>保存状态、时间层级、新建区的轻量方案</li></ul>
+  <p class="takeaway"><b>看点</b>年/月/日用递减字号即可表达层级，不需要三列常驻；保存状态用圆点或灰度，不用红绿勾叉。</p>
+  <p class="learn"><b>对 Serein</b>Serein 条目操作区现在是 ○ × ✓ 三个符号（并带红绿），可改为灰度文字按钮 + 悬停出现。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="surfaces" data-cat="排版参考" data-pr="S">
+  <header><div class="titles"><h3>纸面底色 vs 深色工作区</h3>
+    <div class="meta"><span>排版参考</span><span>实测</span><span>本项目实测</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/surfaces-specimen.png"><img loading="lazy" src="reference-shots/03-typography-ui/surfaces-specimen.png" alt="纸面底色 vs 深色工作区"></a></div><ul class="caps"><li>6 种页面底色在同一段文字上的效果</li></ul>
+  <p class="takeaway"><b>看点</b>深色工作区（#3f4141）会与纸带形成强对比，把注意力吸到两侧空白；浅暖灰工作区（#f4f2ec）能让纸带‘浮起来’而不抢戏。</p>
+  <p class="learn"><b>对 Serein</b>核心建议：--color-workspace 从 #3f4141 改为 #f4f2ec，#color-page 改为 #fdfcfa。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="timeaxis" data-cat="排版参考" data-pr="SM">
+  <header><div class="titles"><h3>时间轴的三种在场程度</h3>
+    <div class="meta"><span>排版参考</span><span>实测</span><span>本项目实测</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/time-axis-specimen.png"><img loading="lazy" src="reference-shots/03-typography-ui/time-axis-specimen.png" alt="时间轴的三种在场程度"></a></div><ul class="caps"><li>无刻度 / 细刻度+月份分隔 / 时间缩进页边</li></ul>
+  <p class="takeaway"><b>看点</b>日期可以从‘三列常驻’降为‘页边的小刻度’或‘每月一条分隔线’，正文回到视觉中心。</p>
+  <p class="learn"><b>对 Serein</b>Serein 的 --year-control-width 等四个宽度 token 可合并成单一 2.5rem 的页边栏。</p>
+  <footer><span class="tag">S</span><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="cards" data-cat="排版参考" data-pr="SF">
+  <header><div class="titles"><h3>条目的三种形态</h3>
+    <div class="meta"><span>排版参考</span><span>实测</span><span>本项目实测</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/card-patterns-specimen.png"><img loading="lazy" src="reference-shots/03-typography-ui/card-patterns-specimen.png" alt="条目的三种形态"></a></div><ul class="caps"><li>卡片 / 分隔线+侧色条 / 双列瀑布</li></ul>
+  <p class="takeaway"><b>看点</b>卡片化会切断“连续长文”，但能立刻制造秩序；分隔线方案介于两者之间，最适合‘连续日记流’的定位。</p>
+  <p class="learn"><b>对 Serein</b>建议只在‘同一天有多条’时加一条极淡分隔线，跨天不加。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="states" data-cat="排版参考" data-pr="SF">
+  <header><div class="titles"><h3>状态与微交互的轻量方案</h3>
+    <div class="meta"><span>排版参考</span><span>实测</span><span>本项目实测</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/03-typography-ui/states-specimen.png"><img loading="lazy" src="reference-shots/03-typography-ui/states-specimen.png" alt="状态与微交互的轻量方案"></a></div><ul class="caps"><li>保存点阵、顶部进度条、格式气泡、灰色按钮、悬停操作</li></ul>
+  <p class="takeaway"><b>看点</b>流畅感来自‘轻反馈 + 不占位’：顶部 2px 进度条、点阵保存指示、悬停出现的操作、选中文字后的浮动格式栏。</p>
+  <p class="learn"><b>对 Serein</b>直接把 4.6 节写成可实现的交互清单，每一项都不增加常驻界面元素。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article></div></section><section class="group" id="04-serein-experiments">
+  <h2>Serein 现实效果实验<span class="count">10 项</span></h2>
+  <p class="gdesc">把参考中的做法直接注入真实 Serein（mock 数据）截图，验证观感而不是空想。</p>
+  <div class="grid"><article class="card" data-id="exp-a" data-cat="Serein 实验" data-pr="S">
+  <header><div class="titles"><h3>实验 A · 纯纸页</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（真实 Serein 注入 CSS）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-a-paper-page.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-a-paper-page.png" alt="实验 A · 纯纸页"></a><a class="shot" href="reference-shots/04-serein-experiments/exp-a-paper-page-mobile.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-a-paper-page-mobile.png" alt="实验 A · 纯纸页"></a></div><ul class="caps"><li>去掉深色工作区与时间轴存在感，正文居中上限 34rem</li><li>移动端：日期只留一行小字</li></ul>
+  <p class="takeaway"><b>看点</b>只把工作区改浅、正文收窄，界面立刻从“应用”变成“纸张”。</p>
+  <p class="learn"><b>对 Serein</b>这是成本最低、收益最大的一步。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="exp-b" data-cat="Serein 实验" data-pr="S">
+  <header><div class="titles"><h3>实验 B · 竖线时间轴</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（真实 Serein 注入 CSS）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-b-vertical-rail.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-b-vertical-rail.png" alt="实验 B · 竖线时间轴"></a></div><ul class="caps"><li>左侧一条 1px 竖线 + 条目圆点</li></ul>
+  <p class="takeaway"><b>看点</b>竖线给出“时间在流动”的暗示，但圆点与日期要克制，否则会像待办清单。</p>
+  <p class="learn"><b>对 Serein</b>若保留时间轴，建议比此实验再淡一档（线 #eeeae0、点 #d8d3c6）。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="exp-c" data-cat="Serein 实验" data-pr="S">
+  <header><div class="titles"><h3>实验 C · 卡片化</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（真实 Serein 注入 CSS）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-c-cards.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-c-cards.png" alt="实验 C · 卡片化"></a></div><ul class="caps"><li>每条一张白卡，14px 圆角 + 极淡阴影</li></ul>
+  <p class="takeaway"><b>看点</b>秩序感最强，但与 Serein“把条目当作一篇长文阅读”的原则冲突。</p>
+  <p class="learn"><b>对 Serein</b>不建议用于阅读流；可用于未来的“月视图/搜索页”。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="exp-d" data-cat="Serein 实验" data-pr="SF">
+  <header><div class="titles"><h3>实验 D · 条目细分隔线</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（真实 Serein 注入 CSS）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-d-entry-rules.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-d-entry-rules.png" alt="实验 D · 条目细分隔线"></a></div><ul class="caps"><li>每条底部一条 #eeeae0 细线，压缩大段留白</li></ul>
+  <p class="takeaway"><b>看点</b>用 1px 线代替 40px 留白，可以在同一屏放下更多内容而不显拥挤。</p>
+  <p class="learn"><b>对 Serein</b>与实验 A 叠加时效果最好。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="exp-e" data-cat="Serein 实验" data-pr="S">
+  <header><div class="titles"><h3>实验 E · 月分隔线</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（真实 Serein 注入 CSS）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-e-month-rule.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-e-month-rule.png" alt="实验 E · 月分隔线"></a></div><ul class="caps"><li>月份变成一条横线 + 小字，替代左侧大号数字</li></ul>
+  <p class="takeaway"><b>看点</b>“六月”只在换月时出现一次，比常驻左栏更符合“长文分页”的直觉。</p>
+  <p class="learn"><b>对 Serein</b>年标签可进一步降为 10px 全大写/加宽字距。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="exp-f" data-cat="Serein 实验" data-pr="SM">
+  <header><div class="titles"><h3>实验 F · 中文衬线 Webfont</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（Noto Serif SC）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-f-serif-webfont.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-f-serif-webfont.png" alt="实验 F · 中文衬线 Webfont"></a><a class="shot" href="reference-shots/04-serein-experiments/exp-f-serif-webfont-mobile.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-f-serif-webfont-mobile.png" alt="实验 F · 中文衬线 Webfont"></a></div><ul class="caps"><li>思源宋体 400/600，17px/2.1 行高</li><li>同一方案在 390px 宽下的效果</li></ul>
+  <p class="takeaway"><b>看点</b>衬线中文一上身，整体立刻有“纸”的味道；标题改用 600 权重即可撑住层级。</p>
+  <p class="learn"><b>对 Serein</b>代价是字体文件体积（Google Fonts 按 unicode-range 切片，中文首屏约 1–3MB）；可仅对正文启用，并为不支持的环境保留回退栈。</p>
+  <footer><span class="tag">S</span><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article>
+<article class="card" data-id="exp-g" data-cat="Serein 实验" data-pr="S">
+  <header><div class="titles"><h3>实验 G · 楷体 Webfont</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（LXGW WenKai）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-g-kai-webfont.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-g-kai-webfont.png" alt="实验 G · 楷体 Webfont"></a></div><ul class="caps"><li>霞鹜文楷，20px/2.15 行高</li></ul>
+  <p class="takeaway"><b>看点</b>楷体最有“手写日记”的温度，但在小字号下笔画细、对比度低，读数略慢。</p>
+  <p class="learn"><b>对 Serein</b>适合标题/引文，不适合作为长正文唯一字体。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="exp-h" data-cat="Serein 实验" data-pr="S">
+  <header><div class="titles"><h3>实验 H · 黑体/无衬线</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（Noto Sans SC）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-h-sans-webfont.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-h-sans-webfont.png" alt="实验 H · 黑体/无衬线"></a></div><ul class="caps"><li>思源黑体 400，17px/2.0 行高</li></ul>
+  <p class="takeaway"><b>看点</b>最中性、最耐读，但丢掉“日记”的文学感；与 Notion 系产品同质。</p>
+  <p class="learn"><b>对 Serein</b>适合作 UI 字体（--font-ui），正文仍建议衬线。</p>
+  <footer><span class="tag">S</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="exp-i" data-cat="Serein 实验" data-pr="SM">
+  <header><div class="titles"><h3>实验 I · 衬线标题 + 黑体正文</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（混合字体栈）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-i-dynamic-type.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-i-dynamic-type.png" alt="实验 I · 衬线标题 + 黑体正文"></a></div><ul class="caps"><li>标题/引文用宋体，正文用黑体</li></ul>
+  <p class="takeaway"><b>看点</b>信息层级最清楚，适合“标题—正文”差异大的日记；但正文的文学感弱于实验 F。</p>
+  <p class="learn"><b>对 Serein</b>若某天想提高密度与可读性，可直接切到这套组合。</p>
+  <footer><span class="tag">S</span><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●●○</span></footer>
+</article>
+<article class="card" data-id="exp-lean" data-cat="Serein 实验" data-pr="SFM">
+  <header><div class="titles"><h3>综合方向 · 瘦身版</h3>
+    <div class="meta"><span>Serein 实验</span><span>Web</span><span>本项目截图（以上实验的叠加）</span></div></div>
+    </header>
+  <div class="shots"><a class="shot" href="reference-shots/04-serein-experiments/exp-lean-direction.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-lean-direction.png" alt="综合方向 · 瘦身版"></a><a class="shot" href="reference-shots/04-serein-experiments/exp-lean-calendar.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-lean-calendar.png" alt="综合方向 · 瘦身版"></a><a class="shot" href="reference-shots/04-serein-experiments/exp-lean-direction-mobile.png"><img loading="lazy" src="reference-shots/04-serein-experiments/exp-lean-direction-mobile.png" alt="综合方向 · 瘦身版"></a></div><ul class="caps"><li>浅工作区 + 衬线正文 + 页边日期 + 降噪时间轴</li><li>日历：每格缩小、有日记的日期仅加一个小圆点</li><li>移动端同款</li></ul>
+  <p class="takeaway"><b>看点</b>这是把 A/D/E/F 与日历微调叠加后的结果：时间轴退到页边、纸张变浅、正文变衬线、日历不再满屏方块。</p>
+  <p class="learn"><b>对 Serein</b>落地时可以只取其中 3 项，不必一次全改。</p>
+  <footer><span class="tag">S</span><span class="tag">F</span><span class="tag">M</span><span class="scale" title="迁移度">迁移度 ●●●</span></footer>
+</article></div></section>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  Array.prototype.forEach.call(document.querySelectorAll('img'), function (img) {
+    function report() {
+      if (img.naturalWidth === 0 && !img.classList.contains('missing')) {
+        img.classList.add('missing');
+        img.alt = '缺失：' + img.getAttribute('src');
+        img.parentElement.classList.add('missing');
+      }
+    }
+    if (img.complete) { report(); } else { img.addEventListener('load', report); }
+  });
+});
+</script>
+<p class="hint">说明：实验区截图是在 Serein 现有代码上临时注入 CSS 得到的视觉验证，不代表已经实现的代码。<br>
+外部站点的截图与素材版权归各自所有者，仅作个人设计参考使用。</p>
+</div></body></html>

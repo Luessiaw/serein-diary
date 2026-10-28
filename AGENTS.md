@@ -41,6 +41,7 @@ configuration names, or deployment scripts.
 | Data contract, storage, index, or migration | `docs/data-contract-v1.md`, then `docs/p4-storage-handoff.md` |
 | Formal API, frontend adapter, comments, or media | `docs/p5-api-frontend-contract.md`, then `docs/p4-storage-handoff.md` |
 | Frontend layout, alignment, or visual spacing | `docs/layout.md`, then `frontend/styles/tokens.css` |
+| Visual/interaction redesign research (external references, screenshots) | `docs/visual-references.md`, then `docs/reference-gallery.html` |
 | Tiptap/editor experiments | `docs/tiptap-experiment.md` |
 | Importing the historical Portal prototype | `docs/migration.md` |
 | Docker/Caddy or static deployment | `docs/deployment.md`, then `compose.yaml`, `deploy/Caddyfile` |
