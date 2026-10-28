@@ -43,6 +43,7 @@ configuration names, or deployment scripts.
 | Frontend layout, alignment, or visual spacing | `docs/layout.md`, then `frontend/styles/tokens.css` |
 | Visual/interaction redesign research (external references, screenshots) | `docs/visual-references.md`, then `docs/reference-gallery.html` |
 | Tiptap/editor experiments | `docs/tiptap-experiment.md` |
+| Self-hosted "local Notion" alternatives (AFFiNE, AppFlowy, SiYuan, Docmost, Outline) | `docs/notion-alternatives-research.md` |
 | Importing the historical Portal prototype | `docs/migration.md` |
 | Docker/Caddy or static deployment | `docs/deployment.md`, then `compose.yaml`, `deploy/Caddyfile` |
 | Historical product task state | `docs/tasks.csv`, then `docs/dev-handoff.md` |
