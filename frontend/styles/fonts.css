@@ -1,0 +1,45 @@
+/*
+ * Serein 标题楷体与正文衬线的 webfont 兜底。
+ *
+ * 只在这里定义字体面，字体栈本身仍由 tokens.css 决定：每个字体栈都先试本地
+ * 字体，最后才落到 `Serein Serif` / `Serein Kai`。因此：
+ *
+ * - 断网、隐私设置屏蔽第三方字体或字体尚未加载时，回退到系统字体；
+ * - 日记正文不会因为字体请求失败而消失。
+ *
+ * 代价与取舍：
+ * - 两族字体都只在被实际使用到时才下载，但中文字盘点阵字体首屏仍有数 MB。
+ *   若在意体积或希望完全离线，可把本文件整体删除（或去掉下面两个 @import），
+ *   应用会自动退回系统字体，布局不会改变。
+ * - Google Fonts 只返回 CSS，真正的字体文件仍由 fonts.gstatic.com 提供；本应用
+ *   不向第三方发送日记内容，仅暴露“本页使用了某字体”。
+ *
+ * `display: swap` 让回退字体先显示，避免首屏空白；加载完成后无缝替换。
+ * 只取 400 一个字重：标题需要的 500/600 由浏览器轻微合成，比再加载一套
+ * 字重更轻，也更不容易在中文字上出现笔画发糊。
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400&display=swap");
+
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400&display=swap");
+
+/*
+ * 这两个 @font-face 只声明本地回退，不引入新的下载：当上面的 @import 失败
+ * （离线、被屏蔽）时，`Serein Kai` / `Serein Serif` 仍会解析为一个已知的
+ * 本地衬线字体，避免字体栈尾部出现“无声的兜底字体”。
+ */
+@font-face {
+  font-family: "Serein Kai";
+  src: local("LXGW WenKai TC"), local("Noto Serif SC"), local("Songti SC");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Serein Serif";
+  src: local("Noto Serif SC"), local("Songti SC"), local("STSong");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

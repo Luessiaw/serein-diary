@@ -131,15 +131,15 @@ Box-year
 
 ```css
 --reading-width: 35rem;
---year-control-width: 4.5rem;
---month-control-width: 3rem;
---date-control-width: 3rem;
+--year-control-width: 3.75rem;
+--month-control-width: 2.75rem;
+--date-control-width: 3.25rem;
 --year-month-inline-gap: var(--space-3);
 --month-date-inline-gap: var(--space-3);
 --date-content-gap: clamp(0.75rem, 2vw, 1.5rem);
 --reading-paper-inline-padding: var(--space-3);
 --page-gutter: clamp(1rem, 4vw, 3rem);
---color-workspace: #3f4141;
+--color-workspace: #f4f2ec;
 --panel-width: 26rem;
 --panel-height: 34rem;
 ```
@@ -153,7 +153,9 @@ Box-year
 - `--date-content-gap`：旧版日期列与正文列之间的横向距离；当前仅影响时间轴兼容计算。
 - `--reading-paper-inline-padding`：宽屏下正文纸带内部的左右留白。
 - `--page-gutter`：整个滚动区左右边距，主要防止窄屏贴边。
-- `--color-workspace`：宽屏下中央浅色日记带之外的工作区背景色。
+- `--color-workspace`：宽屏下中央浅色日记带之外的工作区背景色。默认 `#f4f2ec`
+  与纸带 `#fdfcfa` 只差一档明度，让纸带以极小对比浮起；不要改回深色，深灰会把
+  视觉中心从正文移到两侧空白。
 - `--panel-width`：中央面板外框宽度。
 - `--panel-height`：中央面板外框高度。
 
@@ -176,12 +178,15 @@ Box-year
 分别处在嵌套 grid 的真实列中，因此优先改这些 token，而不是直接给
 `.diary-entry`、`.diary-month` 或 `.diary-year` 增加横向 padding。
 
-宽屏布局中，`.diary-scroll-region` 和 `.diary-feed` 使用 `--color-workspace` 作为
-页面外侧工作区。浅色阅读带从正文纸带开始，宽度由 `--reading-paper-width` 计算：
-“正文列 + 左右内部留白”。年份、月份列以及右侧
-对应的镜像区域保持深灰，形成类似文档编辑器的中央阅读带。年份内容容器也绘制同一
-条浅色阅读带，以填满相邻月份之间的间隔。窄屏布局继续使用全浅色背景，避免手机
+宽屏布局中，`.diary-scroll-region` 使用 `--color-workspace` 作为页面外侧工作区。
+浅色阅读带从正文纸带开始，宽度由 `--reading-paper-width` 计算：
+“正文列 + 左右内部留白”。年份、月份刻度以及右侧对应的镜像区域保持桌面色，
+靠一档明度差形成中央阅读带，而不是靠深色对比。年份内容容器也绘制同一
+条浅色阅读带，以填满相邻月份之间的间隔。窄屏布局继续使用单一纸带色，避免手机
 阅读区域被额外框住。
+
+年、月刻度在宽屏位于桌面上，它们的 sticky 背景必须与桌面同色（`base.css` 中
+用 `var(--color-workspace)`），否则滚动时会露出纸带色缝隙。
 
 ## 纵向对齐参数
 
@@ -241,14 +246,18 @@ Box-year
 这些 token 影响年、月、日的实际视觉高度：
 
 ```css
---font-size-year: 1.2rem;
---font-size-month: 1.2rem;
---font-size-date: 1.2rem;
---font-size-entry-time: 0.78rem;
---letter-spacing-date: 0.08em;
+--font-size-year: 0.8rem;
+--font-size-month: 0.74rem;
+--font-size-date: 1.05rem;
+--font-size-entry-time: 0.7rem;
+--letter-spacing-date: 0.06em;
+--letter-spacing-year: 0.3em;
+--letter-spacing-month: 0.16em;
 ```
 
-- 年、月、日可以独立控制字号，即使当前默认一致。
+- 年、月、日三者字号不同：年是页边最小的刻度，日是正文旁的主要时间标记。
+- 年、月使用加宽字距承担“刻度”气质；`--letter-spacing-date` 保持较紧，
+  避免两位数日期在窄列里换行。
 - 同日多篇日记时，时间显示为日期下方第二行，由 `--font-size-entry-time` 控制。
 - `--letter-spacing-date` 会影响日期数字宽度和视觉密度。
 
@@ -363,6 +372,9 @@ copy(JSON.stringify(SereinDebugLayout.inspect(), null, 2))
 `frontend/assets/pull-arrow.png`。图片默认为展开状态的下拉箭头；折叠状态通过
 旋转同一张图片实现。折叠状态由 `.diary-year[data-open="false"]` 和
 `.diary-month[data-open="false"]` 触发。
+
+年份不显示箭头：在宽屏它位于桌面左缘，箭头会挤占留白并让“2026”贴住窗口。
+折叠功能本身保留（整个年份摘要仍是按钮，`aria-expanded` 不变）。
 
 需要微调图标时，优先修改 `base.css` 中 `.diary-group-summary` 的这一组局部变量：
 
