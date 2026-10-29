@@ -36,6 +36,19 @@ info()  { printf '  INFO: %s\n' "$1"; }
 
 need() { command -v "$1" >/dev/null 2>&1; }
 
+# 目录的 other 位必须同时有 r 与 x。返回 0 表示有缺失，并打印缺掉的那几个字母。
+# 用八进制 mode 的个位数取 other 三位：r=4、w=2、x=1。
+dir_other_missing() {
+  local mode=$1 other missing=""
+  # 只取后三位再看个位：mode 可能是 2775 这种带 setgid 的四位形式，
+  # 直接的 `8#2775` 会把 2775 当成八进制数值再取模，结果仍然对不上。
+  other=$(( 10#${mode: -1} ))
+  (( (other & 4) == 0 )) && missing="${missing}r"
+  (( (other & 1) == 0 )) && missing="${missing}x"
+  [[ -n "$missing" ]] || return 1
+  printf '%s' "$missing"
+}
+
 # 在 api 镜像里跑一条只读命令。镜像不存在时直接失败，绝不触发构建。
 #
 # `run --no-build` 只有较新的 compose 才支持；旧版本会直接报
@@ -248,13 +261,24 @@ stage "8. 构建上下文权限（容器以 uid 1000 运行，不等于你的用
 # 只检查真正进入构建上下文的路径：backend/.dockerignore 排除了 __pycache__、
 # .venv、tests 等，它们缺 other 权限也不会影响构建，报出来只是噪音。
 #
-# 容器读到源码需要两级都满足：父目录 other 可穿越（x），文件 other 可读（r）。
+# 目录需要 other 位同时具备 r 与 x，而且两个缺一不可：
+#   - x 决定能否按已知文件名打开它下面的文件；
+#   - r 决定能否**列出目录内容**，而 import 一个包时要靠列目录发现子模块。
+# 2026-10-29 的事故就是这个判据写窄了：`serein/api/` 曾是 drwxrws--x（2711），
+# 有 x 但没有 r，脚本用 `-perm -o+x` 判它合格，实际容器里
+# `from . import auth` 直接 ImportError。只查可执行位会放过这一类故障。
+#
 # 目录属主是 luessiaw，agent 本人改不动，必须由用户执行 chmod。
 build_dirs=$(find backend/serein -type d \
   -not -path '*/__pycache__' -not -path '*/__pycache__/*' 2>/dev/null)
-bad_dirs=$(printf '%s\n' "$build_dirs" | while read -r d; do
-  [[ -n "$d" ]] && [[ ! -x "$d" ]] && printf '%s\n' "$d"
-done)
+bad_dirs=""
+for d in $build_dirs; do
+  mode=$(stat -c '%a' "$d" 2>/dev/null)
+  if missing=$(dir_other_missing "$mode"); then
+    bad_dirs="${bad_dirs}${mode} ${d} (缺 o${missing})"$'\n'
+  fi
+done
+
 bad_files=$(find backend/serein -type f -name '*.py' \
   -not -path '*/__pycache__/*' ! -perm -o+r 2>/dev/null)
 top_bad=$(find backend -maxdepth 1 -type f \( -name 'Dockerfile' -o -name 'pyproject.toml' -o -name '.dockerignore' \) ! -perm -o+r 2>/dev/null)
@@ -262,17 +286,47 @@ bad_files=$(printf '%s\n%s\n' "$bad_files" "$top_bad")
 bad_files=$(printf '%s\n' "$bad_files" | sed '/^$/d')
 
 if [[ -z "$bad_dirs" && -z "$bad_files" ]]; then
-  pass "构建上下文完整可读（父目录可穿越、源码与构建文件可读）"
+  pass "构建上下文完整可读（目录 other 位 r+x 齐全、源码与构建文件可读）"
   info "__pycache__ 已按 .dockerignore 排除，不参与判断"
 else
+  [[ -n "$bad_dirs" ]] && fail "这些目录的 other 位缺 r 或 x（需你本人执行，见下方命令）:"
+  [[ -n "$bad_dirs" ]] && printf '%s' "$bad_dirs" | sed 's/^/    /'
+  [[ -n "$bad_files" ]] && fail "这些文件缺 o+r:"
+  [[ -n "$bad_files" ]] && printf '%s\n' "$bad_files" | sed 's/^/    /'
   if [[ -n "$bad_dirs" ]]; then
-    fail "这些目录缺 o+x（属主是 luessiaw，需要你本人执行 chmod o+x <这些目录>）:"
-    printf '%s\n' "$bad_dirs" | sed 's/^/    /'
+    info "修法（在仓库根执行）：chmod o+rX backend/serein backend/serein/*/ 2>/dev/null"
   fi
-  if [[ -n "$bad_files" ]]; then
-    fail "这些源码缺 o+r:"
-    printf '%s\n' "$bad_files" | sed 's/^/    /'
-  fi
+fi
+
+# ---------------------------------------------------------------- 9 镜像内以容器身份验
+stage "9. 用容器真实身份（uid 1000）在镜像内导入一次"
+#
+# 这是整套检查里最有说服力的一条：`docker run` 默认以 root 运行，而容器里
+# compose 配的是 `user: 1000:1000`。root 能读任何东西，所以 `docker run` 的
+# 冒烟测试**通过并不能证明容器能起来**——2026-10-29 就是这样被误导的。
+#
+# 只导入 serein.api 而不导入 serein.main：main.py 在模块级调用 create_app()，
+# 会要求 DIARY_DATA_DIR 等配置，导入它得到的 ConfigError 与本次问题无关。
+if [[ $IMAGE_READY -eq 0 ]]; then
+  warn "跳过：api 镜像不存在"
+else
+  # `docker compose config` 会展开 ${DIARY_API_UID:-1000}；若它不可用，就退回
+  # 直接读 .env，再退回 1000（与 compose.yaml 的默认值一致）。取不到数字时
+  # 一律当 1000，绝不要把 "${DIARY_API_UID" 这种字面量当 uid 传给 --user。
+  api_uid=$(docker compose config 2>/dev/null | awk '/^  api:/{f=1} f && /^    user:/{print $2; exit}' | tr -d '"' | cut -d: -f1)
+  [[ "$api_uid" =~ ^[0-9]+$ ]] || api_uid=$(read_env_key DIARY_API_UID)
+  [[ "$api_uid" =~ ^[0-9]+$ ]] || api_uid=1000
+  info "将用 uid ${api_uid} 验证（compose.yaml 的 user 字段）"
+  smoke=$(docker run --rm --user "${api_uid}:${api_uid}" --entrypoint python "$image" \
+    -c 'import serein.api; print("ok")' 2>&1 | tail -3)
+  case "$smoke" in
+    ok) pass "以 uid ${api_uid} 导入 serein.api 成功" ;;
+    *)
+      fail "以 uid ${api_uid} 导入 serein.api 失败（root 能过不代表容器能过）:"
+      printf '%s\n' "$smoke" | sed 's/^/    /'
+      info "根因多在目录 other 位缺 r（import 需要列目录），见第 8 段"
+      ;;
+  esac
 fi
 
 # ---------------------------------------------------------------- 汇总
@@ -288,6 +342,7 @@ cat <<'EOF'
     - 配置校验失败（ConfigError） → 看它点名哪个环境变量；Immich 可先设
       DIARY_IMMICH_ENABLED=false 做二分
     - /data 不可写               → .env 里设 DIARY_API_UID / DIARY_API_GID 让容器用你的身份
-    - 构建上下文缺 other 权限     → 由 luessiaw 本人 chmod o+x 相应目录
+    - 构建上下文缺 other 权限     → 由 luessiaw 本人 chmod o+rX 相应目录
+      （目录必须 r 与 x 齐全：只给 x 能让 ls 通过，但 import 仍会失败）
 EOF
 exit 1
