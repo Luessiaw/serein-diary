@@ -1233,8 +1233,10 @@ body[data-sidebar-open="true"] .app-sidebar {
   justify-content: center;
   block-size: 1.15rem;
   padding-inline: var(--space-2);
-  border-radius: calc(var(--entry-ai-card-radius) * 0.5);
-  background: var(--color-entry-ai-badge);
+  border-radius: 999px;
+  /* 半透明底衬把白字托起来：角标本身不带实底，只是让它不至于直接压在浅卡片上
+     失去对比度。圆形而非圆角矩形，读起来更像一个轻标记而不是按钮。 */
+  background: var(--color-entry-ai-badge-scrim);
   color: var(--color-entry-ai-badge-text);
   font-family: var(--font-ui);
   font-size: var(--font-size-entry-ai-badge);

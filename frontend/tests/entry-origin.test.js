@@ -57,26 +57,53 @@ test("ai entries get a distinct surface while human entries keep none", () => {
   );
 });
 
-test("badge colours come from tokens and stay legible", () => {
-  const badgeBg = tokenCss.match(/--color-entry-ai-badge:\s*(#[0-9a-fA-F]{6})/);
+test("badge stays legible on the ai card surface", () => {
+  const surface = tokenCss.match(/--color-entry-ai-surface:\s*(#[0-9a-fA-F]{6})/);
+  const scrim = tokenCss.match(/--color-entry-ai-badge-scrim:\s*rgb\(([^)]+)\)/);
   const badgeFg = tokenCss.match(/--color-entry-ai-badge-text:\s*(#[0-9a-fA-F]{6})/);
-  assert.ok(badgeBg, "找不到角标底色 token");
+  assert.ok(surface, "找不到卡片底色 token");
+  assert.ok(scrim, "找不到角标底衬 token");
   assert.ok(badgeFg, "找不到角标文字颜色 token");
 
+  // 角标没有实底，白字实际压在「半透明底衬 + 卡片底色」的合成色上，
+  // 所以要先把两者按 alpha 合成再算对比度，直接拿 scrim 的颜色会算错。
+  const [r, g, b, alpha = "1"] = scrim[1].split(/[\s,/]+/).filter(Boolean);
+  const composite = compositeOver(
+    `#${toHex(r)}${toHex(g)}${toHex(b)}`,
+    Number(alpha),
+    surface[1],
+  );
+  const contrast = relativeLuminanceRatio(badgeFg[1], composite);
+
   // 角标字号只有 0.62rem，对比度必须明显高于 WCAG AA 的 4.5:1 才不显虚。
-  const contrast = relativeLuminanceRatio(badgeFg[1], badgeBg[1]);
   assert.ok(
     contrast >= 4.5,
-    `角标文字与其底色的对比度只有 ${contrast.toFixed(2)}:1，小字号下会看不清`,
+    `角标文字与底部的对比度只有 ${contrast.toFixed(2)}:1（合成色 ${composite}），小字号下会看不清`,
   );
 
+  // 白字：若底衬太淡，卡片再浅也不可读，这条防止有人只调卡片不调底衬。
+  assert.equal(badgeFg[1].toLowerCase(), "#ffffff");
+});
+
+test("ai card body text still meets contrast on the darker surface", () => {
+  const surface = tokenCss.match(/--color-entry-ai-surface:\s*(#[0-9a-fA-F]{6})/);
+  const ink = tokenCss.match(/--color-ink:\s*(#[0-9a-fA-F]{6})/);
+  assert.ok(surface && ink, "找不到卡片底色或正文颜色 token");
+  const contrast = relativeLuminanceRatio(ink[1], surface[1]);
+  assert.ok(
+    contrast >= 4.5,
+    `正文在 AI 卡片底色上只有 ${contrast.toFixed(2)}:1，加深卡片前必须重新检查`,
+  );
+});
+
+test("badge visual values come from tokens, never hardcoded", () => {
   const badgeRule = baseCss.match(/\.entry-origin-badge \{[\s\S]*?\n\}/);
   assert.ok(badgeRule, "找不到 .entry-origin-badge 规则");
   const rule = badgeRule[0];
   assert.match(rule, /color: var\(--color-entry-ai-badge-text\)/);
-  assert.match(rule, /background: var\(--color-entry-ai-badge\)/);
-  // 组件里不应出现硬编码颜色，全部经 token 控制。
+  assert.match(rule, /background: var\(--color-entry-ai-badge-scrim\)/);
   assert.doesNotMatch(rule, /#[0-9a-fA-F]{3,8}\b/);
+  assert.doesNotMatch(rule, /rgb[a]?\(/);
 });
 
 function relativeLuminance(hex) {
@@ -91,4 +118,15 @@ function relativeLuminanceRatio(a, b) {
   const la = relativeLuminance(a);
   const lb = relativeLuminance(b);
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+function toHex(value) {
+  return Number(value).toString(16).padStart(2, "0");
+}
+
+function compositeOver(fgHex, alpha, bgHex) {
+  const fg = fgHex.replace("#", "").match(/../g).map((h) => parseInt(h, 16));
+  const bg = bgHex.replace("#", "").match(/../g).map((h) => parseInt(h, 16));
+  const mixed = fg.map((v, i) => Math.round(v * alpha + bg[i] * (1 - alpha)));
+  return `#${mixed.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }

@@ -105,13 +105,17 @@
    * 组件"。正文颜色、字号与行高一律沿用普通条目，避免让自动生成的文字看起来
    * 更廉价或更特别。
    *
-   * 角标用浅底深字，而不是白字压深底：底色可以调得很浅（不抢视线），
-   * 同时对比度反而更高。白字方案若把底色调浅到 #7a9486，白字只剩 3.28:1，
-   * 在 0.62rem 这种小字号上会发虚；浅底深字当前约 6.7:1。
+   * 白色小字只能与它背后的东西产生对比：角标去掉实底后白字直接压在卡片上，
+   * 而卡片必须保持浅色才能让正文读清（正文 #26322d 在 #dbe5df 上有 10.3:1）。
+   * 因此角标保留一层极小的半透明底衬，把白字托到可读区间。
+   *
+   * 底衬是 rgb(45 60 53 / 0.68)，叠在卡片 #dbe5df 上合成约 #65726b，
+   * 白字对比度 5.03:1。透明度不宜再降：0.55 时只有 3.69:1，0.62rem 会发虚。
+   * 角标本身没有实底，底衬只是一层柔和的衬托，不构成一个色块。
    */
-  --color-entry-ai-surface: #f5f8f8;
-  --color-entry-ai-badge: #d6e3dc;
-  --color-entry-ai-badge-text: #37503f;
+  --color-entry-ai-surface: #dbe5df;
+  --color-entry-ai-badge-scrim: rgb(45 60 53 / 0.68);
+  --color-entry-ai-badge-text: #ffffff;
   --font-size-entry-ai-badge: 0.62rem;
   --entry-ai-card-radius: var(--radius-subtle);
 
