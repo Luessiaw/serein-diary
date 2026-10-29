@@ -89,10 +89,11 @@ Serein 的骨架是对的：连续长文、单列纸带、折叠年/月、极简
 /* frontend/styles/tokens.css */
 --color-workspace: #f4f2ec;   /* 原 #3f4141：深灰吸走注意力 */
 --color-page: #fdfcfa;        /* 原 #fcfcfa：纸带略亮，与底色拉开一档 */
---color-muted: #6B7169;       /* 在纸带与工作区上都 ≥4.2:1 */
---font-reading: Georgia, "Noto Serif SC", "Songti SC", STSong, serif;
---line-height-reading: 2.1rem;  /* 原 3rem */
---font-size-reading: 1.15rem;   /* 原 1.25rem */
+--color-muted: #5f7a6c;       /* 纸带 4.56:1；原 #65736a 在浅色桌面上偏低 */
+--color-faint: #6c746b;       /* 纸带 4.71:1；原 --color-faint 未定义 */
+--font-reading: Georgia, "Songti SC", STSong, SimSun, "Noto Serif SC", "Serein Serif", serif;
+--line-height-reading: clamp(1.85rem, 1.35rem + 2.5vw, 2.05rem);  /* 原固定 3rem */
+--font-size-reading: clamp(1rem, 0.55rem + 2.1vw, 1.15rem);       /* 原固定 1.25rem */
 --font-size-entry-time: 0.7rem;
 ```
 
@@ -146,6 +147,7 @@ Times New Roman），并在字体栈里显式写出中文衬线候选（`Songti 
 |---|---|---|
 | 桌面色 `#3f4141 → #f4f2ec`，纸带 `#fcfcfa → #fdfcfa` | `tokens.css` | 纸带靠一档明度差浮起，深色工作区不再是画面主体 |
 | 正文 1.25rem/3rem → 1.15rem/2.05rem | `tokens.css` | 行高比 2.4 → 1.78 |
+| 手机字号偏大修正：正文/标题/日期/段距改用 `clamp()` | `tokens.css` | 320px 视口正文 16px、一行约 18 字；≥1000px 仍为 21.16px；详见 `docs/layout.md` |
 | `--color-muted`/`--color-faint` 重新取值 | `tokens.css` | 纸带上 4.56:1 / 4.71:1（AA）；桌面上约 4.2:1，仅用于桌面上的年/月刻度 |
 | 年份字号 0.8rem、字距 0.3em、去箭头 | `tokens.css`、`base.css` | 年份成为页边刻度，折叠仍可用 |
 | 月份改为分隔线 + 0.74rem 小字 | `tokens.css`、`base.css` | 每月一条 1px 线，不常驻抢占正文两侧 |

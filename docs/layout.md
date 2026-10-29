@@ -248,12 +248,30 @@ Box-year
 ```css
 --font-size-year: 0.8rem;
 --font-size-month: 0.74rem;
---font-size-date: 1.05rem;
+--font-size-date: clamp(0.95rem, 0.85rem + 0.4vw, 1.05rem);
 --font-size-entry-time: 0.7rem;
 --letter-spacing-date: 0.06em;
 --letter-spacing-year: 0.3em;
 --letter-spacing-month: 0.16em;
 ```
+
+### 随视口过渡的正文节奏
+
+正文、标题、日期与段距都用 `clamp()` 从手机平滑过渡到桌面，不在断点处跳变：
+
+```css
+--font-size-title: clamp(1.2rem, 1rem + 1vw, 1.4rem);
+--font-size-reading: clamp(1rem, 0.55rem + 2.1vw, 1.15rem);
+--line-height-reading: clamp(1.85rem, 1.35rem + 2.5vw, 2.05rem);
+--paragraph-gap: clamp(0.35rem, 0.25rem + 0.5vw, 0.5rem);
+```
+
+- 下限对应用户根字号 16px、视口 320px：正文 16px、一行约 18 个汉字。
+- 上限对应 ≥1000px：正文 21.16px，与 2026-10-28 之前的固定值一致，桌面观感不变。
+- 390px 手机取中间值：正文约 16.3–17px、一行约 20 个汉字。手机上一行少于
+  20 个汉字会明显影响长文阅读，因此下限不要再上调。
+- `1vw` 部分只随视口变化，`rem` 部分跟随浏览器字号设置，用户放大字号时仍然有效。
+- 若目标只是“更安静”，优先调 `--line-height-reading`，而不是继续缩小字号。
 
 - 年、月、日三者字号不同：年是页边最小的刻度，日是正文旁的主要时间标记。
 - 年、月使用加宽字距承担“刻度”气质；`--letter-spacing-date` 保持较紧，

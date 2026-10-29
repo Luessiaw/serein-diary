@@ -13,6 +13,9 @@ Serein 的视觉参数集中在
   可选标题（默认楷体）；`--font-reading`、`--font-size-reading` 和
   `--line-height-reading` 控制正文（默认衬线）；`--font-date`、
   `--font-size-date` 与 `--font-size-entry-time` 控制日期和同日多篇时的时间标签。
+  `--font-size-reading`、`--font-size-title`、`--line-height-reading` 与
+  `--paragraph-gap` 都是 `clamp()` 值：手机偏小、桌面偏大。只调其中一个时，请对照
+  `docs/layout.md`「随视口过渡的正文节奏」，确认最小视口下每行仍有约 18 个汉字。
 - **布局：** `--reading-width` 只改变正文行长；`--year-control-width`、
   `--month-control-width` 和 `--date-control-width` 分别调整年、月、日左侧控件
   宽度；`--year-month-inline-gap`、`--month-date-inline-gap`、`--date-content-gap`、

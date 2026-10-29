@@ -40,20 +40,28 @@
   /*
    * 字号与阅读节奏
    *
-   * `clamp()` 会让正文在较宽屏幕上略微增大，同时确保手机上的字号舒适。
-   * 若目标是更安静、适合长文阅读的效果，应优先调整行高，再考虑增大字号。
+   * 正文、标题与段落间距都随视口宽度用 `clamp()` 过渡，而不是在某个断点
+   * 突然切换：
+   *
+   * - 下限（约 320px 宽的手机）：正文 16px，一行约 18 个汉字；
+   * - 上限（≥1000px）：正文 21.16px，与之前固定值一致，桌面观感不变；
+   * - 390px 手机取中间值，正文约 16.3px、一行约 21 个汉字。
+   *
+   * 手机上一行少于 20 个汉字或字号超过 18px 都会让长文读起来费劲，因此
+   * 下限不要再往上调；若想更安静，优先调行高而不是继续缩小字号。
+   * `1vw` 只与视口宽度有关，不受浏览器字号设置影响，rem 部分则跟随它。
    */
-  --font-size-title: 1.4rem;
-  --font-size-reading: 1.15rem;
+  --font-size-title: clamp(1.2rem, 1rem + 1vw, 1.4rem);
+  --font-size-reading: clamp(1rem, 0.55rem + 2.1vw, 1.15rem);
   /* 时间轴降噪后，年 / 月退到页边做很轻的刻度，日期仍是正文旁的主要时间标记。 */
   --font-year: var(--font-ui);
   --font-month: var(--font-ui);
   --font-date: var(--font-ui);
   --font-size-year: 0.8rem;
   --font-size-month: 0.74rem;
-  --font-size-date: 1.05rem;
+  --font-size-date: clamp(0.95rem, 0.85rem + 0.4vw, 1.05rem);
   --font-size-entry-time: 0.7rem;
-  --line-height-reading: 2.05rem;
+  --line-height-reading: clamp(1.85rem, 1.35rem + 2.5vw, 2.05rem);
   --letter-spacing-date: 0.06em;
   --letter-spacing-year: 0.3em;
   --letter-spacing-month: 0.16em;
@@ -180,7 +188,8 @@
     + var(--sticky-year-label-height-compact)
   );
   --title-gap: 0;
-  --paragraph-gap: var(--space-2);
+  /* 段距随正文行高一起收紧：手机上行高降了，段距也要同步，否则会上下失衡。 */
+  --paragraph-gap: clamp(0.35rem, 0.25rem + 0.5vw, 0.5rem);
   --entry-edit-button-size: 1.65rem;
   --entry-edit-icon-size: 0.78rem;
   --entry-edit-button-inline-inset: var(--space-2);
