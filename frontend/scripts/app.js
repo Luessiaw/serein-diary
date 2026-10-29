@@ -3970,15 +3970,6 @@
       renderImages: false,
     });
 
-    if (metadata.source_kind === "ai-dialogue") {
-      // 来源标记放在正文区标题之上，而不是日期栏：日期栏是固定 3.25rem 的
-      // grid 列（扣除 1rem 左内边距只剩约 36px），四个汉字放不下会溢出到正文。
-      // 作为独立一行、字号明显小于标题，既能一眼认出，又不改变正文排版。
-      const origin = document.createElement("p");
-      origin.className = "entry-origin";
-      origin.textContent = "对话整理";
-      header.prepend(origin);
-    }
     if (metadata.title) {
       const title = document.createElement("h2");
       title.className = "entry-title";
@@ -3987,6 +3978,16 @@
     }
     entry.append(date, body);
     body.append(reading);
+    if (metadata.source_kind === "ai-dialogue") {
+      // 来源只用两块视觉提示表达：整卡换一个极淡的底色，右上角压一个白字 "AI"。
+      // 不再写"对话整理"这类文字，避免在正文区增加一行与日记无关的内容。
+      // 角标挂在 entry-reading 上，它已是 position: relative，便于绝对定位。
+      const badge = document.createElement("span");
+      badge.className = "entry-origin-badge";
+      badge.textContent = "AI";
+      badge.setAttribute("aria-label", "由对话整理生成");
+      reading.append(badge);
+    }
     reading.append(header, content);
     appendEntryImageGallery(reading, metadata.id, createEntryImageMedia(sample));
     if (isBackendDataSource()) {

@@ -98,14 +98,20 @@
   /*
    * 条目来源
    *
-   * 手写条目是默认形态。由对话整理生成的条目在日期旁多一个很轻的来源标记，
-   * 正文排版、字号与行高都保持不变：读者该一眼看出它不是自己写的，而不该
-   * 觉得那篇"更廉价"或"更特别"。标记放在正文区标题之上，不放日期栏——日期栏
-   * 是固定 3.25rem 的窄列，四个汉字会溢出。样式在 base.css 的 `.entry-origin`。
+   * 手写条目是默认形态。由对话整理生成的条目整块换一个极淡的底色，并在卡片
+   * 右上角压一个白色小字 "AI" 角标，作为唯一来源提示。
+   *
+   * 底色刻意只用与纸色极小的色相差：它应当"换了一张纸"，而不是"变成了另一种
+   * 组件"。正文颜色、字号与行高一律沿用普通条目，避免让自动生成的文字看起来
+   * 更廉价或更特别。
+   *
+   * 角标白字压在同色系的深色上，保证对比度；字号很小但仍然可辨认。
    */
-  --color-entry-origin-ai: var(--color-faint);
-  --font-size-entry-origin: 0.72rem;
-  /* 标记文字本身由 app.js 写入 `.entry-origin`，这里只放字号与颜色。 */
+  --color-entry-ai-surface: #f5f8f8;
+  --color-entry-ai-badge: var(--color-muted);
+  --color-entry-ai-badge-text: #ffffff;
+  --font-size-entry-ai-badge: 0.62rem;
+  --entry-ai-card-radius: var(--radius-subtle);
 
   /*
    * 间距刻度

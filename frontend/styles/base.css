@@ -1198,17 +1198,52 @@ body[data-sidebar-open="true"] .app-sidebar {
 }
 
 /*
- * 由对话整理生成的条目：只在日期栏多一行很轻的来源标记。
- * 正文、标题、行高一律沿用普通条目，避免让自动生成的文字看起来"低一等"。
- * 放在正文区标题之上：日期栏只有约 36px 可用宽度，四个汉字会溢出。
+ * 由对话整理生成的条目。
+ *
+ * 两个视觉信号：整块换一个极淡的底色（"换了一张纸"），以及右上角的白色
+ * "AI" 角标。正文颜色、字号与行高都不变——来源不该影响阅读，更不该让自动
+ * 生成的文字看起来更廉价或更特别。
+ *
+ * 底色作用在 .entry-body（正文列）上而不是 .diary-entry：后者是整行 grid，
+ * 会把左侧日期栏一起刷上底色，反而抢走时间轴的整齐感。
  */
-.entry-origin {
-  margin: 0 0 var(--space-1);
-  color: var(--color-entry-origin-ai);
+.diary-entry[data-origin-kind="ai-dialogue"] .entry-body {
+  background: var(--color-entry-ai-surface);
+  border-radius: var(--entry-ai-card-radius);
+  /*
+   * 内边距把正文从底色边缘推开，避免底色贴字；再用等量的负外边距抵消，
+   * 使正文文字列与手写条目严格对齐——换底色不应该挪动任何一行文字。
+   * 四个方向都按这个规则写，卡片上下留白才是对称的。
+   */
+  padding-block: var(--space-3);
+  padding-inline: var(--space-3);
+  margin-block: calc(-1 * var(--space-3));
+  margin-inline: calc(-1 * var(--space-3));
+}
+
+.entry-origin-badge {
+  position: absolute;
+  /* 角标相对 .entry-reading 定位，而 .entry-reading 已被 .entry-body 的 1rem
+     内边距推离底色边缘，所以这里用 0 才是贴着卡片内边距的位置；再给 1rem
+     会离边缘 2rem，显得飘在正文中间。 */
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  block-size: 1.15rem;
+  padding-inline: var(--space-2);
+  border-radius: calc(var(--entry-ai-card-radius) * 0.5);
+  background: var(--color-entry-ai-badge);
+  color: var(--color-entry-ai-badge-text);
   font-family: var(--font-ui);
-  font-size: var(--font-size-entry-origin);
+  font-size: var(--font-size-entry-ai-badge);
+  font-weight: 600;
   letter-spacing: 0.06em;
-  line-height: 1.2;
+  line-height: 1;
+  /* 角标只是提示，不接收点击，避免挡住条目菜单的悬停区域。 */
+  pointer-events: none;
+  user-select: none;
 }
 
 .entry-body {
