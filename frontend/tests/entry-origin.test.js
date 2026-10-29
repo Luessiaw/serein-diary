@@ -57,12 +57,38 @@ test("ai entries get a distinct surface while human entries keep none", () => {
   );
 });
 
-test("badge text is white and every visual value comes from tokens", () => {
-  assert.match(tokenCss, /--color-entry-ai-badge-text:\s*#ffffff/);
+test("badge colours come from tokens and stay legible", () => {
+  const badgeBg = tokenCss.match(/--color-entry-ai-badge:\s*(#[0-9a-fA-F]{6})/);
+  const badgeFg = tokenCss.match(/--color-entry-ai-badge-text:\s*(#[0-9a-fA-F]{6})/);
+  assert.ok(badgeBg, "找不到角标底色 token");
+  assert.ok(badgeFg, "找不到角标文字颜色 token");
+
+  // 角标字号只有 0.62rem，对比度必须明显高于 WCAG AA 的 4.5:1 才不显虚。
+  const contrast = relativeLuminanceRatio(badgeFg[1], badgeBg[1]);
+  assert.ok(
+    contrast >= 4.5,
+    `角标文字与其底色的对比度只有 ${contrast.toFixed(2)}:1，小字号下会看不清`,
+  );
+
   const badgeRule = baseCss.match(/\.entry-origin-badge \{[\s\S]*?\n\}/);
   assert.ok(badgeRule, "找不到 .entry-origin-badge 规则");
   const rule = badgeRule[0];
   assert.match(rule, /color: var\(--color-entry-ai-badge-text\)/);
+  assert.match(rule, /background: var\(--color-entry-ai-badge\)/);
   // 组件里不应出现硬编码颜色，全部经 token 控制。
   assert.doesNotMatch(rule, /#[0-9a-fA-F]{3,8}\b/);
 });
+
+function relativeLuminance(hex) {
+  const channels = hex.replace("#", "").match(/../g).map((h) => {
+    const v = parseInt(h, 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function relativeLuminanceRatio(a, b) {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}

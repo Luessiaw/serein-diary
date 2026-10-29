@@ -105,11 +105,13 @@
    * 组件"。正文颜色、字号与行高一律沿用普通条目，避免让自动生成的文字看起来
    * 更廉价或更特别。
    *
-   * 角标白字压在同色系的深色上，保证对比度；字号很小但仍然可辨认。
+   * 角标用浅底深字，而不是白字压深底：底色可以调得很浅（不抢视线），
+   * 同时对比度反而更高。白字方案若把底色调浅到 #7a9486，白字只剩 3.28:1，
+   * 在 0.62rem 这种小字号上会发虚；浅底深字当前约 6.7:1。
    */
   --color-entry-ai-surface: #f5f8f8;
-  --color-entry-ai-badge: var(--color-muted);
-  --color-entry-ai-badge-text: #ffffff;
+  --color-entry-ai-badge: #d6e3dc;
+  --color-entry-ai-badge-text: #37503f;
   --font-size-entry-ai-badge: 0.62rem;
   --entry-ai-card-radius: var(--radius-subtle);
 
