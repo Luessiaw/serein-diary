@@ -57,6 +57,36 @@ class EntriesApiTests(TestCase):
     def make_session(self) -> AuthenticatedSession:
         return AuthenticatedSession(subject="single-admin")
 
+    def test_api_reports_source_kind_for_ai_and_human_entries(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            request = self.make_request(root)
+            session = self.make_session()
+            ai_dir = create_entry_fixture(
+                root / "entries",
+                name="202606231030-22222222-2222-4222-8222-222222222222",
+                entry_id="22222222-2222-4222-8222-222222222222",
+                created_at="2026-06-23T10:30:00+08:00",
+                content="今天把仿真跑完了。\n",
+            )
+            metadata = read_json(ai_dir / "metadata.json")
+            metadata["source_kind"] = "ai-dialogue"
+            write_json(ai_dir / "metadata.json", metadata)
+
+            created = create_entry_endpoint(
+                EntryCreateRequest(title=None, content="自己写的一段。\n"),
+                request,
+                Response(),
+                session,
+            )
+            page = list_entries(Response(), request, session=session)
+            ai_detail = get_entry(UUID("22222222-2222-4222-8222-222222222222"), Response(), request, session)
+
+        by_id = {str(item.id): item.source_kind for item in page.items}
+        self.assertEqual(created.source_kind, "human")
+        self.assertEqual(by_id["22222222-2222-4222-8222-222222222222"], "ai-dialogue")
+        self.assertEqual(ai_detail.source_kind, "ai-dialogue")
+
     def test_entries_dependency_rejects_unauthenticated_request(self) -> None:
         request = SimpleNamespace(
             app=SimpleNamespace(state=SimpleNamespace(settings=None)),

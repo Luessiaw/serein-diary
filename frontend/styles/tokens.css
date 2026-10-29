@@ -96,6 +96,17 @@
   --color-date: var(--color-muted);
 
   /*
+   * 条目来源
+   *
+   * 手写条目是默认形态。由对话整理生成的条目在日期旁多一个很轻的来源标记，
+   * 正文排版、字号与行高都保持不变：读者该一眼看出它不是自己写的，而不该
+   * 觉得那篇"更廉价"或"更特别"。样式在 base.css 的 `.entry-origin`。
+   */
+  --color-entry-origin-ai: var(--color-faint);
+  --font-size-entry-origin: 0.72rem;
+  /* 标记文字本身由 app.js 写入 `.entry-origin`，这里只放字号与颜色。 */
+
+  /*
    * 间距刻度
    *
    * 这是全站共用的基础步进。优先选用已有刻度，而不是新增一次性的像素值，

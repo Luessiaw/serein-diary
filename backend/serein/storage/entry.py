@@ -31,6 +31,15 @@ REQUIRED_ENTRY_FILES = (
     "media-manifest.json",
 )
 
+# metadata.json accepts extra top-level keys only when they carry this prefix.
+# The prefix exists so an agent-written entry can record where its text came
+# from without bumping schema_version and migrating every human-written entry:
+# a human entry simply omits the keys. Everything else stays rejected, so the
+# contract still refuses legacy fields such as `date`, `tags`, or `mood`.
+SOURCE_KEY_PREFIX = "source"
+SOURCE_KIND_HUMAN = "human"
+SOURCE_KIND_AI_DIALOGUE = "ai-dialogue"
+
 
 class EntryValidationError(ValueError):
     """Raised when an entry directory does not match the v1 data contract."""
@@ -45,9 +54,14 @@ class EntryDirectoryIdentity:
 
 
 class Metadata(BaseModel):
-    """metadata.json v1 model."""
+    """metadata.json model.
 
-    model_config = ConfigDict(extra="forbid")
+    Top-level keys outside the declared fields are only accepted when they begin
+    with `source`; see `validate_extra_keys`. They are preserved verbatim on
+    read and write so an editing pass never drops provenance it does not model.
+    """
+
+    model_config = ConfigDict(extra="allow")
 
     schema_version: Literal[1, 2]
     id: UUID
@@ -90,6 +104,36 @@ class Metadata(BaseModel):
         if self.schema_version == 2 and (self.updated_at is None or self.revision is None):
             raise ValueError("schema_version 2 requires updated_at and revision")
         return self
+
+    @model_validator(mode="after")
+    def validate_extra_keys(self) -> "Metadata":
+        """Reject undeclared top-level keys that do not declare provenance."""
+
+        rejected = sorted(
+            key
+            for key in (self.model_extra or {})
+            if not key.startswith(SOURCE_KEY_PREFIX)
+        )
+        if rejected:
+            raise ValueError("unknown metadata field(s): " + ", ".join(rejected))
+        return self
+
+    @property
+    def source(self) -> dict[str, object]:
+        """Extra `source*` metadata, in file order, without the declared fields."""
+
+        return dict(self.model_extra or {})
+
+    def source_kind(self) -> str:
+        """Return the entry's declared origin, defaulting to a human entry.
+
+        Only summaries use this. A human-written entry omits the keys entirely,
+        so absence means `human`; an entry that does declare provenance must
+        declare it as a string.
+        """
+
+        value = self.model_extra.get(f"{SOURCE_KEY_PREFIX}_kind") if self.model_extra else None
+        return value if isinstance(value, str) and value.strip() else SOURCE_KIND_HUMAN
 
 
 class QuoteAnchor(BaseModel):

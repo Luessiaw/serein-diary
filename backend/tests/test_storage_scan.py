@@ -8,7 +8,7 @@ from unittest import TestCase
 
 from serein.storage.entry import EntryValidationError
 from serein.storage.repository import scan_entry_summaries
-from test_entry_contract import create_entry_fixture, write_json
+from test_entry_contract import create_entry_fixture, read_json, write_json
 
 
 class StorageScanTests(TestCase):
@@ -17,6 +17,35 @@ class StorageScanTests(TestCase):
             summaries = scan_entry_summaries(Path(data_dir))
 
         self.assertEqual(summaries, [])
+
+    def test_summary_reports_declared_and_default_source_kind(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            entries = root / "entries"
+            human_id = "11111111-1111-4111-8111-111111111111"
+            ai_id = "22222222-2222-4222-8222-222222222222"
+            create_entry_fixture(
+                entries,
+                name=f"202606230930-{human_id}",
+                entry_id=human_id,
+                created_at="2026-06-23T09:30:00+08:00",
+            )
+            ai_dir = create_entry_fixture(
+                entries,
+                name=f"202606231030-{ai_id}",
+                entry_id=ai_id,
+                created_at="2026-06-23T10:30:00+08:00",
+            )
+            metadata = read_json(ai_dir / "metadata.json")
+            metadata["source_kind"] = "ai-dialogue"
+            write_json(ai_dir / "metadata.json", metadata)
+
+            summaries = scan_entry_summaries(root)
+
+        self.assertEqual(
+            [(str(summary.id), summary.source_kind) for summary in summaries],
+            [(human_id, "human"), (ai_id, "ai-dialogue")],
+        )
 
     def test_scans_flat_entries_sorted_by_created_at(self) -> None:
         with TemporaryDirectory() as data_dir:

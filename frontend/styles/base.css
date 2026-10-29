@@ -1197,6 +1197,21 @@ body[data-sidebar-open="true"] .app-sidebar {
   letter-spacing: 0.04em;
 }
 
+/*
+ * 由对话整理生成的条目：只在日期栏多一行很轻的来源标记。
+ * 正文、标题、行高一律沿用普通条目，避免让自动生成的文字看起来"低一等"。
+ */
+.entry-origin {
+  color: var(--color-entry-origin-ai);
+  font-size: var(--font-size-entry-origin);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.entry-origin:empty {
+  display: none;
+}
+
 .entry-body {
   grid-column: 4;
   min-inline-size: 0;

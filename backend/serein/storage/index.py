@@ -13,7 +13,7 @@ from serein.storage.repository import EntrySummary, scan_entry_summaries
 
 
 INDEX_RELATIVE_PATH = Path(".serein") / "index.sqlite3"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -67,7 +67,8 @@ def create_schema(connection: sqlite3.Connection) -> None:
             content_excerpt TEXT NOT NULL,
             comment_count INTEGER NOT NULL,
             media_count INTEGER NOT NULL,
-            deleted INTEGER NOT NULL CHECK (deleted IN (0, 1))
+            deleted INTEGER NOT NULL CHECK (deleted IN (0, 1)),
+            source_kind TEXT NOT NULL DEFAULT 'human'
         );
 
         CREATE INDEX IF NOT EXISTS idx_entries_created_at ON entries(created_at);
@@ -75,10 +76,35 @@ def create_schema(connection: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_entries_deleted ON entries(deleted);
         """
     )
+    # Runs before any index DDL that names a newly added column.
+    add_missing_columns(connection)
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_entries_source_kind ON entries(source_kind)
+        """
+    )
     connection.execute(
         "INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)",
         ("schema_version", str(SCHEMA_VERSION)),
     )
+
+
+def add_missing_columns(connection: sqlite3.Connection) -> None:
+    """Add columns a previous index schema lacked, without touching fact files.
+
+    `CREATE TABLE IF NOT EXISTS` leaves an existing table alone, so an index
+    written by an older schema would otherwise fail every insert that names a
+    new column. The index is a rebuildable derivative, so an added column is
+    enough; the next rebuild fills it from fact files.
+    """
+
+    existing = {
+        row[1] for row in connection.execute("PRAGMA table_info(entries)").fetchall()
+    }
+    if "source_kind" not in existing:
+        connection.execute(
+            "ALTER TABLE entries ADD COLUMN source_kind TEXT NOT NULL DEFAULT 'human'"
+        )
 
 
 def replace_entries(connection: sqlite3.Connection, summaries: list[EntrySummary]) -> None:
@@ -118,8 +144,9 @@ def create_entry_upsert_sql() -> str:
             content_excerpt,
             comment_count,
             media_count,
-            deleted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            deleted,
+            source_kind
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
 
@@ -134,6 +161,7 @@ def entry_summary_to_row(summary: EntrySummary) -> tuple:
         summary.comment_count,
         summary.media_count,
         int(summary.deleted),
+        summary.source_kind,
     )
 
 
@@ -202,4 +230,5 @@ def row_to_summary(row: sqlite3.Row) -> EntrySummary:
         comment_count=row["comment_count"],
         media_count=row["media_count"],
         deleted=bool(row["deleted"]),
+        source_kind=row["source_kind"],
     )

@@ -92,8 +92,36 @@ Serein 的首个版本不允许补写，也不允许修改已保存正文。
 - `created_at` 必须是带 UTC 偏移量的 RFC 3339 / ISO 8601 时间字符串。
 - `title` 如存在，必须是字符串；空字符串等同于不存在。
 - `deleted_at` 如存在，必须是带 UTC 偏移量的时间字符串，表示该条目已被软删除。
-- 顶层未知字段必须被拒绝。尤其拒绝旧字段：`date`、`updated_at`、`revision`、
-  `tags`、`mood`、`weather`、`time_range`、`is_favorite`。
+- 顶层字段除上面列出的以外必须被拒绝，**唯一例外是以 `source` 开头的键**
+  （见下节）。尤其拒绝旧字段：`date`、`updated_at`、`revision`、`tags`、`mood`、
+  `weather`、`time_range`、`is_favorite`。
+
+## 来源字段（`source*`）
+
+手写条目不需要任何来源字段，缺省即 `human`。由 Agent 根据对话整理生成的条目可以
+额外写入下列键，用于在前端区分、并说明这段文字从哪来：
+
+```json
+{
+  "source_kind": "ai-dialogue",
+  "source_session_ids": ["session-14d50e59-eb97-4799-a684-d2407c711fea"],
+  "source_material": "2026-10-28T09:00:00+08:00/2026-10-28T23:30:00+08:00",
+  "source_review": "unreviewed"
+}
+```
+
+约束：
+
+- 放行规则是**前缀**而不是白名单：任何以 `source` 开头的顶层键都被接受，其他键一律
+  拒绝。这样将来加一个来源子键不需要再改契约，也不会顺手放过 `tags` 这类旧字段。
+- 这些键**不参与版本校验**：它们与 `schema_version` 无关，手写条目继续是 1 或 2，
+  不需要迁移，也不需要为了记来源而升级版本号。
+- 值必须是 JSON 可序列化对象，后端原样保留、原样写回。编辑条目时 `metadata.json`
+  会被整体重写，`source*` 键必须一并保留，不得悄悄丢弃来源。
+- `source_material` 只存时间范围或等价引用，**不存对话原文**。
+- `source_kind` 缺省视为 `human`。摘要与 API 响应用 `source_kind` 字段暴露这个值，
+  前端据此在日期旁显示"对话整理"标记；`source*` 的其余内容不通过列表接口返回。
+- `comments.json` 与 `media-manifest.json` 保持严格：不接受任何未知字段。
 
 ## content.md
 
@@ -202,6 +230,11 @@ DIARY_DATA_DIR/.serein/index.sqlite3
 - 按 `created_at` 正序/倒序分页。
 - 按日期统计是否有日记。
 - 查询标题、内容摘要、评论数、媒体数和删除状态。
+- 查询来源类别（`source_kind`，缺省 `human`）。
+
+索引 schema 当前为版本 2：版本 1 没有 `source_kind` 列。打开旧索引时会原地补上该列
+（默认 `human`）再重建，旧索引不会直接报错；索引始终可以由事实文件完整重建，所以
+这里不需要数据迁移。
 
 索引重建不得修改任何条目事实文件。
 

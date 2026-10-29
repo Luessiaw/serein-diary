@@ -15,6 +15,7 @@ from uuid import UUID, uuid4
 from PIL import Image, UnidentifiedImageError
 
 from serein.storage.entry import (
+    SOURCE_KIND_HUMAN,
     DiaryEntry,
     EntryValidationError,
     parse_media_manifest,
@@ -43,6 +44,8 @@ class EntrySummary:
     comment_count: int
     media_count: int
     deleted: bool
+    # Declared origin of the text ("human" when the entry omits the keys).
+    source_kind: str = SOURCE_KIND_HUMAN
 
 
 @dataclass(frozen=True)
@@ -422,6 +425,7 @@ def create_entry_summary(entry: DiaryEntry, data_dir: Path) -> EntrySummary:
         comment_count=len(entry.comments.comments),
         media_count=len(entry.media_manifest.media),
         deleted=entry.metadata.deleted_at is not None,
+        source_kind=entry.metadata.source_kind(),
     )
 
 

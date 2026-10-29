@@ -32,6 +32,7 @@ from serein.services.entries import (
     EntryWindow,
 )
 from serein.services.immich import ImmichError, get_immich_client
+from serein.storage.entry import SOURCE_KIND_HUMAN
 from serein.storage.repository import ImageAttachment, create_content_excerpt
 
 
@@ -100,6 +101,8 @@ class EntrySummaryResponse(BaseModel):
     comment_count: int
     media_count: int
     deleted: bool
+    # "human" for a handwritten entry; an ai-dialogue entry declares its own.
+    source_kind: str = SOURCE_KIND_HUMAN
     revision: int | None
     updated_at: datetime | None
 
@@ -596,6 +599,7 @@ def entry_summary_to_response(item: EntrySummaryItem) -> EntrySummaryResponse:
         comment_count=item.comment_count,
         media_count=item.media_count,
         deleted=item.deleted,
+        source_kind=item.source_kind,
         revision=None,
         updated_at=None,
     )
@@ -612,6 +616,7 @@ def entry_detail_to_response(detail: EntryDetailItem) -> EntryDetailResponse:
         comment_count=len(entry.comments.comments),
         media_count=len(entry.media_manifest.media),
         deleted=entry.metadata.deleted_at is not None,
+        source_kind=entry.metadata.source_kind(),
         revision=entry.metadata.revision,
         updated_at=entry.metadata.updated_at,
         content=entry.content,

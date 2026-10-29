@@ -7,7 +7,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from serein.storage.entry import EntryValidationError, read_entry
+from serein.storage.entry import SOURCE_KIND_HUMAN, EntryValidationError, read_entry
 
 
 ENTRY_ID = "0b6d2ebd-74f8-4a5c-9515-aaf4076b6189"
@@ -71,6 +71,62 @@ class EntryContractTests(TestCase):
             entry = read_entry(entry_dir)
 
         self.assertEqual(entry.metadata.revision, 1)
+
+    def test_accepts_source_prefixed_metadata_keys(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            entry_dir = create_entry_fixture(Path(data_dir))
+            metadata = read_json(entry_dir / "metadata.json")
+            metadata.update(
+                {
+                    "source_kind": "ai-dialogue",
+                    "source_session_ids": ["session-14d50e59"],
+                    "source_material": "2026-10-28T09:00:00+08:00/2026-10-28T23:30:00+08:00",
+                    "source_review": "unreviewed",
+                }
+            )
+            write_json(entry_dir / "metadata.json", metadata)
+
+            entry = read_entry(entry_dir)
+
+        self.assertEqual(entry.metadata.source_kind(), "ai-dialogue")
+        self.assertEqual(entry.metadata.source["source_review"], "unreviewed")
+
+    def test_source_fields_survive_an_edit(self) -> None:
+        """An edit rewrites metadata.json; provenance must not be dropped."""
+
+        with TemporaryDirectory() as data_dir:
+            entry_dir = create_entry_fixture(Path(data_dir))
+            metadata = read_json(entry_dir / "metadata.json")
+            metadata.update({"source_kind": "ai-dialogue", "source_review": "unreviewed"})
+            write_json(entry_dir / "metadata.json", metadata)
+
+            entry = read_entry(entry_dir)
+            rewritten = entry.metadata.model_dump(mode="json", exclude_none=True)
+            rewritten.update({"schema_version": 2, "revision": 1})
+            rewritten["updated_at"] = "2026-06-24T00:14:23+08:00"
+            write_json(entry_dir / "metadata.json", rewritten)
+
+            edited = read_entry(entry_dir)
+
+        self.assertEqual(edited.metadata.source_kind(), "ai-dialogue")
+        self.assertEqual(edited.metadata.revision, 1)
+
+    def test_human_entry_reports_the_default_kind(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            entry = read_entry(create_entry_fixture(Path(data_dir)))
+
+        self.assertEqual(entry.metadata.source, {})
+        self.assertEqual(entry.metadata.source_kind(), SOURCE_KIND_HUMAN)
+
+    def test_rejects_non_source_extra_metadata_key(self) -> None:
+        with TemporaryDirectory() as data_dir:
+            entry_dir = create_entry_fixture(Path(data_dir))
+            metadata = read_json(entry_dir / "metadata.json")
+            metadata["tags"] = ["雨"]
+            write_json(entry_dir / "metadata.json", metadata)
+
+            with self.assertRaisesRegex(EntryValidationError, "tags"):
+                read_entry(entry_dir)
 
     def test_rejects_invalid_entry_directory_name(self) -> None:
         with TemporaryDirectory() as data_dir:

@@ -39,6 +39,7 @@ configuration names, or deployment scripts.
 | Overall architecture, stages, or scope | `docs/plan-v1.1.md` |
 | Backend scope, API skeleton, or auth | `docs/backend-boundary.md`, then `docs/plan-v1.1.md` |
 | Data contract, storage, index, or migration | `docs/data-contract-v1.md`, then `docs/p4-storage-handoff.md` |
+| Entry provenance (`source*` metadata) or AI-written entries | `docs/data-contract-v1.md` §来源字段 |
 | Formal API, frontend adapter, comments, or media | `docs/p5-api-frontend-contract.md`, then `docs/p4-storage-handoff.md` |
 | Frontend layout, alignment, or visual spacing | `docs/layout.md`, then `frontend/styles/tokens.css` |
 | Visual/interaction redesign research (external references, screenshots) | `docs/visual-references.md`, then `docs/reference-gallery.html` |

@@ -534,6 +534,9 @@
           created_at: entry.created_at,
           ...(entry.revision ? { revision: entry.revision, updated_at: entry.updated_at } : {}),
           ...(entry.title ? { title: entry.title } : {}),
+          ...(entry.source_kind && entry.source_kind !== "human"
+            ? { source_kind: entry.source_kind }
+            : {}),
           ...(entry.deleted ? { deleted_at: entry.deleted_at || true } : {}),
         },
         content: entry.content || "",
@@ -3946,6 +3949,9 @@
     entry.dataset.entryId = metadata.id;
     entry.dataset.entryDate = calendarDate;
     entry.dataset.entryMode = ui.mode;
+    if (metadata.source_kind) {
+      entry.dataset.originKind = metadata.source_kind;
+    }
     body.className = "entry-body";
     reading.className = "entry-reading";
     date.className = "entry-date";
@@ -3956,6 +3962,10 @@
       metadata.created_at,
       entriesByDate.get(calendarDate),
     );
+    const origin = document.createElement("span");
+    origin.className = "entry-origin";
+    origin.textContent = metadata.source_kind === "ai-dialogue" ? "对话整理" : "";
+    date.append(origin);
     header.className = "entry-header";
     content.className = "entry-content";
     appendMarkdownBlocks(content, stripManagedImageTokens(data.content), {

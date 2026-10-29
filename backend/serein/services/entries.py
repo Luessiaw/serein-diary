@@ -62,6 +62,7 @@ class EntrySummaryItem:
     comment_count: int
     media_count: int
     deleted: bool
+    source_kind: str
     cursor: str
 
 
@@ -534,6 +535,7 @@ def summary_to_item(summary: EntrySummary) -> EntrySummaryItem:
         comment_count=summary.comment_count,
         media_count=summary.media_count,
         deleted=summary.deleted,
+        source_kind=summary.source_kind,
         cursor=encode_entry_cursor(summary.created_at, summary.id),
     )
 
