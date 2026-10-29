@@ -100,7 +100,8 @@
    *
    * 手写条目是默认形态。由对话整理生成的条目在日期旁多一个很轻的来源标记，
    * 正文排版、字号与行高都保持不变：读者该一眼看出它不是自己写的，而不该
-   * 觉得那篇"更廉价"或"更特别"。样式在 base.css 的 `.entry-origin`。
+   * 觉得那篇"更廉价"或"更特别"。标记放在正文区标题之上，不放日期栏——日期栏
+   * 是固定 3.25rem 的窄列，四个汉字会溢出。样式在 base.css 的 `.entry-origin`。
    */
   --color-entry-origin-ai: var(--color-faint);
   --font-size-entry-origin: 0.72rem;

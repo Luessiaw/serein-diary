@@ -3962,10 +3962,6 @@
       metadata.created_at,
       entriesByDate.get(calendarDate),
     );
-    const origin = document.createElement("span");
-    origin.className = "entry-origin";
-    origin.textContent = metadata.source_kind === "ai-dialogue" ? "对话整理" : "";
-    date.append(origin);
     header.className = "entry-header";
     content.className = "entry-content";
     appendMarkdownBlocks(content, stripManagedImageTokens(data.content), {
@@ -3974,6 +3970,15 @@
       renderImages: false,
     });
 
+    if (metadata.source_kind === "ai-dialogue") {
+      // 来源标记放在正文区标题之上，而不是日期栏：日期栏是固定 3.25rem 的
+      // grid 列（扣除 1rem 左内边距只剩约 36px），四个汉字放不下会溢出到正文。
+      // 作为独立一行、字号明显小于标题，既能一眼认出，又不改变正文排版。
+      const origin = document.createElement("p");
+      origin.className = "entry-origin";
+      origin.textContent = "对话整理";
+      header.prepend(origin);
+    }
     if (metadata.title) {
       const title = document.createElement("h2");
       title.className = "entry-title";

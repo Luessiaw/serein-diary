@@ -1200,16 +1200,15 @@ body[data-sidebar-open="true"] .app-sidebar {
 /*
  * 由对话整理生成的条目：只在日期栏多一行很轻的来源标记。
  * 正文、标题、行高一律沿用普通条目，避免让自动生成的文字看起来"低一等"。
+ * 放在正文区标题之上：日期栏只有约 36px 可用宽度，四个汉字会溢出。
  */
 .entry-origin {
+  margin: 0 0 var(--space-1);
   color: var(--color-entry-origin-ai);
+  font-family: var(--font-ui);
   font-size: var(--font-size-entry-origin);
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.entry-origin:empty {
-  display: none;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
 }
 
 .entry-body {

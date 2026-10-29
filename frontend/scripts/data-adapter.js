@@ -395,6 +395,8 @@
       comment_count: comments.length,
       media_count: media.length,
       deleted,
+      // 与后端响应保持同形：手写条目不带该键，来源由缺省值表达。
+      ...(metadata.source_kind ? { source_kind: metadata.source_kind } : {}),
     };
   }
 
@@ -408,6 +410,7 @@
       comment_count: detail.comment_count,
       media_count: detail.media_count,
       deleted: detail.deleted,
+      ...(detail.source_kind ? { source_kind: detail.source_kind } : {}),
     };
   }
 

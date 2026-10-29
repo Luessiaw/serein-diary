@@ -8,6 +8,26 @@
  */
 window.SereinMockEntries = [
   {
+    /*
+     * 由对话整理生成的条目。metadata 里带 source_kind，前端据此在日期旁
+     * 显示来源标记；正文排版与手写条目完全一致，这是区分策略的一部分。
+     */
+    ui: { mode: "reading" },
+    data: {
+      metadata: {
+        schema_version: 1,
+        id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+        created_at: "2026-06-26T23:30:00+08:00",
+        title: "整理的昨日",
+        source_kind: "ai-dialogue",
+      },
+      content:
+        "今天把仿真的边界条件改完了，下午有点躁，但没有硬撑。\n\n傍晚出去走了一圈，回来之后反而写得更顺。",
+      comments: { schema_version: 1, comments: [] },
+      mediaManifest: { schema_version: 1, media: [] },
+    },
+  },
+  {
     ui: { mode: "reading" },
     data: {
       metadata: {
