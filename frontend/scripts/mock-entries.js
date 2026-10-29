@@ -17,7 +17,7 @@ window.SereinMockEntries = [
       metadata: {
         schema_version: 1,
         id: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
-        created_at: "2026-06-26T23:30:00+08:00",
+        created_at: "2026-08-13T23:30:00+08:00",
         title: "整理的昨日",
         source_kind: "ai-dialogue",
       },
