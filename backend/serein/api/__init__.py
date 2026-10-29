@@ -2,19 +2,16 @@
 
 from fastapi import APIRouter
 
-# 逐个 `import serein.api.X`，而不是 `from serein.api import X, Y, ...`。
+# 用相对导入列出子模块，而不是 `from serein.api import ...` 或
+# `import serein.api.x as x`。
 #
-# 两种写法在当前解释器上都可用，但语义不同：后者要求 `serein.api` 这个包对象
-# 上已经挂好 `auth` 等属性，也就是要求本次导入开始前包已初始化完毕。只要某个
-# 子模块（或它拉进来的其他包）在这期间回头经过一次 `serein.api`，Python 3.12
-# 就会报 `ImportError: cannot import name 'auth' from partially initialized
-# module 'serein.api'`，而 3.13+ 会从 sys.modules 恢复。显式导入子模块不依赖
-# 包属性，因此与版本无关。
-import serein.api.auth as auth
-import serein.api.entries as entries
-import serein.api.health as health
-import serein.api.integrations as integrations
-import serein.api.protected as protected
+# 这个包在被 `serein.main` 导入时仍处于初始化状态。前两种写法都要在
+# `sys.modules` 里按绝对名解析 `serein.api` 的成员或子模块；本次修复的报错
+# 正是 `import serein.api.auth as auth` 在 Python 3.12 上抛
+# `ModuleNotFoundError: No module named 'serein.api.auth'`（3.13+ 能恢复，
+# 本仓库的开发环境是 3.14，因此本地测不出来）。相对导入只解析当前包的
+# `__path__`，不要求包已初始化完成，三种版本行为一致。
+from . import auth, entries, health, integrations, protected
 
 
 api_router = APIRouter()
