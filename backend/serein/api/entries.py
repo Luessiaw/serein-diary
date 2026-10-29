@@ -32,7 +32,6 @@ from serein.services.entries import (
     EntryWindow,
 )
 from serein.services.immich import ImmichError, get_immich_client
-from serein.storage.entry import SOURCE_KIND_HUMAN
 from serein.storage.repository import ImageAttachment, create_content_excerpt
 
 
@@ -102,7 +101,10 @@ class EntrySummaryResponse(BaseModel):
     media_count: int
     deleted: bool
     # "human" for a handwritten entry; an ai-dialogue entry declares its own.
-    source_kind: str = SOURCE_KIND_HUMAN
+    # Kept as a literal on purpose: importing serein.storage.entry at module
+    # scope makes `serein.api` pull in another subpackage while it is still
+    # initialising, which Python 3.12 reports as a circular import.
+    source_kind: str = "human"
     revision: int | None
     updated_at: datetime | None
 
