@@ -23,7 +23,7 @@ Serein 的视觉参数集中在
   `--paragraph-gap` 调整留白。
 - **日历分组：** `--font-year`、`--font-size-year`、`--letter-spacing-year`、
   `--font-month`、`--font-size-month` 与 `--letter-spacing-month` 控制可折叠的
-  年份、月份刻度（默认很小，月份另有一条分隔线）；`--color-year`、
+  年份、月份刻度（默认很小，不加分隔线）；`--color-year`、
   `--color-month` 和 `--color-date` 控制其层级色彩；`--year-gap`、
   `--year-month-block-gap` 和 `--month-date-block-gap` 调整它们与正文的距离。
 - **颜色：** 应一起修改具有语义的 `--color-*` 变量。只要已有对应 token，

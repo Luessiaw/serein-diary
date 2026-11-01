@@ -1098,12 +1098,9 @@ body[data-sidebar-open="true"] .app-sidebar {
 }
 
 /*
- * 月份不再与年份并排成两列大号数字，而是每月上方一条极淡分隔线 + 小字，
- * 像纸张的分页：换月时才出现一次，不常驻抢占正文两侧。
- *
- * 分隔线的定位宽度是 `reading-width`（与正文列同宽）；月份摘要本身位于
- * 日期列左侧（只占 month-control-width），因此起点需要再向左让出这一段。
- * 折叠时摘要仍保留同样的上边距，展开后正文不会整体跳动。
+ * 月份不再与年份并排成两列大号数字，而是一行很小的刻度，换月时才出现一次，
+ * 不常驻抢占正文两侧。不再画分隔线：纸带上的每一条横线都会切碎连续阅读，
+ * 月份只靠字距和留白区分。
  */
 .diary-month > .diary-group-summary {
   grid-column: 1;
@@ -1123,18 +1120,6 @@ body[data-sidebar-open="true"] .app-sidebar {
 
 .diary-year > .diary-group-summary::before {
   display: none;
-}
-
-.diary-month > .diary-group-summary::before {
-  content: "";
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: calc(-1 * (var(--month-control-width) + var(--date-control-inline-padding-start) + var(--date-control-width) + var(--date-content-gap)));
-  /* 起点比正文列左缘再向左让出整整一节纸带内边距：分隔线在桌面上也要有留白。 */
-  inline-size: calc(var(--reading-width) + var(--month-control-width) + var(--date-control-inline-padding-start) + var(--date-control-width) + var(--date-content-gap) + var(--reading-paper-inline-padding-start));
-  block-size: 1px;
-  background: var(--color-line);
-  opacity: 0.6;
 }
 
 .diary-month > .diary-group-content {
@@ -2015,23 +2000,11 @@ body[data-sidebar-open="true"] .app-sidebar {
   }
 
   /*
-   * 窄屏下年、月摘要回到纸带内并右对齐，因此恢复 grid 布局，并把月份分隔线
-   * 贴在正文右侧（宽屏时它伸到纸带外的桌面上）。
+   * 窄屏下年、月摘要回到纸带内并右对齐，恢复 grid 布局。
    */
   .diary-year > .diary-group-summary,
   .diary-month > .diary-group-summary {
     display: grid;
-    padding-block-start: 0;
-  }
-
-  .diary-month > .diary-group-summary {
-    padding-block-start: var(--space-3);
-  }
-
-  .diary-month > .diary-group-summary::before {
-    inset-inline-start: 0;
-    inset-inline-end: 0;
-    inline-size: auto;
   }
 
   .diary-group-summary::before {

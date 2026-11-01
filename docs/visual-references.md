@@ -150,7 +150,7 @@ Times New Roman），并在字体栈里显式写出中文衬线候选（`Songti 
 | 手机字号偏大修正：正文/标题/日期/段距改用 `clamp()` | `tokens.css` | 320px 视口正文 16px、一行约 18 字；≥1000px 仍为 21.16px；详见 `docs/layout.md` |
 | `--color-muted`/`--color-faint` 重新取值 | `tokens.css` | 纸带上 4.56:1 / 4.71:1（AA）；桌面上约 4.2:1，仅用于桌面上的年/月刻度 |
 | 年份字号 0.8rem、字距 0.3em、去箭头 | `tokens.css`、`base.css` | 年份成为页边刻度，折叠仍可用 |
-| 月份改为分隔线 + 0.74rem 小字 | `tokens.css`、`base.css` | 每月一条 1px 线，不常驻抢占正文两侧 |
+| 月份改为 0.74rem 小字 | `tokens.css`、`base.css` | 换月才出现一次，不常驻抢占正文两侧（2026-10-28 曾加分隔线，验收后已移除） |
 | 宽度收敛 `3rem/2.5rem/4rem → 3.75rem/2.75rem/3.25rem` | `tokens.css` | 与更小的时间字号匹配 |
 | 标题楷体、正文衬线 | `tokens.css`、`fonts.css` | 本地字体优先，Noto Serif SC / LXGW WenKai 兜底 |
 | 日历改为小圆点标记 | `base.css` | 有日记的日期不再整格铺底色 |
@@ -160,8 +160,8 @@ Times New Roman），并在字体栈里显式写出中文衬线候选（`Songti 
 - **字体下载**：中文字体首屏仍有数 MB 流量。删除 `fonts.css` 内容即可回退到系统
   字体，版式不变；见 `docs/theme-customization.md`「字体与 webfont」。
 - **年份没有箭头**：宽屏时箭头会挤占桌面留白，把“2026”顶到窗口左缘。
-- **月份分隔线**由 CSS 按正文列宽度计算位置，若改 `--reading-width` 或日期列宽度，
-  分隔线会随之一并对齐，无需额外调整。
+- **不做月份分隔线**：纸带上的每条横线都会切断连续阅读，月份只靠字距与留白分隔。
+  调研中的参考方案 `exp-e-month-rule.png` 保留为对照，不代表当前实现。
 
 ## 6. 复现方式
 
