@@ -93,6 +93,39 @@ echo "今天把边界条件改完了……" | bash scripts/post-ai-entry.sh \
 脚本从 stdin 或 `--file` 读正文，token 从文件读（不经命令行，避免进入 shell
 history 和进程列表）。
 
+## 取素材：从会话日志整理当天对话
+
+AI 写入的前一步是知道「今天聊了什么」。DSH 的定时提醒绑定在单个 Session
+上，醒来时看不到别的窗口，所以素材必须从会话日志里取：
+
+```text
+$HOME/sessions/<工作区转义名>/session-<uuid>/session.v4.jsonl.zstd
+```
+
+用现成工具提取：
+
+```bash
+cd ~/storage/srv/projects/serein-diary/backend
+.venv/bin/python -m serein.services.session_digest \
+  --date 2026-10-28 \
+  --workspace "/home/luessiaw/storage/data/01_生活/00_我的记录/05_心理健康" \
+  --sessions-root /var/lib/dsh/home/sessions
+```
+
+输出是一份带时间戳的 Markdown 素材，交给 agent 筛选后再用
+`scripts/post-ai-entry.sh` 提交。退出码 `3` 表示当天没有用户发言，此时**不应
+生成日记**。
+
+三个容易出错的地方：
+
+1. **只取 `data.source.kind == "user"` 的事件。** 同一 `user/message` 类型下还有
+   `agent-instructions` 和 `runtime-context`，它们是系统注入的规则与上下文。
+   不排除的话，`AGENTS.md` 的规则会被当成「用户说过的话」写进日记。
+2. **按本地日期过滤。** 事件 `time` 是毫秒时间戳，必须按 `DIARY_TIMEZONE`
+   换算后再比较，否则跨零点的对话会落到错误的一天。
+3. **素材是原话，比日记敏感。** `--out` 写出的文件权限会是 `600`，并且提醒
+   用完即删；不要把它放进日记数据目录或会被同步的位置。
+
 ## 落盘结果
 
 ```json
