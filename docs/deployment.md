@@ -19,10 +19,36 @@ Compose 会自动读取同目录下的 `.env`。如果没有 `.env`，配置仍�
 
 ### 受限网络下构建
 
-若服务器 Docker daemon 通过本机反向代理访问网络，可在保持该隧道在线时构建。Compose
-默认将构建阶段使用 `http://127.0.0.1:17897`，并采用 host build network，使构建容器
-能访问宿主机代理；如代理地址不同，可通过 `DIARY_BUILD_HTTP_PROXY`、
-`DIARY_BUILD_HTTPS_PROXY` 和 `DIARY_BUILD_NO_PROXY` 覆盖。代理地址不写入镜像。
+构建阶段有两件与网络有关的事，分开控制：
+
+**安装源**（`DIARY_BUILD_PIP_INDEX`）。默认 `https://pypi.org/simple`。国内或
+官方源不可达时改用镜像：
+
+```env
+DIARY_BUILD_PIP_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
+DIARY_BUILD_PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn
+```
+
+镜像地址只影响构建，不写进最终镜像的运行配置。
+
+**代理**（`DIARY_BUILD_HTTP_PROXY` / `DIARY_BUILD_HTTPS_PROXY`）。**默认为空，
+即不走代理**。这一点是刻意的：代理一旦失效，pip 会以
+`ProxyError ... Connection refused` 失败，而报错看起来像网络问题，容易误判。
+国内源通常可直连，正常构建不需要代理。
+
+需要代理时才填，并确认代理确实在监听：
+
+```env
+DIARY_BUILD_HTTP_PROXY=http://127.0.0.1:7890
+DIARY_BUILD_HTTPS_PROXY=http://127.0.0.1:7890
+```
+
+> 2026-11-02 的教训：`.env` 里长期保留着指向 `127.0.0.1:7890` 的构建代理，
+> 后来 mihomo 进程挂掉，构建就以 `pip install` 的 `exit code: 1` 失败，
+> 但 compose 只打印最后一行，看不出根因。改为默认无代理 + 国内源后，
+> 构建不再依赖代理是否在线。
+
+Compose 采用 host build network，使构建容器能访问宿主机端口。
 
 该示例仅将 `web` 绑定到 `127.0.0.1:8088`。在宿主机打开
 `http://127.0.0.1:8088` 可访问静态前端；访问
