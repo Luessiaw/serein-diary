@@ -11,7 +11,7 @@ from fastapi import APIRouter
 # `ModuleNotFoundError: No module named 'serein.api.auth'`（3.13+ 能恢复，
 # 本仓库的开发环境是 3.14，因此本地测不出来）。相对导入只解析当前包的
 # `__path__`，不要求包已初始化完成，三种版本行为一致。
-from . import auth, entries, health, integrations, protected
+from . import ai, auth, entries, health, integrations, protected
 
 
 api_router = APIRouter()
@@ -20,3 +20,4 @@ api_router.include_router(auth.router)
 api_router.include_router(protected.router)
 api_router.include_router(entries.router)
 api_router.include_router(integrations.router)
+api_router.include_router(ai.router)

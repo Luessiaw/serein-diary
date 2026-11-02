@@ -16,6 +16,9 @@ services:
       DIARY_IMMICH_ENABLED: ${DIARY_IMMICH_ENABLED:-false}
       DIARY_IMMICH_BASE_URL: ${DIARY_IMMICH_BASE_URL:-http://immich-api:2283/api}
       DIARY_IMMICH_API_KEY_FILE: /run/secrets/immich-api-key
+      # AI 写入是 opt-in：只有摘要，没有明文 token。
+      DIARY_AI_WRITER_ENABLED: ${DIARY_AI_WRITER_ENABLED:-false}
+      DIARY_AI_TOKEN_SHA256: ${DIARY_AI_TOKEN_SHA256:-}
     volumes:
       - ${DIARY_HOST_DATA_DIR:-./data}:/data
       - type: bind

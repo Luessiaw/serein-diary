@@ -224,6 +224,7 @@ class EntryService:
         title: str | None = None,
         created_at: datetime | None = None,
         entry_id: UUID | None = None,
+        source: dict[str, object] | None = None,
     ) -> EntryDetailItem:
         """Create an immutable entry and refresh the rebuildable index."""
 
@@ -234,6 +235,7 @@ class EntryService:
                 title=title,
                 created_at=created_at,
                 entry_id=entry_id,
+                source=source,
             )
             self.refresh_entry_index(entry)
         except EntryValidationError as error:

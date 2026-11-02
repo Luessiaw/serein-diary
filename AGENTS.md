@@ -40,6 +40,7 @@ configuration names, or deployment scripts.
 | Backend scope, API skeleton, or auth | `docs/backend-boundary.md`, then `docs/plan-v1.1.md` |
 | Data contract, storage, index, or migration | `docs/data-contract-v1.md`, then `docs/p4-storage-handoff.md` |
 | Entry provenance (`source*` metadata) or AI-written entries | `docs/data-contract-v1.md` §来源字段 |
+| AI 写入接口、ai-writer token、或手动提交 AI 日记 | `docs/ai-writer.md` |
 | Formal API, frontend adapter, comments, or media | `docs/p5-api-frontend-contract.md`, then `docs/p4-storage-handoff.md` |
 | Frontend layout, alignment, or visual spacing | `docs/layout.md`, then `frontend/styles/tokens.css` |
 | Visual/interaction redesign research (external references, screenshots) | `docs/visual-references.md`, then `docs/reference-gallery.html` |

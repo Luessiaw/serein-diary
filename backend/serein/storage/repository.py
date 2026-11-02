@@ -16,6 +16,7 @@ from PIL import Image, UnidentifiedImageError
 
 from serein.storage.entry import (
     SOURCE_KIND_HUMAN,
+    SOURCE_KEY_PREFIX,
     DiaryEntry,
     EntryValidationError,
     parse_media_manifest,
@@ -70,8 +71,14 @@ def create_entry(
     title: str | None = None,
     created_at: datetime | None = None,
     entry_id: UUID | None = None,
+    source: dict[str, object] | None = None,
 ) -> DiaryEntry:
-    """Atomically create a new immutable v1 entry and return its parsed facts."""
+    """Atomically create a new immutable v1 entry and return its parsed facts.
+
+    `source` carries optional `source*` provenance keys (see `Metadata`). It is
+    validated by the same `Metadata` model on the way back in, so an unknown
+    non-`source` key is rejected before it can reach disk.
+    """
 
     created_at = normalize_created_at(created_at)
     entry_id = entry_id or uuid4()
@@ -89,7 +96,7 @@ def create_entry(
 
     temp_dir = Path(tempfile.mkdtemp(prefix=".tmp-entry-", dir=entries_dir))
     try:
-        write_new_entry_files(temp_dir, entry_id, created_at, title, content)
+        write_new_entry_files(temp_dir, entry_id, created_at, title, content, source)
         temp_dir.replace(final_dir)
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -472,6 +479,7 @@ def write_new_entry_files(
     created_at: datetime,
     title: str | None,
     content: str,
+    source: dict[str, object] | None = None,
 ) -> None:
     """Write all v1 fact files into a temporary entry directory."""
 
@@ -483,6 +491,12 @@ def write_new_entry_files(
     normalized_title = (title or "").strip()
     if normalized_title:
         metadata["title"] = normalized_title
+    # 只有 source 前缀的键会被 Metadata 接受；这里再挡一次，避免写入一个
+    # 之后读不回来的条目（那会让整次 scan 失败，影响既有 518 条）。
+    for key, value in (source or {}).items():
+        if not key.startswith(SOURCE_KEY_PREFIX):
+            raise EntryValidationError(f"source keys must start with {SOURCE_KEY_PREFIX}")
+        metadata[key] = value
 
     write_json_file(entry_dir / "metadata.json", metadata)
     (entry_dir / "content.md").write_text(content, encoding="utf-8", newline="\n")

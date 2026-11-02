@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from os import access, environ
 from os import R_OK, W_OK, X_OK
@@ -17,6 +18,8 @@ DIARY_SESSION_SECRET_ENV = "DIARY_SESSION_SECRET"
 DIARY_IMMICH_ENABLED_ENV = "DIARY_IMMICH_ENABLED"
 DIARY_IMMICH_BASE_URL_ENV = "DIARY_IMMICH_BASE_URL"
 DIARY_IMMICH_API_KEY_FILE_ENV = "DIARY_IMMICH_API_KEY_FILE"
+DIARY_AI_WRITER_ENABLED_ENV = "DIARY_AI_WRITER_ENABLED"
+DIARY_AI_TOKEN_SHA256_ENV = "DIARY_AI_TOKEN_SHA256"
 DEFAULT_TIMEZONE = "UTC"
 MIN_SESSION_SECRET_LENGTH = 32
 UNSAFE_ADMIN_PASSWORDS = {
@@ -50,6 +53,10 @@ class Settings:
     immich_enabled: bool = False
     immich_base_url: str = "http://immich-api:2283/api"
     immich_api_key: str | None = None
+    # Sha256 of the ai-writer bearer token. Only the digest is kept in
+    # settings, so an accidental repr or log line cannot leak the secret.
+    ai_writer_enabled: bool = False
+    ai_token_sha256: str | None = None
 
     def __repr__(self) -> str:
         return (
@@ -61,6 +68,7 @@ class Settings:
             f", immich_enabled={self.immich_enabled!r}, "
             f"immich_base_url={self.immich_base_url!r}, "
             "immich_api_key=<redacted>"
+            f", ai_writer_enabled={self.ai_writer_enabled!r}"
             ")"
         )
 
@@ -95,6 +103,19 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         if not immich_api_key:
             raise ConfigError(f"{DIARY_IMMICH_API_KEY_FILE_ENV} must not be empty.")
 
+    ai_writer_enabled = _read_bool(source, DIARY_AI_WRITER_ENABLED_ENV, False)
+    ai_token_sha256 = None
+    if ai_writer_enabled:
+        # 只接受散列，不接受明文 token：明文一旦进了环境变量，就会出现在
+        # docker inspect / systemctl show 和崩溃转储里。
+        candidate = _read_required(source, DIARY_AI_TOKEN_SHA256_ENV).lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", candidate):
+            raise ConfigError(
+                f"{DIARY_AI_TOKEN_SHA256_ENV} must be the sha256 of the AI token "
+                "(64 lowercase hex characters)."
+            )
+        ai_token_sha256 = candidate
+
     return Settings(
         data_dir=_validate_data_dir(data_dir),
         timezone=_validate_timezone(timezone),
@@ -103,6 +124,8 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         immich_enabled=immich_enabled,
         immich_base_url=immich_base_url,
         immich_api_key=immich_api_key,
+        ai_writer_enabled=ai_writer_enabled,
+        ai_token_sha256=ai_token_sha256,
     )
 
 
