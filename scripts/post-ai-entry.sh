@@ -16,18 +16,21 @@ set -uo pipefail
 
 API_BASE="${SEREIN_API_BASE:-http://127.0.0.1:8088}"
 
-# token 查找顺序：显式覆盖 → 共享位置 → 历史位置。
+# token 查找顺序：显式覆盖 → 凭据目录 → 历史位置。
 #
 # 为什么不只认 $HOME：这个脚本会被两个身份调用。运维自己跑时 HOME 是
 # /home/luessiaw；DSH 会话以服务身份运行，HOME 是 /var/lib/dsh/home，且服务带
-# ProtectHome=tmpfs，看不到 /home/luessiaw。所以 token 放在两者都能看到、
-# 且已被 .gitignore 排除的 srv/tmp 下（由 enable.py 写入）。
+# ProtectHome=tmpfs，看不到 /home/luessiaw。
+#
+# 首选 storage/services/serein-diary/secrets：该树以只读方式挂进 DSH 命名空间
+# （BindReadOnlyPaths），因此两种身份都能读，且 DSH 改不了它——正是凭据需要的形态。
 default_token_file() {
   local candidate
   local candidates=(
-    "/home/luessiaw/storage/srv/tmp/serein/ai-token"
-    "$HOME/.config/serein/ai-token"
+    "/home/luessiaw/storage/services/serein-diary/secrets/ai-writer-token"
     "/home/luessiaw/.config/serein/ai-token"
+    "/var/lib/dsh/home/.config/serein/ai-token"
+    "/home/luessiaw/storage/srv/tmp/serein/ai-token"
   )
   for candidate in "${candidates[@]}"; do
     if [[ -r "$candidate" ]]; then
@@ -35,7 +38,6 @@ default_token_file() {
       return 0
     fi
   done
-  # 都不可读时返回首选位置，让报错信息指向推荐做法。
   printf '%s' "${candidates[0]}"
 }
 TOKEN_FILE="${SEREIN_AI_TOKEN_FILE:-$(default_token_file)}"
@@ -134,7 +136,7 @@ fi
 stage "读取 AI token"
 if [[ ! -r "$TOKEN_FILE" ]]; then
   die "读不到 token 文件: $TOKEN_FILE
-  已尝试：共享位置、\$HOME/.config/serein/ai-token、/home/luessiaw/.config/serein/ai-token
+  已尝试凭据目录与若干历史位置
   推荐用一键脚本生成并同步到两处：
     python3 /home/luessiaw/storage/srv/scripts/serein_ai_writer/enable.py
   或用 --token-file 显式指定。"
