@@ -16,22 +16,27 @@ set -uo pipefail
 
 API_BASE="${SEREIN_API_BASE:-http://127.0.0.1:8088}"
 
-# token 查找顺序：显式覆盖 → $HOME 下的位置 → 运维侧的绝对路径。
+# token 查找顺序：显式覆盖 → 共享位置 → 历史位置。
 #
 # 为什么不只认 $HOME：这个脚本会被两个身份调用。运维自己跑时 HOME 是
-# /home/luessiaw；DSH 会话以服务身份运行，HOME 是 /var/lib/dsh/home，而且
-# 通常看不到 /home/luessiaw。依次尝试可以让两种身份都直接工作，而不是让
-# 调用者自己去猜该传哪个 --token-file。
+# /home/luessiaw；DSH 会话以服务身份运行，HOME 是 /var/lib/dsh/home，且服务带
+# ProtectHome=tmpfs，看不到 /home/luessiaw。所以 token 放在两者都能看到、
+# 且已被 .gitignore 排除的 srv/tmp 下（由 enable.py 写入）。
 default_token_file() {
   local candidate
-  for candidate in "$HOME/.config/serein/ai-token" "/home/luessiaw/.config/serein/ai-token"; do
+  local candidates=(
+    "/home/luessiaw/storage/srv/tmp/serein/ai-token"
+    "$HOME/.config/serein/ai-token"
+    "/home/luessiaw/.config/serein/ai-token"
+  )
+  for candidate in "${candidates[@]}"; do
     if [[ -r "$candidate" ]]; then
       printf '%s' "$candidate"
       return 0
     fi
   done
-  # 都不可读时，返回第一个候选，让后面的报错信息指向最常见的那个位置。
-  printf '%s' "$HOME/.config/serein/ai-token"
+  # 都不可读时返回首选位置，让报错信息指向推荐做法。
+  printf '%s' "${candidates[0]}"
 }
 TOKEN_FILE="${SEREIN_AI_TOKEN_FILE:-$(default_token_file)}"
 TITLE=""
@@ -129,7 +134,7 @@ fi
 stage "读取 AI token"
 if [[ ! -r "$TOKEN_FILE" ]]; then
   die "读不到 token 文件: $TOKEN_FILE
-  已尝试：\$HOME/.config/serein/ai-token 与 /home/luessiaw/.config/serein/ai-token
+  已尝试：共享位置、\$HOME/.config/serein/ai-token、/home/luessiaw/.config/serein/ai-token
   推荐用一键脚本生成并同步到两处：
     python3 /home/luessiaw/storage/srv/scripts/serein_ai_writer/enable.py
   或用 --token-file 显式指定。"
