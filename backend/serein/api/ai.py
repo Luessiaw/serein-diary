@@ -44,6 +44,24 @@ class AiEntryRequest(BaseModel):
     source_material: str | None = Field(default=None, max_length=200)
     source_session_ids: list[str] = Field(default_factory=list, max_length=20)
     source_review: str = Field(default="unreviewed", max_length=32)
+    # 条目时间：应当是这段对话最后一次发言的时刻，而不是整理发生的时刻。
+    # 省略时才回退到当前时间（兼容旧调用方）。
+    created_at: datetime | None = None
+
+    @field_validator("created_at")
+    @classmethod
+    def require_offset(cls, value: datetime | None) -> datetime | None:
+        if value is not None and value.utcoffset() is None:
+            raise ValueError("must include a UTC offset, e.g. 2026-11-12T22:30:00+08:00")
+        return value
+
+    @field_validator("created_at")
+    @classmethod
+    def reject_future(cls, value: datetime | None) -> datetime | None:
+        # 未来时间会让这条日记排在所有条目之后，也会让「已整理到哪天」失真。
+        if value is not None and value > datetime.now(value.tzinfo):
+            raise ValueError("must not be in the future")
+        return value
 
     @field_validator("content")
     @classmethod
@@ -163,7 +181,7 @@ def create_ai_entry(
         detail = get_entry_service(request).create_entry(
             title=payload.title,
             content=payload.content,
-            created_at=datetime.now(ZoneInfo(settings.timezone)),
+            created_at=payload.created_at or datetime.now(ZoneInfo(settings.timezone)),
             source=source,
         )
     except EntryServiceError as error:

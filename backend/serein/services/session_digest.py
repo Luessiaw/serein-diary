@@ -33,7 +33,7 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -53,10 +53,16 @@ class Utterance:
 
 @dataclass
 class SessionDigest:
-    """Everything the user said in one workspace on one local date."""
+    """Everything the user said in one workspace, grouped by session.
+
+    A conversation can span several days, so the material is grouped by session
+    rather than by calendar date: one conversation is one unit of diary work,
+    and its `created_at` is the moment of its last user message.
+    """
 
     workspace: Path
-    day: date
+    since: datetime
+    until: datetime
     timezone: str
     utterances: list[Utterance] = field(default_factory=list)
     skipped_sessions: int = 0
@@ -72,6 +78,16 @@ class SessionDigest:
     @property
     def empty(self) -> bool:
         return not self.utterances
+
+    def by_session(self) -> dict[str, list[Utterance]]:
+        """Utterances grouped by session id, each group time-ordered."""
+
+        grouped: dict[str, list[Utterance]] = {}
+        for item in self.utterances:
+            grouped.setdefault(item.session_id, []).append(item)
+        for items in grouped.values():
+            items.sort(key=lambda item: item.at)
+        return grouped
 
 
 def escape_workspace(path: Path) -> str:
@@ -186,10 +202,16 @@ def extract_utterances(
     events: list[dict],
     *,
     session_id: str,
-    day: date,
+    since: datetime,
+    until: datetime,
     tz: ZoneInfo,
 ) -> list[Utterance]:
-    """Pull the user's own words for one local date."""
+    """Pull the user's own words within a local time window.
+
+    The window is half-open: `since <= t < until`. Boundaries are local
+    midnights in practice, so a message at exactly midnight belongs to the day
+    that starts there.
+    """
 
     found: list[Utterance] = []
     for event in events:
@@ -206,7 +228,7 @@ def extract_utterances(
         if not isinstance(timestamp, (int, float)):
             continue
         at = datetime.fromtimestamp(timestamp / 1000, tz=tz)
-        if at.date() != day:
+        if not (since <= at < until):
             continue
 
         text = join_parts(data.get("content"))
@@ -235,13 +257,27 @@ def build_digest(
     *,
     sessions_root: Path,
     workspace: Path,
-    day: date,
+    since: datetime,
+    until: datetime,
     timezone: str,
+    skip_sessions: set[str] | None = None,
 ) -> SessionDigest:
+    """Collect the user's words in a window, grouped by session.
+
+    `skip_sessions` holds session ids already turned into diary entries; those
+    are excluded so a long conversation is never整理 twice.
+    """
+
     tz = ZoneInfo(timezone)
-    digest = SessionDigest(workspace=workspace, day=day, timezone=timezone)
+    digest = SessionDigest(
+        workspace=workspace, since=since, until=until, timezone=timezone
+    )
+    skip = skip_sessions or set()
 
     for session_dir in find_session_dirs(sessions_root, workspace):
+        session_id = session_dir.name.removeprefix("session-")
+        if session_id in skip:
+            continue
         log_files = sorted(
             [p for p in session_dir.iterdir() if p.name.endswith(".jsonl") or p.name.endswith(".jsonl.zstd")],
             reverse=True,
@@ -257,8 +293,9 @@ def build_digest(
         digest.utterances.extend(
             extract_utterances(
                 events,
-                session_id=session_dir.name.removeprefix("session-"),
-                day=day,
+                session_id=session_id,
+                since=since,
+                until=until,
                 tz=tz,
             )
         )
@@ -268,34 +305,70 @@ def build_digest(
 
 
 def render_digest(digest: SessionDigest) -> str:
-    """Render the material as Markdown for a human or agent to curate."""
+    """Render the material session by session.
+
+    Each session is rendered with its own last-message time, because that is
+    the timestamp the diary entry must carry — not the time the summary runs.
+    """
 
     lines = [
-        f"# {digest.day.isoformat()} 对话素材",
+        f"# 对话素材 {digest.since.strftime('%Y-%m-%d %H:%M')} → {digest.until.strftime('%Y-%m-%d %H:%M')}",
         "",
         f"- 工作区：`{digest.workspace}`",
         f"- 时区：{digest.timezone}",
-        f"- 会话：{len(digest.session_ids)} 个",
+        f"- 会话：{len(digest.by_session())} 个",
         f"- 用户发言：{len(digest.utterances)} 条",
     ]
     if digest.skipped_sessions:
         lines.append(f"- 跳过（读不到或已清理）：{digest.skipped_sessions} 个会话")
     lines.append("")
     if digest.empty:
-        lines.append("这一天没有可用的用户发言。空日记比勉强生成的日记更有害，建议不生成。")
+        lines.append(
+            "这个时间范围内没有可用的用户发言。空日记比勉强生成的日记更有害，建议不生成。"
+        )
         return "\n".join(lines) + "\n"
 
-    for item in digest.utterances:
-        lines.append(f"## {item.at.strftime('%H:%M')}")
+    for index, (session_id, items) in enumerate(digest.by_session().items(), 1):
+        last = items[-1].at
+        first = items[0].at
+        lines.append(f"## 会话 {index}：`{session_id}`")
         lines.append("")
-        lines.append(item.text)
+        lines.append(f"- 首次发言：{first.strftime('%Y-%m-%d %H:%M')}")
+        lines.append(f"- 最后发言：{last.strftime('%Y-%m-%d %H:%M')}")
+        lines.append(
+            f"- 建议日记时间：`{last.isoformat()}`（提交时必须用它，而不是整理时的当前时间）"
+        )
+        lines.append(f"- 发言数：{len(items)}")
         lines.append("")
+        for item in items:
+            lines.append(f"### {item.at.strftime('%m-%d %H:%M')}")
+            lines.append("")
+            lines.append(item.text)
+            lines.append("")
     return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--date", help="本地日期 YYYY-MM-DD（默认昨天）")
+    parser.add_argument(
+        "--since",
+        help="窗口起点 YYYY-MM-DD（本地日期，含当天 00:00）；默认只看昨天",
+    )
+    parser.add_argument(
+        "--until",
+        help="窗口终点 YYYY-MM-DD（本地日期，不含当天 00:00）；默认今天",
+    )
+    parser.add_argument(
+        "--date",
+        help="兼容旧参数：等价于 --since=D --until=D+1",
+    )
+    parser.add_argument(
+        "--skip-session",
+        action="append",
+        default=[],
+        metavar="ID",
+        help="跳过已整理过的会话 id（可重复）",
+    )
     parser.add_argument("--workspace", required=True, help="会话所属工作区（绝对路径）")
     parser.add_argument("--sessions-root", default=str(DEFAULT_SESSIONS_ROOT))
     parser.add_argument("--timezone", default="Asia/Shanghai")
@@ -303,20 +376,40 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     tz = ZoneInfo(args.timezone)
-    if args.date:
+
+    def parse_day(value: str, flag: str) -> date | None:
         try:
-            day = date.fromisoformat(args.date)
+            return date.fromisoformat(value)
         except ValueError:
-            print(f"ERROR: --date 需要 YYYY-MM-DD，收到 {args.date}", file=sys.stderr)
+            print(f"ERROR: {flag} 需要 YYYY-MM-DD，收到 {value}", file=sys.stderr)
+            return None
+
+    today = datetime.now(tz).date()
+    if args.date:
+        start_day = parse_day(args.date, "--date")
+        if start_day is None:
             return 2
+        end_day = start_day + timedelta(days=1)
     else:
-        day = (datetime.now(tz) - timedelta(days=1)).date()
+        start_day = parse_day(args.since, "--since") if args.since else today - timedelta(days=1)
+        end_day = parse_day(args.until, "--until") if args.until else today
+        if start_day is None or end_day is None:
+            return 2
+
+    if end_day <= start_day:
+        print("ERROR: --until 必须晚于 --since", file=sys.stderr)
+        return 2
+
+    since = datetime.combine(start_day, time.min, tzinfo=tz)
+    until = datetime.combine(end_day, time.min, tzinfo=tz)
 
     digest = build_digest(
         sessions_root=Path(args.sessions_root),
         workspace=Path(args.workspace),
-        day=day,
+        since=since,
+        until=until,
         timezone=args.timezone,
+        skip_sessions=set(args.skip_session),
     )
     rendered = render_digest(digest)
 
@@ -330,7 +423,8 @@ def main(argv: list[str] | None = None) -> int:
         except OSError:
             pass
         print(
-            f"已写入 {out_path}（{len(digest.utterances)} 条发言，{len(digest.session_ids)} 个会话）\n"
+            f"已写入 {out_path}（{len(digest.utterances)} 条发言，"
+            f"{len(digest.by_session())} 个会话）\n"
             "提醒：这份素材含原话，用完请删除；不要放进日记数据目录。"
         )
     else:

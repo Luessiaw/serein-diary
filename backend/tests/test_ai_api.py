@@ -249,3 +249,71 @@ class AiWriterCannotReachOwnerEndpointsTests(TestCase):
             request.cookies = {"serein_session": forged}
 
             self.assertIsNone(read_current_session(request))
+
+
+class AiEntryTimeTests(TestCase):
+    """The entry time must be the conversation's, not the summary run's."""
+
+    def make_request(self, data_dir: Path) -> SimpleNamespace:
+        return SimpleNamespace(
+            app=SimpleNamespace(
+                state=SimpleNamespace(
+                    settings=Settings(
+                        data_dir=data_dir,
+                        timezone="Asia/Shanghai",
+                        admin_password="a private lock-screen password",
+                        session_secret="x" * 32,
+                        ai_writer_enabled=True,
+                        ai_token_sha256=digest(TOKEN),
+                    )
+                )
+            ),
+            cookies={},
+        )
+
+    def test_uses_supplied_created_at(self) -> None:
+        from datetime import datetime
+
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            created = create_ai_entry(
+                AiEntryRequest(
+                    content="昨晚的对话。\n",
+                    created_at=datetime.fromisoformat("2026-10-12T23:40:00+08:00"),
+                ),
+                self.make_request(root),
+                Response(),
+            )
+            entry = read_entry(next((root / "entries").iterdir()))
+
+        self.assertEqual(entry.metadata.created_at.isoformat(), "2026-10-12T23:40:00+08:00")
+        # 目录名同样由该时间派生，列表中会排在对应位置。
+        self.assertTrue(entry.path.name.startswith("202610122340"))
+        self.assertEqual(created.created_at.isoformat(), "2026-10-12T23:40:00+08:00")
+
+    def test_rejects_created_at_without_offset(self) -> None:
+        from pydantic import ValidationError
+
+        with self.assertRaises(ValidationError):
+            AiEntryRequest(content="x", created_at="2026-10-12T23:40:00")
+
+    def test_rejects_future_created_at(self) -> None:
+        from datetime import datetime, timedelta
+        from pydantic import ValidationError
+
+        future = datetime.now().astimezone() + timedelta(days=2)
+        with self.assertRaises(ValidationError):
+            AiEntryRequest(content="x", created_at=future)
+
+    def test_omitting_created_at_still_works(self) -> None:
+        from datetime import datetime, timedelta, timezone as tzmod
+
+        with TemporaryDirectory() as data_dir:
+            root = Path(data_dir)
+            before = datetime.now(tzmod.utc) - timedelta(seconds=5)
+            created = create_ai_entry(
+                AiEntryRequest(content="没有显式时间。\n"),
+                self.make_request(root),
+                Response(),
+            )
+        self.assertGreater(created.created_at, before)

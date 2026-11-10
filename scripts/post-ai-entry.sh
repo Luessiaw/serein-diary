@@ -44,6 +44,7 @@ TOKEN_FILE="${SEREIN_AI_TOKEN_FILE:-$(default_token_file)}"
 TITLE=""
 MATERIAL=""
 REVIEW="unreviewed"
+CREATED_AT=""
 SESSION_IDS=""
 CONTENT_FILE=""
 DRY_RUN=0
@@ -57,6 +58,8 @@ usage() {
   --material <range>    素材时间范围，例如 2026-10-28T09:00/2026-10-28T23:30
   --session-id <id>     来源会话 ID，可重复
   --review <state>      unreviewed（默认）/ confirmed / rejected
+  --created-at <time>   条目时间，带时区，例如 2026-11-12T22:30:00+08:00
+                        取自 session_digest 输出的「建议日记时间」
   --token-file <path>   存放 AI token 的文件
   --base <url>          API 地址（默认 http://127.0.0.1:8088）
   --dry-run             只打印将要提交的内容，不发送
@@ -71,6 +74,7 @@ while [[ $# -gt 0 ]]; do
     --material) MATERIAL="${2:?--material 需要参数}"; shift 2 ;;
     --session-id) SESSION_IDS="${SESSION_IDS}${SESSION_IDS:+,}\"${2:?}\""; shift 2 ;;
     --review) REVIEW="${2:?--review 需要参数}"; shift 2 ;;
+    --created-at) CREATED_AT="${2:?--created-at 需要参数}"; shift 2 ;;
     --token-file) TOKEN_FILE="${2:?--token-file 需要参数}"; shift 2 ;;
     --base) API_BASE="${2:?--base 需要参数}"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
@@ -111,7 +115,7 @@ fi
 # ---------------------------------------------------------------- 拼 JSON
 stage "拼装请求"
 PAYLOAD=$(CONTENT="$CONTENT" TITLE="$TITLE" MATERIAL="$MATERIAL" \
-  REVIEW="$REVIEW" SESSION_IDS="$SESSION_IDS" python3 - <<'PY'
+  REVIEW="$REVIEW" SESSION_IDS="$SESSION_IDS" CREATED_AT="$CREATED_AT" python3 - <<'PY'
 import json, os
 body = {
     "content": os.environ["CONTENT"],
@@ -119,6 +123,11 @@ body = {
     "source_material": os.environ["MATERIAL"] or None,
     "source_review": os.environ["REVIEW"] or "unreviewed",
 }
+# 条目时间由调用方给出（对话最后一次发言的时刻）。缺省时服务端用当前时间，
+# 但那会把「昨晚的对话」记成「明早整理的时刻」，所以默认要求显式传入。
+created = os.environ.get("CREATED_AT", "").strip()
+if created:
+    body["created_at"] = created
 ids = os.environ["SESSION_IDS"].strip()
 if ids:
     body["source_session_ids"] = json.loads("[" + ids + "]")
